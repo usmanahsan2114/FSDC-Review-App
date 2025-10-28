@@ -1,4 +1,21 @@
-# Welcome to your Expo app 👋
+
+## Goal
+Implement a dark mode toggle and theme switching.
+
+## Tasks
+1. Create a context or state in root (`App.js` or a ThemeProvider) to store dark / light mode  
+2. Use `react-native-paper` theming or use `Appearance` API  
+3. Wrap UI components to respond to theme changes (colors, backgrounds, text)  
+4. Expose a toggle switch (e.g. in Home screen menu or settings) to flip dark / light mode  
+5. Persist theme preference (e.g. via AsyncStorage)  
+
+## Expected output
+User can toggle dark mode; UI updates colors accordingly and remains persistent across app launches.
+
+## How to test manually
+- Toggle to dark mode → UI changes  
+- Close app → relaunch → it still uses chosen theme  
+- Verify in both emulator and A71  # Welcome to your Expo app 👋
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 

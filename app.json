@@ -1,25 +1,31 @@
 {
   "expo": {
-    "name": "ReviewsApp",
-    "slug": "ReviewsApp",
+    "name": "FSDC Flight Reviews",
+    "slug": "fsdc",
     "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "orientation": "default",
+    "icon": "./assets/images/AppIcons/playstore.png",
     "scheme": "reviewsapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.ReviewsApp",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#FFFFFF",
+        "foregroundImage": "./assets/images/AppIcons/playstore.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.anonymous.ReviewsApp",
+      "proguardEnabled": true,
+      "enableProguardInReleaseBuilds": true,
+      "enableDangerousExperimentalLeanBuilds": false
     },
     "web": {
       "output": "static",
@@ -30,11 +36,12 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
+          "image": "./assets/images/AppIcons/playstore.png",
+          "imageWidth": 250,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",
           "dark": {
+            "image": "./assets/images/AppIcons/playstore.png",
             "backgroundColor": "#000000"
           }
         }
@@ -43,6 +50,17 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "6ee7f2d9-4656-404a-9aef-e93374d9576f"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/6ee7f2d9-4656-404a-9aef-e93374d9576f"
     }
   }
 }

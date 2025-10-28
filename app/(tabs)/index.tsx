@@ -1,98 +1,174 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
+import OptimizedImage from '@/components/OptimizedImage';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import ThemeToggle from '@/components/ThemeToggle';
+import { useTheme } from '@/contexts/ThemeContext';
+import { router } from 'expo-router';
+import React from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { Button } from 'react-native-paper';
+import { getDevicePadding, hp, isTablet, minTouchTarget, rf, rs, wp } from '../../utils/responsive';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const { isDark } = useTheme();
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
+  const handleAddReview = () => {
+    router.push('/add-review');
+  };
+
+  const handleViewReviews = () => {
+    router.push('/reviews-list');
+  };
+
+  const handleAdminQuestions = () => {
+    router.push('/admin-questions');
+  };
+
+  const handleDashboard = () => {
+    router.push('/dashboard');
+  };
+
+  return (
+    <ThemedView style={styles.container}>
+      <View style={styles.header}>
+        <ThemeToggle />
+      </View>
+      
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <OptimizedImage 
+          source={isDark ? require('@/assets/images/white-logo.png') : require('@/assets/images/black-logo.png')} 
+          style={styles.logo}
+          contentFit="contain"
+          transition={200}
+          cachePolicy="memory-disk"
+          priority="high"
+          alt="FSDC Logo"
+        />
+        
+        <ThemedText type="title" style={styles.title}>
+          FSDC Flight Reviews
         </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
+        
+        <ThemedText style={styles.subtitle}>
+          Welcome! Choose an option below to get started.
         </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+
+        <View style={styles.buttonContainer}>
+          <Button
+            mode="contained"
+            onPress={handleDashboard}
+            style={[styles.button, styles.dashboardButton]}
+            contentStyle={styles.buttonContent}
+            labelStyle={styles.buttonLabel}
+            icon="chart-box"
+          >
+            Dashboard & Analytics
+          </Button>
+
+          <Button
+            mode="contained"
+            onPress={handleAddReview}
+            style={styles.button}
+            contentStyle={styles.buttonContent}
+            labelStyle={styles.buttonLabel}
+            icon="plus-circle"
+          >
+            Add a New Review
+          </Button>
+
+          <Button
+            mode="outlined"
+            onPress={handleViewReviews}
+            style={styles.button}
+            contentStyle={styles.buttonContent}
+            labelStyle={styles.buttonLabel}
+            icon="view-list"
+          >
+            View All Reviews
+          </Button>
+
+          <Button
+            mode="contained"
+            onPress={handleAdminQuestions}
+            style={[styles.button, styles.adminButton]}
+            contentStyle={styles.buttonContent}
+            labelStyle={styles.buttonLabel}
+            icon="cog"
+          >
+            Admin: Manage Questions
+          </Button>
+        </View>
+
+      </ScrollView>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
+  container: {
+    flex: 1,
+    padding: getDevicePadding().horizontal,
+  },
+  header: {
+    alignItems: 'flex-end',
+    marginBottom: rs(16),
+  },
+  content: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
+    width: '100%',
+    maxWidth: isTablet ? wp(70) : wp(90),
+    alignSelf: 'center',
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  logo: {
+    width: isTablet ? wp(40) : wp(60),
+    height: isTablet ? hp(12) : hp(15),
+    marginBottom: rs(24),
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  title: {
+    fontSize: rf(isTablet ? 28 : 24),
+    // Avoid overriding ThemedText's safe lineHeight to prevent descender cutoff
+    marginBottom: rs(16),
+    textAlign: 'center',
+    fontWeight: 'bold',
+  },
+  subtitle: {
+    fontSize: rf(16),
+    // Avoid tight lineHeight to prevent descender cutoff on Android tablets
+    textAlign: 'center',
+    marginBottom: rs(32),
+    opacity: 0.8,
+    paddingHorizontal: rs(8),
+  },
+  buttonContainer: {
+    width: '100%',
+    gap: rs(16),
+  },
+  button: {
+    width: '100%',
+    minHeight: minTouchTarget,
+    borderRadius: rs(8),
+  },
+  buttonContent: {
+    paddingVertical: rs(12),
+    paddingHorizontal: rs(16),
+    minHeight: minTouchTarget,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  buttonLabel: {
+    fontSize: rf(16),
+    // Let platform compute safe line height
+    textAlign: 'center',
+  },
+  dashboardButton: {
+    backgroundColor: '#2196F3',
+    minHeight: minTouchTarget,
+  },
+  adminButton: {
+    backgroundColor: '#FF6B35',
+    marginTop: rs(16),
+    minHeight: minTouchTarget,
   },
 });

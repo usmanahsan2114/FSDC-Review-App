@@ -1,4 +1,5 @@
 import { StyleSheet, Text, type TextProps } from 'react-native';
+import { rf } from '../utils/responsive';
 
 import { useThemeColor } from '@/hooks/use-theme-color';
 
@@ -35,26 +36,32 @@ export function ThemedText({
 
 const styles = StyleSheet.create({
   default: {
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: rf(16),
+    lineHeight: rf(24),
+    paddingVertical: rf(2), // Add padding to prevent cutoff
   },
   defaultSemiBold: {
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: rf(16),
+    lineHeight: rf(24),
     fontWeight: '600',
+    paddingVertical: rf(2), // Add padding to prevent cutoff
   },
   title: {
-    fontSize: 32,
+    fontSize: rf(32),
     fontWeight: 'bold',
-    lineHeight: 32,
+    lineHeight: rf(40), // Increased from rf(32) to accommodate descenders
+    paddingVertical: rf(4), // Add padding to prevent cutoff
   },
   subtitle: {
-    fontSize: 20,
+    fontSize: rf(20),
     fontWeight: 'bold',
+    lineHeight: rf(28), // Added line height to prevent cutoff
+    paddingVertical: rf(3), // Add padding to prevent cutoff
   },
   link: {
-    lineHeight: 30,
-    fontSize: 16,
+    lineHeight: rf(30),
+    fontSize: rf(16),
     color: '#0a7ea4',
+    paddingVertical: rf(2), // Add padding to prevent cutoff
   },
 });
