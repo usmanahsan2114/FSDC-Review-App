@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "FSDC Flight Reviews",
-    "slug": "fsdc",
+    "slug": "ReviewsApp",
     "version": "1.0.0",
     "orientation": "default",
     "icon": "./assets/images/AppIcons/playstore.png",
