@@ -79,19 +79,18 @@ export const createStaggerAnimation = (
 };
 
 /**
- * Scale animation
+ * Scale animationr
  */
 export const scaleAnimation = (
   animatedValue: Animated.Value,
   toValue: number,
   duration: number = 200
 ): Animated.CompositeAnimation => {
-  return Animated.spring(animatedValue, {
+  return Animated.timing(animatedValue, {
     toValue,
     duration,
+    easing: Easing.out(Easing.ease),
     useNativeDriver: true,
-    tension: 100,
-    friction: 5,
   });
 };
 

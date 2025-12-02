@@ -2,17 +2,18 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useTheme } from '@/contexts/ThemeContext';
-import { generateReviewPDF, previewAndSavePDF, ReviewData } from '@/utils/pdfGenerator';
+import { buildReviewHTML, generateReviewPDF, previewAndSavePDF, previewHTMLWithPrintDialog, ReviewData } from '@/utils/pdfGenerator';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Button, Card, Chip } from 'react-native-paper';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StarRating from 'react-native-star-rating-widget';
 
 
 import OptimizedImage from '@/components/OptimizedImage';
-import { hp, rf, wp } from '../utils/responsive';
+import { hp, rf, rs, wp } from '../utils/responsive';
 
 
 interface RatingCategory {
@@ -23,50 +24,39 @@ interface RatingCategory {
 }
 
 const defaultRatingCategories: RatingCategory[] = [
-  {
-    id: '1',
-    key: 'generalFlying',
-    title: 'General Flying / Handling Characteristics',
-    description: 'Overall flight dynamics and aircraft handling'
-  },
-  {
-    id: '2',
-    key: 'emergencyProcedures',
-    title: 'Emergency Procedures',
-    description: 'Emergency scenarios and procedures training'
-  },
-  {
-    id: '3',
-    key: 'instrumentFlying',
-    title: 'Instrument Flying System Integration',
-    description: 'Instrument flight rules and system integration'
-  },
-  {
-    id: '4',
-    key: 'visualEffects',
-    title: 'Visual Effects Take-Off & Landing',
-    description: 'Visual system quality for takeoff and landing'
-  },
-  {
-    id: '5',
-    key: 'fidelityRealism',
-    title: 'Characteristics Fidelity & Realism',
-    description: 'Realism and fidelity of aircraft characteristics'
-  },
-  {
-    id: '6',
-    key: 'simulatorPerformance',
-    title: 'Simulator Performance',
-    description: 'Overall simulator performance and reliability'
-  }
+  { id: '1',  key: 'cockpitRealismLayout',            title: 'Cockpit realism & layout',               description: '' },
+  { id: '2',  key: 'visualQualityFOV',                title: 'Visual quality & field of view',         description: '' },
+  { id: '3',  key: 'controlLoadingRealism',           title: 'Control loading realism (force feedback)', description: '' },
+  { id: '4',  key: 'motionFidelity',                  title: 'Motion fidelity (6-DOF cues & response)', description: '' },
+  { id: '5',  key: 'aerodynamicResponse',             title: 'Aerodynamic response & flight feel',      description: '' },
+  { id: '6',  key: 'instrumentSwitchFunctionality',   title: 'Instrument & switch functionality',       description: '' },
+  { id: '7',  key: 'visualMotionSync',                title: 'Visual-motion synchronization',           description: '' },
+  { id: '8',  key: 'instructorControlTrainingFlow',   title: 'Instructor control & training flow',      description: '' },
+  { id: '9',  key: 'aircraftBehaviorMatch',           title: 'Aircraft behavior matches real flight characteristics', description: '' },
+  { id: '10', key: 'soundVibrationRealism',           title: 'Sound & vibration realism',               description: '' },
+  { id: '11', key: 'overallImmersionRealism',         title: 'Overall immersion & realism',             description: '' },
+];
+
+const joyrideRatingCategories: RatingCategory[] = [
+  { id: '1', key: 'overallExperience', title: 'Overall experience rating', description: '' },
+  { id: '2', key: 'visualQuality', title: 'Visual quality and graphics', description: '' },
+  { id: '3', key: 'motionExperience', title: 'Motion experience and realism', description: '' },
+  { id: '4', key: 'easeOfUse', title: 'Ease of use and controls', description: '' },
+  { id: '5', key: 'safetyFeeling', title: 'Feeling of safety and security', description: '' },
+  { id: '6', key: 'thrillLevel', title: 'Thrill and excitement level', description: '' },
+  { id: '7', key: 'wouldRecommend', title: 'How much would you recommend this to others?', description: '' },
+  { id: '8', key: 'overallSatisfaction', title: 'Overall satisfaction', description: '' },
 ];
 
 interface PersonalInfoField {
+  id?: string;
   key: string;
   label: string;
-  type: 'text' | 'email' | 'phone' | 'multiline' | 'autocomplete';
+  placeholder?: string;
+  type: 'text' | 'email' | 'phone' | 'multiline' | 'autocomplete' | 'yesno';
   required: boolean;
   options?: string[];
+  yesNoValues?: { yes: string; no: string };
 }
 
 const defaultPersonalInfoFields: PersonalInfoField[] = [
@@ -78,8 +68,96 @@ const defaultPersonalInfoFields: PersonalInfoField[] = [
   { key: 'contact', label: 'Contact Information', type: 'text', required: false },
 ];
 
+const joyridePersonalInfoFields: PersonalInfoField[] = [
+  {
+    id: '1',
+    key: 'fullName',
+    label: 'Full Name',
+    placeholder: 'Enter your full name',
+    required: true,
+    type: 'text'
+  },
+  {
+    id: '2',
+    key: 'age',
+    label: 'Age',
+    placeholder: 'Enter your age',
+    required: true,
+    type: 'text'
+  },
+  {
+    id: '3',
+    key: 'nationality',
+    label: 'Nationality',
+    placeholder: 'Select your nationality',
+    required: true,
+    type: 'text'
+  },
+  {
+    id: '4',
+    key: 'profession',
+    label: 'Profession / Occupation',
+    placeholder: 'Enter your profession or occupation',
+    required: true,
+    type: 'text'
+  },
+  {
+    id: '5',
+    key: 'simulatorCostEstimate',
+    label: 'Based on your time in the simulator, what’s your estimated value of the entire experience in millions of USD?',
+    placeholder: 'e.g., 2.5',
+    required: false,
+    type: 'text'
+  },
+  {
+    id: '6',
+    key: 'priceSuggestion',
+    label: 'How much would you pay for a 15-minute joyride?',
+    placeholder: 'e.g., 75 (USD)',
+    required: false,
+    type: 'text'
+  },
+  {
+    id: '7',
+    key: 'previousSimulatorExperience',
+    label: 'Previous Simulator Experience',
+    placeholder: '',
+    required: false,
+    type: 'yesno',
+    yesNoValues: { yes: 'Yes', no: 'No' }
+  },
+  {
+    id: '8',
+    key: 'amusementParkInterest',
+    label: 'Would you try this in an amusement park?',
+    placeholder: '',
+    required: false,
+    type: 'yesno',
+    yesNoValues: { yes: 'Yes', no: 'No' }
+  },
+  {
+    id: '9',
+    key: 'contact',
+    label: 'Contact Information',
+    placeholder: 'Enter your email or phone',
+    required: false,
+    type: 'email'
+  }
+];
+
+const joyrideDetectionKeys = ['priceSuggestion', 'simulatorCostEstimate', 'age', 'amusementParkInterest'];
+
+const detectJoyrideFromPersonalInfo = (info?: { [key: string]: string }) => {
+  if (!info) return false;
+  return joyrideDetectionKeys.some((key) => {
+    const value = info[key];
+    return typeof value === 'string' && value.trim().length > 0;
+  });
+};
+
 interface Review {
   id: string;
+  reviewType?: 'professional' | 'joyride'; // Review type
   // Legacy fields for backward compatibility
   fullName?: string;
   nationality?: string;
@@ -94,6 +172,7 @@ interface Review {
   handwrittenComment?: string;
   photos: string[];
   submittedAt: string;
+  timestamp?: number; // Fallback for older reviews
 }
 
 function ReviewDetailScreen() {
@@ -105,32 +184,62 @@ function ReviewDetailScreen() {
   const [showImageModal, setShowImageModal] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const { isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   
   // Memoized styles based on theme
   const styles = useMemo(() => createStyles(isDark), [isDark]);
 
-  useEffect(() => {
-    loadRatingCategories();
-    loadPersonalInfoFields();
-  }, []);
-
+  // Load review data and appropriate questions/personal info fields based on review type
   useEffect(() => {
     if (params.reviewData) {
       try {
         const reviewData = JSON.parse(params.reviewData as string);
-        setReview(reviewData);
+        const normalizedType: 'professional' | 'joyride' =
+          reviewData.reviewType === 'joyride' || detectJoyrideFromPersonalInfo(reviewData.personalInfo)
+            ? 'joyride'
+            : 'professional';
+        const normalizedReview = { ...reviewData, reviewType: normalizedType };
+        setReview(normalizedReview);
+        // Load appropriate questions and personal info fields based on review type
+        const reviewType = normalizedType;
+        if (reviewType === 'joyride') {
+          // For joyride reviews, use joyride questions and personal info fields directly
+          setRatingCategories(joyrideRatingCategories);
+          setPersonalInfoFields(joyridePersonalInfoFields);
+        } else {
+          // For professional reviews, load from admin settings
+          loadRatingCategories();
+          loadPersonalInfoFields();
+        }
       } catch (error) {
         console.error('Error parsing review data:', error);
       }
+    } else {
+      // If no review data, load professional defaults
+      loadRatingCategories();
+      loadPersonalInfoFields();
     }
   }, [params.reviewData]);
 
   const loadRatingCategories = async () => {
     try {
-      const savedCategories = await AsyncStorage.getItem('ratingCategories');
+      // Only load for professional reviews
+      const savedCategories = await AsyncStorage.getItem('admin_rating_categories');
       if (savedCategories) {
         const categories = JSON.parse(savedCategories);
+        const expectedKeys = new Set(defaultRatingCategories.map((c: RatingCategory) => c.key));
+        const isMismatch = !Array.isArray(categories) || categories.length !== defaultRatingCategories.length || categories.some((c: any) => !expectedKeys.has(c.key));
+        if (isMismatch) {
+          await AsyncStorage.setItem('admin_rating_categories', JSON.stringify(defaultRatingCategories));
+          await AsyncStorage.setItem('ratingCategories', JSON.stringify(defaultRatingCategories));
+          setRatingCategories(defaultRatingCategories);
+        } else {
         setRatingCategories(categories);
+        }
+      } else {
+        await AsyncStorage.setItem('admin_rating_categories', JSON.stringify(defaultRatingCategories));
+        await AsyncStorage.setItem('ratingCategories', JSON.stringify(defaultRatingCategories));
+        setRatingCategories(defaultRatingCategories);
       }
     } catch (error) {
       console.error('Error loading rating categories:', error);
@@ -139,23 +248,48 @@ function ReviewDetailScreen() {
 
   const loadPersonalInfoFields = async () => {
     try {
-      const savedFields = await AsyncStorage.getItem('personalInfoFields');
+      // Load professional personal info fields from admin settings
+      const savedFields = await AsyncStorage.getItem('admin_personal_info_fields');
       if (savedFields) {
         const fields = JSON.parse(savedFields);
         setPersonalInfoFields(fields);
+      } else {
+        // Use defaults if no saved fields
+        setPersonalInfoFields(defaultPersonalInfoFields);
       }
     } catch (error) {
       console.error('Error loading personal info fields:', error);
+      // Fallback to defaults on error
+      setPersonalInfoFields(defaultPersonalInfoFields);
     }
   };
 
   const getPersonalInfoValue = (key: string): string => {
     if (!review) return '';
-    // Use dynamic structure from storage (admin keys), with fallbacks
-    const fromDynamic = (review.personalInfo && (review.personalInfo[key] ||
-      (key === 'fullName' ? review.personalInfo['name'] : undefined) ||
-      (key === 'contact' ? review.personalInfo['email'] : undefined))) || '';
-    if (fromDynamic) return fromDynamic;
+    
+    // Support key variants
+    const snakeKey = key
+      .replace(/([a-z])([A-Z])/g, '$1_$2')
+      .toLowerCase();
+
+    // Check multiple possible sources for robustness
+    const camelObj = review.personalInfo as any;
+    const snakeObj = (review as any).personal_info as any;
+
+    const dynamicFromCamel = camelObj && (
+      (camelObj[key] ?? camelObj[snakeKey]) ??
+      ((key === 'fullName' ? (camelObj['name'] ?? camelObj['full_name']) : undefined) ||
+       (key === 'contact' ? (camelObj['email'] ?? camelObj['contact_email']) : undefined))
+    );
+
+    const dynamicFromSnake = snakeObj && (
+      (snakeObj[key] ?? snakeObj[snakeKey]) ??
+      ((key === 'fullName' ? (snakeObj['name'] ?? snakeObj['full_name']) : undefined) ||
+       (key === 'contact' ? (snakeObj['email'] ?? snakeObj['contact_email']) : undefined))
+    );
+
+    const fromDynamic = (dynamicFromCamel || dynamicFromSnake || '') as string;
+    if (fromDynamic) return String(fromDynamic);
 
     // Legacy fallbacks
     switch (key) {
@@ -165,8 +299,13 @@ function ReviewDetailScreen() {
         return review.nationality || '';
       case 'profession':
         return review.profession || '';
+      case 'age':
+        return (camelObj && camelObj.age) || '';
+      case 'willingnessToPay':
+        return ((camelObj && (camelObj.willingnessToPay ?? camelObj.willingness_to_pay)) ||
+               (snakeObj && (snakeObj.willingnessToPay ?? snakeObj.willingness_to_pay)) || '');
       case 'previousSimulatorExperience':
-        return review.previousSimulatorExperience || '';
+        return review.previousSimulatorExperience || (camelObj && camelObj.previousSimulatorExperience) || '';
       case 'previousFlyingExperience':
         return review.previousFlyingExperience || '';
       case 'contact':
@@ -220,7 +359,7 @@ function ReviewDetailScreen() {
       // Convert review data to the format expected by PDF generator
       const reviewData: ReviewData = {
         id: review.id,
-        submittedAt: review.submittedAt || new Date(review.timestamp).toLocaleString(),
+        submittedAt: review.submittedAt || (review.timestamp ? new Date(review.timestamp).toLocaleString() : new Date().toLocaleString()),
         personalInfo: mappedPersonalInfo,
         ratings: review.ratings,
         textComment: review.textComment,
@@ -228,10 +367,12 @@ function ReviewDetailScreen() {
         photos: review.photos,
       };
 
-      // Generate PDF
-      const pdfUri = await generateReviewPDF(reviewData, personalInfoFields, ratingCategories);
+      // Build HTML and preview via print dialog first
+      const html = await buildReviewHTML(reviewData as any, personalInfoFields, ratingCategories);
+      await previewHTMLWithPrintDialog(html);
       
-      // Preview and save PDF
+      // Also generate a file for sharing/saving
+      const pdfUri = await generateReviewPDF(reviewData as any, personalInfoFields, ratingCategories);
       await previewAndSavePDF(pdfUri);
       
       Alert.alert('Success', 'PDF generated successfully!');
@@ -285,21 +426,74 @@ function ReviewDetailScreen() {
             <ThemedText type="subtitle" style={styles.sectionTitle}>
               Personal Information
             </ThemedText>
-            {personalInfoFields.map((field) => {
-              const value = getPersonalInfoValue(field.key);
-              if (!value) return null;
-
+            {(() => {
+              const renderedKeys = new Set<string>();
               return (
-                <View key={field.key} style={styles.infoRow}>
+                <>
+                  {personalInfoFields.map((field, index) => {
+                    if (review?.reviewType === 'joyride' && (field.key === 'priceSuggestion' || field.key === 'simulatorCostEstimate')) {
+                      return null;
+                    }
+                    const value = getPersonalInfoValue(field.key);
+                    if (!value || value.trim() === '') return null;
+
+                    renderedKeys.add(field.key);
+
+                    return (
+                      <View key={field.key || `field-${index}`} style={styles.infoRow}>
                   <ThemedText style={styles.label}>{field.label}:</ThemedText>
                   {field.key === 'nationality' || field.key === 'profession' ? (
                     <Chip style={styles.chip}>{value}</Chip>
+                        ) : field.key === 'previousSimulatorExperience' && review?.reviewType === 'joyride' ? (
+                          <Chip 
+                            mode="outlined" 
+                            style={[styles.chip, (value?.toLowerCase() === 'yes') ? styles.chipYes : styles.chipNo]}
+                          >
+                            {value}
+                          </Chip>
                   ) : (
                     <ThemedText style={styles.value}>{value}</ThemedText>
                   )}
                 </View>
               );
             })}
+                  
+                  {review?.reviewType === 'joyride' && (
+                    <>
+                      {(() => {
+                        const rawEstimate = getPersonalInfoValue('simulatorCostEstimate');
+                        const estimateValue = typeof rawEstimate === 'string' ? rawEstimate.trim() : '';
+                        if (!estimateValue) return null;
+                        return (
+                          <View key="simulatorCostEstimate" style={styles.infoRow}>
+                            <ThemedText style={styles.label}>
+                              Based on your time in the simulator, what’s your estimated value of the entire experience in millions of USD?
+                            </ThemedText>
+                            <Chip style={styles.chip}>
+                              {estimateValue.toLowerCase().endsWith('m') ? estimateValue : `${estimateValue}M`}
+                            </Chip>
+                          </View>
+                        );
+                      })()}
+                      
+                      {(() => {
+                        const rawPrice = getPersonalInfoValue('priceSuggestion');
+                        const priceValue = typeof rawPrice === 'string' ? rawPrice.trim() : '';
+                        if (!priceValue) return null;
+                        return (
+                          <View key="priceSuggestion" style={styles.infoRow}>
+                            <ThemedText style={styles.label}>How much would you pay for a 15-minute joyride?</ThemedText>
+                            <Chip style={styles.chip}>
+                              {priceValue.startsWith('$') ? priceValue : `$${priceValue}`}
+                            </Chip>
+                          </View>
+                        );
+                      })()}
+                    </>
+                  )}
+                </>
+              );
+            })()}
           </Card.Content>
         </Card>
 
@@ -331,8 +525,8 @@ function ReviewDetailScreen() {
             <ThemedText type="subtitle" style={styles.sectionTitle}>
               Detailed Ratings
             </ThemedText>
-            {ratingCategories.map((category) => (
-              <View key={category.key} style={styles.ratingRow}>
+            {ratingCategories.map((category, index) => (
+              <View key={category.key || category.id || `category-${index}`} style={styles.ratingRow}>
                 <View style={styles.ratingInfo}>
                   <ThemedText style={styles.ratingTitle}>{category.title}</ThemedText>
                   <ThemedText style={styles.ratingDescription}>{category.description}</ThemedText>
@@ -421,7 +615,7 @@ function ReviewDetailScreen() {
           </Card>
         )}
 
-        <View style={styles.buttonContainer}>
+        <View style={[styles.buttonContainer, { paddingBottom: Math.max(hp('1.5%'), insets.bottom) }]}>
           <Button
             mode="contained"
             onPress={handleGeneratePDF}
@@ -517,12 +711,14 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     textAlign: 'center',
     flexShrink: 1,
     paddingHorizontal: wp('2%'),
+    paddingVertical: hp('1%'),
   },
   submittedDate: {
     fontSize: wp('3.5%'),
     textAlign: 'center',
     opacity: 0.6,
     marginBottom: hp('2%'),
+    paddingVertical: rs(4),
   },
   section: {
     marginBottom: hp('2%'),
@@ -538,6 +734,8 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: hp('1.5%'),
     color: '#1976d2',
+    paddingVertical: rs(6),
+    lineHeight: wp('6%'),
   },
   infoRow: {
     flexDirection: 'row',
@@ -550,13 +748,23 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     fontWeight: '600',
     marginRight: wp('2%'),
     minWidth: wp('30%'),
+    paddingVertical: rs(4),
+    lineHeight: wp('3%'),
   },
   value: {
     fontSize: wp('4%'),
     flex: 1,
+    paddingBottom: rs(3),
+    lineHeight: wp('5%'),
   },
   chip: {
     backgroundColor: isDark ? '#1E3A5F' : '#e3f2fd',
+  },
+  chipYes: {
+    backgroundColor: isDark ? '#14532D' : '#D1FAE5',
+  },
+  chipNo: {
+    backgroundColor: isDark ? '#7C2D12' : '#FEE2E2',
   },
   ratingRow: {
     flexDirection: 'row',
@@ -568,16 +776,19 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     fontSize: wp('4%'),
     fontWeight: '600',
     flex: 1,
+    paddingVertical: rs(4),
   },
   ratingValue: {
     fontSize: wp('4%'),
     color: '#ff9800',
+    paddingBottom: rs(3),
   },
   comments: {
     fontSize: wp('4%'),
     fontStyle: 'italic',
     lineHeight: wp('6%'),
     padding: wp('3%'),
+    paddingBottom: wp('4%'),
     backgroundColor: '#f5f5f5',
     borderRadius: wp('2%'),
     borderLeftWidth: 3,
@@ -624,6 +835,7 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     marginBottom: hp('1%'),
     textAlign: 'center',
     flexShrink: 1,
+    paddingVertical: rs(6),
   },
   ratingInfo: {
     flex: 1,
@@ -631,12 +843,16 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
   ratingTitle: {
     fontSize: wp('4%'),
     fontWeight: '600',
+    lineHeight: wp('5.4%'),
     marginBottom: hp('0.5%'),
+    paddingVertical: rs(4),
   },
   ratingDescription: {
     fontSize: wp('3.5%'),
+    lineHeight: wp('4.7%'),
     opacity: 0.7,
     marginBottom: hp('1%'),
+    paddingVertical: rs(3),
   },
   ratingDisplay: {
     flexDirection: 'row',
@@ -647,6 +863,7 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     fontSize: wp('4%'),
     lineHeight: wp('6%'),
     padding: wp('3%'),
+    paddingBottom: wp('4%'),
     backgroundColor: isDark ? '#3A3A3A' : '#f5f5f5', // Lighter background in dark mode for better visibility
     borderRadius: wp('2%'),
     borderLeftWidth: 3,
@@ -714,5 +931,6 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     fontSize: wp('6%'),
     fontWeight: 'bold',
     color: '#000',
+    paddingBottom: rs(3),
   },
 });

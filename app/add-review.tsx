@@ -3,38 +3,41 @@ import { ThemedView } from '@/components/themed-view';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useThemeColor } from '@/hooks/use-theme-color';
-import { Picker } from '@react-native-picker/picker';
-import { useCameraPermissions } from 'expo-camera';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
+import * as MediaLibrary from 'expo-media-library';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-    Alert,
-    BackHandler,
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View
+  Alert,
+  BackHandler,
+  Image,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import {
-    Button,
-    Card,
-    Dialog,
-    IconButton,
-    Paragraph,
-    Portal,
-    SegmentedButtons,
-    TextInput
+  Button,
+  Card,
+  Dialog,
+  IconButton,
+  Paragraph,
+  Portal,
+  SegmentedButtons,
+  TextInput
 } from 'react-native-paper';
 import StarRating from 'react-native-star-rating-widget';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import OptimizedImage from '@/components/OptimizedImage';
+import StylusCanvas from '@/components/StylusCanvas';
 import { usePerformance } from '@/hooks/usePerformance';
-import SignatureCanvas from 'react-native-signature-canvas';
+import * as FileSystem from 'expo-file-system/legacy';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { deleteImagePermanently, initializeImageStorage, saveImagePermanently } from '../utils/imageStorage';
 import { getDevicePadding, getPhotoGridSize, hp, isTablet, minTouchTarget, rf, rs, wp } from '../utils/responsive';
 
@@ -183,7 +186,7 @@ const COUNTRIES: Country[] = [
   { name: 'Mauritania', flag: '🇲🇷' },
   { name: 'Mauritius', flag: '🇲🇺' },
   { name: 'Mexico', flag: '🇲🇽' },
-  { name: 'Micronesia', flag: '🇫���2' },
+  { name: 'Micronesia', flag: '🇫🇲2' },
   { name: 'Moldova', flag: '🇲🇩' },
   { name: 'Monaco', flag: '🇲🇨' },
   { name: 'Mongolia', flag: '🇲🇳' },
@@ -230,13 +233,13 @@ const COUNTRIES: Country[] = [
   { name: 'Solomon Islands', flag: '🇸🇧' },
   { name: 'Somalia', flag: '🇸🇴' },
   { name: 'South Africa', flag: '🇿🇦' },
-  { name: 'South Sudan', flag: '🇸���8' },
-  { name: 'Spain', flag: '🇪���8' },
+  { name: 'South Sudan', flag: '🇸🇸8' },
+  { name: 'Spain', flag: '🇪🇸8' },
   { name: 'Sri Lanka', flag: '🇱🇰' },
   { name: 'Sudan', flag: '🇸🇩' },
   { name: 'Suriname', flag: '🇸🇷' },
   { name: 'Eswatini', flag: '🇸🇿' },
-  { name: 'Sweden', flag: '🇸���5' },
+  { name: 'Sweden', flag: '🇸🇪5' },
   { name: 'Switzerland', flag: '🇨🇭' },
   { name: 'Syria', flag: '🇸🇾' },
   { name: 'Taiwan', flag: '🇹🇼' },
@@ -266,57 +269,105 @@ const COUNTRIES: Country[] = [
   { name: 'Other', flag: '🌍' }
 ];
 
-const PROFESSIONS = [
-  'Select Profession',
-  'Commercial Pilot', 'Private Pilot', 'Flight Instructor', 'Air Traffic Controller',
-  'Aircraft Mechanic', 'Aerospace Engineer', 'Flight Attendant', 'Airport Manager',
-  'Aviation Safety Inspector', 'Airline Operations Manager', 'Aircraft Dispatcher',
-  'Avionics Technician', 'Flight Test Engineer', 'Aviation Meteorologist',
-  'Student Pilot', 'Military Pilot', 'Helicopter Pilot', 'Cargo Pilot',
-  'Charter Pilot', 'Corporate Pilot', 'Flight Simulator Instructor',
-  'Aviation Consultant', 'Aircraft Sales Representative', 'Aviation Lawyer',
-  'Aviation Insurance Specialist', 'Airport Security Officer', 'Ground Crew',
-  'Baggage Handler', 'Ramp Agent', 'Aircraft Cleaner', 'Fuel Technician',
-  'Aviation Photographer', 'Aviation Journalist', 'Aviation Enthusiast',
-  'Retired Aviation Professional', 'Other'
+const defaultRatingCategories: RatingCategory[] = [
+  { id: '1',  key: 'cockpitRealismLayout',            title: 'Cockpit realism & layout',               description: '' },
+  { id: '2',  key: 'visualQualityFOV',                title: 'Visual quality & field of view',         description: '' },
+  { id: '3',  key: 'controlLoadingRealism',           title: 'Control loading realism (force feedback)', description: '' },
+  { id: '4',  key: 'motionFidelity',                  title: 'Motion fidelity (6-DOF cues & response)', description: '' },
+  { id: '5',  key: 'aerodynamicResponse',             title: 'Aerodynamic response & flight feel',      description: '' },
+  { id: '6',  key: 'instrumentSwitchFunctionality',   title: 'Instrument & switch functionality',       description: '' },
+  { id: '7',  key: 'visualMotionSync',                title: 'Visual-motion synchronization',           description: '' },
+  { id: '8',  key: 'instructorControlTrainingFlow',   title: 'Instructor control & training flow',      description: '' },
+  { id: '9',  key: 'aircraftBehaviorMatch',           title: 'Aircraft behavior matches real flight characteristics', description: '' },
+  { id: '10', key: 'soundVibrationRealism',           title: 'Sound & vibration realism',               description: '' },
+  { id: '11', key: 'overallImmersionRealism',         title: 'Overall immersion & realism',             description: '' },
 ];
 
-const defaultRatingCategories: RatingCategory[] = [
+const joyrideRatingCategories: RatingCategory[] = [
+  { id: '1',  key: 'overallExperience',               title: 'Overall experience rating',               description: '' },
+  { id: '2',  key: 'visualQuality',                   title: 'Visual quality and graphics',             description: '' },
+  { id: '3',  key: 'motionExperience',                title: 'Motion experience and realism',             description: '' },
+  { id: '4',  key: 'easeOfUse',                       title: 'Ease of use and controls',                description: '' },
+  { id: '5',  key: 'safetyFeeling',                   title: 'Feeling of safety and security',          description: '' },
+  { id: '6',  key: 'thrillLevel',                     title: 'Thrill and excitement level',              description: '' },
+  { id: '7',  key: 'wouldRecommend',                  title: 'How much would you recommend this to others?',      description: '' },
+  { id: '8',  key: 'overallSatisfaction',             title: 'Overall satisfaction',                    description: '' },
+];
+
+const joyridePersonalInfoFields: PersonalInfoField[] = [
   {
     id: '1',
-    key: 'generalFlying',
-    title: 'General Flying / Handling Characteristics',
-    description: 'How realistic are the aircraft controls and flight dynamics?'
+    key: 'fullName',
+    label: 'Full Name',
+    placeholder: 'Enter your full name',
+    required: true,
+    type: 'text'
   },
   {
     id: '2',
-    key: 'emergencyProcedures',
-    title: 'Emergency Procedures',
-    description: 'How well does the simulator handle emergency scenarios?'
+    key: 'age',
+    label: 'Age',
+    placeholder: 'Enter your age',
+    required: true,
+    type: 'text'
   },
   {
     id: '3',
-    key: 'instrumentFlying',
-    title: 'Instrument Flying System Integration',
-    description: 'How accurate and functional are the aircraft instruments?'
+    key: 'nationality',
+    label: 'Nationality',
+    placeholder: 'Select your nationality',
+    required: true,
+    type: 'text'
   },
   {
     id: '4',
-    key: 'visualEffects',
-    title: 'Visual Effects Take-Off & Landing',
-    description: 'How realistic are the visual effects during critical phases?'
+    key: 'profession',
+    label: 'Profession / Occupation',
+    placeholder: 'Enter your profession or occupation',
+    required: true,
+    type: 'text'
   },
   {
     id: '5',
-    key: 'fidelityRealism',
-    title: 'Characteristics Fidelity & Realism',
-    description: 'Overall realism and attention to detail in the simulation'
+    key: 'simulatorCostEstimate',
+    label: 'Based on your time in the simulator, what’s your estimated value of the entire experience in millions of USD?',
+    placeholder: 'e.g., 2.5',
+    required: false,
+    type: 'text'
   },
   {
     id: '6',
-    key: 'simulatorPerformance',
-    title: 'Simulator Performance',
-    description: 'Technical performance, frame rate, and system stability'
+    key: 'priceSuggestion',
+    label: 'How much would you pay for a 15-minute joyride?',
+    placeholder: 'e.g., 75 (USD)',
+    required: false,
+    type: 'text'
+  },
+  {
+    id: '7',
+    key: 'previousSimulatorExperience',
+    label: 'Previous Simulator Experience',
+    placeholder: '',
+    required: false,
+    type: 'yesno',
+    yesNoValues: { yes: 'Yes', no: 'No' }
+  },
+  {
+    id: '8',
+    key: 'amusementParkInterest',
+    label: 'Would you try this in an amusement park?',
+    placeholder: '',
+    required: false,
+    type: 'yesno',
+    yesNoValues: { yes: 'Yes', no: 'No' }
+  },
+  {
+    id: '9',
+    key: 'contact',
+    label: 'Contact Information',
+    placeholder: 'Enter your email or phone',
+    required: false,
+    type: 'email'
   }
 ];
 
@@ -365,15 +416,56 @@ const defaultPersonalInfoFields: PersonalInfoField[] = [
     id: '6',
     key: 'contact',
     label: 'Contact Information',
-    placeholder: 'Enter your email or phone',
+    placeholder: 'Enter your email or phone (Optional)',
     required: false,
     type: 'email'
   }
 ];
 
+const createInitialRatings = (categories: RatingCategory[]) => {
+  const ratings: { [key: string]: number } = {};
+  categories.forEach(category => {
+    ratings[category.key] = 0;
+  });
+  return ratings;
+};
+
+const createInitialPersonalInfo = (fields: PersonalInfoField[]) => {
+  const personalInfo: { [key: string]: string } = {};
+  fields.forEach(field => {
+    personalInfo[field.key] = '';
+  });
+  return personalInfo;
+};
+
 function AddReviewScreen() {
   const params = useLocalSearchParams();
+  const getFirstParamValue = (value: string | string[] | undefined): string | undefined => {
+    if (Array.isArray(value)) {
+      return value[0];
+    }
+    return value;
+  };
+  const rawTypeParam =
+    getFirstParamValue(params.type as string | string[] | undefined) ??
+    getFirstParamValue(params.reviewType as string | string[] | undefined);
+  const rawEditData = getFirstParamValue(params.editData as string | string[] | undefined);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  
+  // Determine review type from params
+  const reviewType = (rawTypeParam === 'joyride' ? 'joyride' : 'professional') as 'professional' | 'joyride';
+
+  const parsedEditData = useMemo<FormData | null>(() => {
+    if (!rawEditData) {
+      return null;
+    }
+    try {
+      return JSON.parse(rawEditData as string) as FormData;
+    } catch (error) {
+      console.error('Error parsing edit data:', error);
+      return null;
+    }
+  }, [rawEditData]);
   
   // Theme hooks
   const { isDark } = useTheme();
@@ -392,53 +484,102 @@ function AddReviewScreen() {
     [backgroundColor, textColor, borderColor, cardBackgroundColor, inputBackgroundColor]
   );
   
-  // Rating categories state
-  const [ratingCategories, setRatingCategories] = useState<RatingCategory[]>(defaultRatingCategories);
+  // Rating categories state - initialize based on review type
+  const [ratingCategories, setRatingCategories] = useState<RatingCategory[]>(
+    reviewType === 'joyride' ? joyrideRatingCategories : defaultRatingCategories
+  );
   
-  // Personal info fields state
-  const [personalInfoFields, setPersonalInfoFields] = useState<PersonalInfoField[]>(defaultPersonalInfoFields);
+  // Personal info fields state - initialize based on review type
+  const [personalInfoFields, setPersonalInfoFields] = useState<PersonalInfoField[]>(
+    reviewType === 'joyride' ? joyridePersonalInfoFields : defaultPersonalInfoFields
+  );
   
-  // Initialize ratings based on current categories
-  const initializeRatings = (categories: RatingCategory[]) => {
-    const ratings: { [key: string]: number } = {};
-    categories.forEach(category => {
-      ratings[category.key] = 0;
-    });
-    return ratings;
-  };
-  
-  // Initialize personal info based on current fields
-  const initializePersonalInfo = (fields: PersonalInfoField[]) => {
-    const personalInfo: { [key: string]: string } = {};
-    fields.forEach(field => {
-      personalInfo[field.key] = '';
-    });
-    return personalInfo;
-  };
-  
-  const [formData, setFormData] = useState<FormData>({
-    personalInfo: initializePersonalInfo(defaultPersonalInfoFields),
-    ratings: initializeRatings(defaultRatingCategories),
+  const initialFormData = useMemo<FormData>(() => {
+    const basePersonalFields = reviewType === 'joyride' ? joyridePersonalInfoFields : defaultPersonalInfoFields;
+    const baseRatingCategories = reviewType === 'joyride' ? joyrideRatingCategories : defaultRatingCategories;
+
+    if (parsedEditData) {
+      return {
+        personalInfo: {
+          ...createInitialPersonalInfo(basePersonalFields),
+          ...(parsedEditData.personalInfo ?? {}),
+        },
+        ratings: {
+          ...createInitialRatings(baseRatingCategories),
+          ...(parsedEditData.ratings ?? {}),
+        },
+        textComment: parsedEditData.textComment ?? '',
+        handwrittenComment: parsedEditData.handwrittenComment ?? '',
+        photos: Array.isArray(parsedEditData.photos) ? parsedEditData.photos : [],
+      };
+    }
+
+    return {
+      personalInfo: createInitialPersonalInfo(basePersonalFields),
+      ratings: createInitialRatings(baseRatingCategories),
     textComment: '',
     handwrittenComment: '',
     photos: [],
-  });
+    };
+  }, [parsedEditData, reviewType]);
 
-  // Load rating categories from AsyncStorage
+  const [formData, setFormData] = useState<FormData>(() => initialFormData);
+
+  useEffect(() => {
+    if (parsedEditData) {
+      setFormData(initialFormData);
+    }
+  }, [parsedEditData, initialFormData]);
+
+  // Load rating categories from AsyncStorage (only for professional reviews)
   useEffect(() => {
     const loadRatingCategories = async () => {
       try {
         // Initialize image storage system
         await initializeImageStorage();
         
+        // For joyride reviews, use joyride questions directly
+        if (reviewType === 'joyride') {
+          setRatingCategories(joyrideRatingCategories);
+          setFormData(prev => ({
+            ...prev,
+            ratings: {
+              ...createInitialRatings(joyrideRatingCategories),
+              ...prev.ratings,
+            }
+          }));
+          return;
+        }
+        
+        // For professional reviews, load from admin settings
         const saved = await AsyncStorage.getItem('admin_rating_categories');
         if (saved) {
           const categories = JSON.parse(saved);
-          setRatingCategories(categories);
-          // Update formData ratings to match loaded categories
+          const expectedKeys = new Set(defaultRatingCategories.map(c => c.key));
+          const isMismatch = !Array.isArray(categories) || categories.length !== defaultRatingCategories.length || categories.some((c: any) => !expectedKeys.has(c.key));
+          const finalCategories = isMismatch ? defaultRatingCategories : categories;
+          if (isMismatch) {
+            await AsyncStorage.setItem('admin_rating_categories', JSON.stringify(defaultRatingCategories));
+            await AsyncStorage.setItem('ratingCategories', JSON.stringify(defaultRatingCategories));
+          }
+          setRatingCategories(finalCategories);
           setFormData(prev => ({
             ...prev,
-            ratings: initializeRatings(categories)
+            ratings: {
+              ...createInitialRatings(finalCategories),
+              ...prev.ratings,
+            }
+          }));
+        } else {
+          await AsyncStorage.setItem('admin_rating_categories', JSON.stringify(defaultRatingCategories));
+          await AsyncStorage.setItem('ratingCategories', JSON.stringify(defaultRatingCategories));
+          setRatingCategories(defaultRatingCategories);
+          setFormData(prev => ({
+            ...prev,
+            ratings: {
+              ...createInitialRatings(defaultRatingCategories),
+              ...prev.ratings,
+            }
           }));
         }
       } catch (error) {
@@ -447,12 +588,26 @@ function AddReviewScreen() {
     };
     
     loadRatingCategories();
-  }, []);
+  }, [reviewType]);
 
-  // Load personal info fields from AsyncStorage
+  // Load personal info fields from AsyncStorage (only for professional reviews)
   useEffect(() => {
     const loadPersonalInfoFields = async () => {
       try {
+        // For joyride reviews, use joyride fields directly
+        if (reviewType === 'joyride') {
+          setPersonalInfoFields(joyridePersonalInfoFields);
+          setFormData(prev => ({
+            ...prev,
+            personalInfo: {
+              ...createInitialPersonalInfo(joyridePersonalInfoFields),
+              ...prev.personalInfo,
+            }
+          }));
+          return;
+        }
+        
+        // For professional reviews, load from admin settings
         const saved = await AsyncStorage.getItem('admin_personal_info_fields');
         if (saved) {
           const fields = JSON.parse(saved);
@@ -460,7 +615,10 @@ function AddReviewScreen() {
           // Update formData personal info to match loaded fields
           setFormData(prev => ({
             ...prev,
-            personalInfo: initializePersonalInfo(fields)
+            personalInfo: {
+              ...createInitialPersonalInfo(fields),
+              ...prev.personalInfo,
+            }
           }));
         }
       } catch (error) {
@@ -469,27 +627,7 @@ function AddReviewScreen() {
     };
     
     loadPersonalInfoFields();
-  }, []);
-
-  // Handle edit data when returning from preview
-  useEffect(() => {
-    if (params.editData) {
-      try {
-        const editData = JSON.parse(params.editData as string);
-        setFormData(editData);
-        
-        // Initialize Yes/No state variables based on existing data
-        if (editData.personalInfo?.previousSimulatorExperience) {
-          setHasSimulatorExperience('yes');
-        }
-        if (editData.personalInfo?.previousFlyingExperience) {
-          setHasFlyingExperience('yes');
-        }
-      } catch (error) {
-        console.error('Error parsing edit data:', error);
-      }
-    }
-  }, [params.editData]);
+  }, [reviewType]);
 
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showImageModal, setShowImageModal] = useState(false);
@@ -497,19 +635,52 @@ function AddReviewScreen() {
   const [validationMessage, setValidationMessage] = useState('');
   
   // New state variables for enhanced components
-  const [professionQuery, setProfessionQuery] = useState('');
-  const [filteredProfessions, setFilteredProfessions] = useState<string[]>([]);
   const [nationalityQuery, setNationalityQuery] = useState('');
   const [filteredNationalities, setFilteredNationalities] = useState<Country[]>([]);
+  const [showNationalitySuggestions, setShowNationalitySuggestions] = useState(false);
   
   // Handwriting state variables
   const [commentMode, setCommentMode] = useState<'text' | 'handwriting'>('text');
   const [showHandwritingModal, setShowHandwritingModal] = useState(false);
-  const signatureRef = useRef<any>(null);
+  const [showCameraModal, setShowCameraModal] = useState(false);
+  const cameraRef = useRef<any>(null);
+  
+  const deriveYesNoState = (value?: string): 'yes' | 'no' | '' => {
+    if (!value || typeof value !== 'string') {
+      return '';
+    }
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'yes' || normalized === 'no') {
+      return normalized as 'yes' | 'no';
+    }
+    return '';
+  };
   
   // Experience fields Yes/No state variables
-  const [hasSimulatorExperience, setHasSimulatorExperience] = useState<'yes' | 'no' | ''>('');
-  const [hasFlyingExperience, setHasFlyingExperience] = useState<'yes' | 'no' | ''>('');
+  const [hasSimulatorExperience, setHasSimulatorExperience] = useState<'yes' | 'no' | ''>(() =>
+    deriveYesNoState(initialFormData.personalInfo?.previousSimulatorExperience)
+  );
+  const [hasFlyingExperience, setHasFlyingExperience] = useState<'yes' | 'no' | ''>(() =>
+    deriveYesNoState(initialFormData.personalInfo?.previousFlyingExperience)
+  );
+  const simulatorExperienceValue = formData.personalInfo?.previousSimulatorExperience;
+  const flyingExperienceValue = formData.personalInfo?.previousFlyingExperience;
+
+  useEffect(() => {
+    const nextState = deriveYesNoState(simulatorExperienceValue);
+    if (nextState !== hasSimulatorExperience) {
+      setHasSimulatorExperience(nextState);
+    }
+  }, [simulatorExperienceValue, hasSimulatorExperience]);
+
+  useEffect(() => {
+    const nextState = deriveYesNoState(flyingExperienceValue);
+    if (nextState !== hasFlyingExperience) {
+      setHasFlyingExperience(nextState);
+    }
+  }, [flyingExperienceValue, hasFlyingExperience]);
+
+  const insets = useSafeAreaInsets();
 
   // Handle hardware back button to always navigate to home page
   useFocusEffect(
@@ -576,7 +747,7 @@ function AddReviewScreen() {
     }
     
     // Check if all ratings are provided
-    const hasAllRatings = Object.values(formData.ratings).every(rating => rating > 0);
+    const hasAllRatings = Object.values(formData.ratings).every((rating: number) => rating > 0);
     return hasAllRatings;
   }, [formData.personalInfo, formData.ratings, personalInfoFields]);
 
@@ -593,7 +764,7 @@ function AddReviewScreen() {
       }
     }
     
-    const hasAllRatings = Object.values(formData.ratings).every(rating => rating > 0);
+    const hasAllRatings = Object.values(formData.ratings).every((rating: number) => rating > 0);
     if (!hasAllRatings) {
       setValidationMessage('Please provide ratings for all categories');
       setShowValidationDialog(true);
@@ -603,23 +774,6 @@ function AddReviewScreen() {
     return true;
   }, [formData.personalInfo, formData.ratings, personalInfoFields]);
 
-  // Filter professions based on query - optimized with useCallback
-  const filterProfessions = useCallback((query: string) => {
-    if (query === '') {
-      setFilteredProfessions([]);
-      return;
-    }
-    
-    const filtered = PROFESSIONS
-      .filter(profession => profession !== 'Select Profession')
-      .filter(profession => 
-        profession.toLowerCase().includes(query.toLowerCase())
-      )
-      .slice(0, 5); // Limit to 5 suggestions
-    
-    setFilteredProfessions(filtered);
-  }, []);
-
   // Filter nationalities based on query - optimized with useCallback
   const filterNationalities = useCallback((query: string) => {
     if (query === '') {
@@ -628,7 +782,7 @@ function AddReviewScreen() {
     }
     
     const filtered = COUNTRIES
-      .filter(country => country.name !== 'Select Nationality')
+      .filter(country => country.name !== 'Select Country')
       .filter(country => 
         country.name.toLowerCase().includes(query.toLowerCase())
       )
@@ -637,77 +791,78 @@ function AddReviewScreen() {
     setFilteredNationalities(filtered);
   }, []);
 
-  // Handle profession input change - optimized with useCallback
-  const handleProfessionChange = useCallback((text: string) => {
-    setProfessionQuery(text);
-    updatePersonalInfo('profession', text);
-    filterProfessions(text);
-  }, [filterProfessions]);
-
   // Handle nationality input change - optimized with useCallback
   const handleNationalityChange = useCallback((text: string) => {
     setNationalityQuery(text);
     updatePersonalInfo('nationality', text);
     filterNationalities(text);
+    setShowNationalitySuggestions(text.trim().length > 0);
   }, [filterNationalities]);
 
 
 
-  // Function to process signature - simplified for React Native
-  const processSignature = async (signatureDataUrl: string): Promise<string> => {
+  // Handwriting functions - Stylus-only canvas handlers
+  const handleStylusCanvasSave = async (dataUrl: string) => {
     try {
-      // For React Native, we'll use the signature as-is since it's already optimized
-      // The signature canvas already provides a clean white background
-      return signatureDataUrl;
-    } catch (error) {
-      console.error('Error processing signature:', error);
-      throw error;
-    }
-  };
-
-  // Handwriting functions
-  const handleSignature = async (signature: string) => {
-    try {
-      // Save signature permanently (not to gallery to avoid permission dialogs)
-      const permanentPath = await saveImagePermanently(signature, 'signature', true, false);
+      // Initialize image storage
+      await initializeImageStorage();
       
-      updateFormData('handwrittenComment', permanentPath);
+      // Generate filename: handwriting_{timestamp}.png
+      const timestamp = Date.now();
+      const filename = `handwriting_${timestamp}.png`;
+      const directory = (FileSystem.documentDirectory ?? '') + 'images/';
+      const filePath = directory + filename;
+      
+      // Ensure directory exists
+      const dirInfo = await FileSystem.getInfoAsync(directory);
+      if (!dirInfo.exists) {
+        await FileSystem.makeDirectoryAsync(directory, { intermediates: true });
+    }
+      
+      // Convert base64 data URL to file
+      // Remove data:image/png;base64, prefix
+      const base64Data = dataUrl.replace(/^data:image\/png;base64,/, '');
+      
+      // Write to file system
+      await FileSystem.writeAsStringAsync(filePath, base64Data, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      
+      console.log(`Handwriting saved: ${filePath}`);
+      
+      // Update form data with file path
+      updateFormData('handwrittenComment', filePath);
       setShowHandwritingModal(false);
     } catch (error) {
-      console.error('Error saving signature permanently:', error);
+      console.error('Error saving handwriting:', error);
       Alert.alert('Error', 'Failed to save handwritten comment. Please try again.');
       setShowHandwritingModal(false);
     }
   };
 
-  const clearHandwriting = async () => {
-    try {
-      // Delete the existing signature file if it exists
-      if (formData.handwrittenComment) {
-        await deleteImagePermanently(formData.handwrittenComment);
-      }
-      
-      // Clear the signature canvas and form data
-      signatureRef.current?.clearSignature();
-      updateFormData('handwrittenComment', '');
-    } catch (error) {
-      console.error('Error clearing handwriting:', error);
-      // Still clear the UI even if file deletion fails
-      signatureRef.current?.clearSignature();
-      updateFormData('handwrittenComment', '');
-    }
+  const handleStylusCanvasClear = () => {
+    // Clear action is handled by the WebView canvas itself
+    // This is just a callback for any additional clearing needed
+    console.log('Canvas cleared');
   };
 
-  const openHandwritingModal = () => {
+  const handleStylusCanvasClose = () => {
+    setShowHandwritingModal(false);
+  };
+
+  const openHandwritingModal = async () => {
     setShowHandwritingModal(true);
   };
 
   const handleSubmit = () => {
     if (validateForm()) {
-      // Navigate to preview screen with form data
+      // Navigate to preview screen with form data and review type
       router.push({
         pathname: '/review-preview',
-        params: { formData: JSON.stringify(formData) }
+        params: { 
+          formData: JSON.stringify(formData),
+          reviewType: reviewType
+        }
       });
     }
   };
@@ -725,21 +880,26 @@ function AddReviewScreen() {
         return;
       }
     }
+    setShowCameraModal(true);
+  };
 
+  const capturePhoto = async () => {
     try {
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ['images'],
-        allowsEditing: false,
-        quality: 1.0,
-        exif: true,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        const photoUri = result.assets[0].uri;
-        
+      const photo = await cameraRef.current?.takePictureAsync({ quality: 1, skipProcessing: true, exif: true });
+      if (photo?.uri) {
         try {
-          // Save image permanently AND to gallery
-          const permanentPath = await saveImagePermanently(photoUri, 'photo', true, true);
+          // Request gallery permission (non-blocking save fallback handled in utils)
+          try {
+            const { status } = await MediaLibrary.requestPermissionsAsync();
+            if (status !== 'granted') {
+              console.warn('MediaLibrary permission not granted; will skip gallery save');
+            }
+          } catch (permErr) {
+            console.warn('MediaLibrary permission request failed:', permErr);
+          }
+
+          // Save image permanently and also to gallery (creates/uses album "FSDC Reviews")
+          const permanentPath = await saveImagePermanently(photo.uri, 'photo', true, true);
           const newPhotos = [...formData.photos, permanentPath];
           updateFormData('photos', newPhotos);
         } catch (error) {
@@ -748,8 +908,10 @@ function AddReviewScreen() {
         }
       }
     } catch (error) {
-      console.error('Error taking photo:', error);
-      Alert.alert('Error', 'Failed to take photo. Please try again.');
+      console.error('Error capturing photo:', error);
+      Alert.alert('Error', 'Failed to capture photo. Please try again.');
+    } finally {
+      setShowCameraModal(false);
     }
   };
 
@@ -831,15 +993,21 @@ function AddReviewScreen() {
       <ScrollView 
         style={styles.scrollView} 
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
+        keyboardShouldPersistTaps="always"
         keyboardDismissMode="on-drag"
+        contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, rs(24)) }}
       >
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <View style={styles.headerTitles}>
               <ThemedText type="title" style={styles.title}>
-                Add Flight Simulator Review
+                {reviewType === 'joyride' ? 'Joyride Review' : 'Add Flight Simulator Review'}
               </ThemedText>
+              {reviewType === 'joyride' && (
+                <ThemedText style={styles.subtitle}>
+                  Please provide your detailed feedback 
+                </ThemedText>
+              )}
             </View>
             <ThemeToggle />
           </View>
@@ -860,7 +1028,7 @@ function AddReviewScreen() {
                     <ThemedText style={styles.pickerLabel}>
                       {field.label}{field.required ? ' *' : ''}
                     </ThemedText>
-                    <View style={{ position: 'relative', zIndex: 2 }}>
+                    <View style={{ position: 'relative', zIndex: (showNationalitySuggestions && filteredNationalities.length > 0 ? 1000 : 1) }}>
                       <TextInput
                         label={field.placeholder}
                         value={nationalityQuery}
@@ -870,14 +1038,20 @@ function AddReviewScreen() {
                         accessibilityLabel={`${field.label} input field`}
                         accessibilityHint="Type to search for your nationality"
                         accessibilityRole="search"
+                        autoCapitalize="words"
+                        returnKeyType="done"
+                        blurOnSubmit={false}
+                        onSubmitEditing={() => { /* keep focus */ }}
+                        onFocus={() => setShowNationalitySuggestions(nationalityQuery.trim().length > 0)}
+                        onBlur={() => setShowNationalitySuggestions(false)}
                       />
                       
-                      {filteredNationalities.length > 0 && (
+                      {showNationalitySuggestions && filteredNationalities.length > 0 && (
                         <View style={styles.autocompleteContainer}>
                           <ScrollView 
                             style={styles.autocompleteList} 
                             nestedScrollEnabled
-                            keyboardShouldPersistTaps="handled"
+                            keyboardShouldPersistTaps="always"
                           >
                             {filteredNationalities.map((item) => (
                               <TouchableOpacity
@@ -889,6 +1063,7 @@ function AddReviewScreen() {
                                   setNationalityQuery(item.name);
                                   updatePersonalInfo(field.key, item.name);
                                   setFilteredNationalities([]);
+                                  setShowNationalitySuggestions(false);
                                 }}
                               >
                                 <View style={styles.autocompleteItemContent}>
@@ -905,51 +1080,52 @@ function AddReviewScreen() {
                 );
               }
               
-              // Special handling for profession field with autocomplete
+              // Special handling for profession field (simple text input for all review types)
               if (field.key === 'profession') {
                 return (
-                  <View key={field.id} style={styles.pickerContainer}>
-                    <ThemedText style={styles.pickerLabel}>
-                      {field.label}{field.required ? ' *' : ''}
-                    </ThemedText>
-                    <View style={{ position: 'relative', zIndex: 1 }}>
                       <TextInput
-                        label={field.placeholder}
-                        value={professionQuery}
-                        onChangeText={handleProfessionChange}
+                    key={field.id}
+                    label={`${field.label}${field.required ? ' *' : ''}`}
+                    value={fieldValue}
+                    onChangeText={(text) => updatePersonalInfo(field.key, text)}
                         style={styles.textInput}
                         mode="outlined"
-                        accessibilityLabel={`${field.label} input field`}
-                        accessibilityHint="Type to search for your profession"
-                        accessibilityRole="search"
+                    placeholder={field.placeholder}
+                    accessibilityLabel={`${field.label} input field${field.required ? ', required' : ''}`}
+                    accessibilityHint={`Enter your ${field.label.toLowerCase()}`}
+                    accessibilityRole="text"
+                    autoCapitalize="words"
                       />
-                      
-                      {filteredProfessions.length > 0 && (
-                        <View style={styles.autocompleteContainer}>
-                          <ScrollView 
-                            style={styles.autocompleteList} 
-                            nestedScrollEnabled
-                            keyboardShouldPersistTaps="handled"
-                          >
-                            {filteredProfessions.map((item) => (
-                              <TouchableOpacity
-                                key={item}
-                                style={styles.autocompleteItem}
-                                activeOpacity={0.7}
-                                delayPressIn={0}
-                                onPress={() => {
-                                  setProfessionQuery(item);
-                                  updatePersonalInfo(field.key, item);
-                                  setFilteredProfessions([]);
-                                }}
-                              >
-                                <ThemedText>{item}</ThemedText>
-                              </TouchableOpacity>
-                            ))}
-                          </ScrollView>
-                        </View>
-                      )}
-                    </View>
+                );
+              }
+
+              if (field.key === 'priceSuggestion' || field.key === 'simulatorCostEstimate') {
+                const isCostEstimate = field.key === 'simulatorCostEstimate';
+                const keyboardType = Platform.select({ ios: 'decimal-pad', default: 'numeric' }) as 'numeric' | 'decimal-pad';
+                return (
+                  <View key={field.id} style={styles.pickerContainer}>
+                    <ThemedText style={styles.priceNote}>{field.label}</ThemedText>
+                    <TextInput
+                      label={isCostEstimate ? 'Your estimate (USD millions)' : 'Your price suggestion (USD)'}
+                      value={fieldValue}
+                      onChangeText={(text) => updatePersonalInfo(field.key, text)}
+                      style={styles.textInput}
+                      mode="outlined"
+                      placeholder={field.placeholder || (isCostEstimate ? 'e.g., 2.0' : 'e.g., 75')}
+                      accessibilityLabel={
+                        isCostEstimate
+                          ? 'Flight simulator cost estimate input'
+                          : 'Joyride price suggestion input'
+                      }
+                      accessibilityHint={
+                        isCostEstimate
+                          ? 'Enter how much you believe the flight simulator costs in USD millions'
+                          : 'Enter how much you would pay for a 15-minute joyride in USD'
+                      }
+                      accessibilityRole="text"
+                      autoCapitalize="none"
+                      keyboardType={keyboardType}
+                    />
                   </View>
                 );
               }
@@ -1062,30 +1238,57 @@ function AddReviewScreen() {
                 );
               }
 
-              // Handle Scroll field type
+              // Handle Scroll field type (text input with quick-select options)
               if (field.type === 'scroll') {
+                const options = field.options ?? [];
                 return (
                   <View key={field.id} style={styles.pickerContainer}>
                     <ThemedText style={styles.pickerLabel}>
                       {field.label}{field.required ? ' *' : ''}
                     </ThemedText>
-                    <View style={styles.scrollPickerWrapper}>
-                      <Picker
-                        selectedValue={fieldValue || ''}
-                        onValueChange={(itemValue) => {
-                          if (itemValue !== '') {
-                            updatePersonalInfo(field.key, itemValue);
-                          }
-                        }}
-                        style={styles.scrollPickerComponent}
-                        mode="dropdown"
-                      >
-                        <Picker.Item label="Select an option..." value="" />
-                        {(field.options || []).map((option, index) => (
-                          <Picker.Item key={index} label={option} value={option} />
-                        ))}
-                      </Picker>
+                    <TextInput
+                      label={field.placeholder || 'Select or type an option'}
+                      value={fieldValue}
+                      onChangeText={(text) => updatePersonalInfo(field.key, text)}
+                      style={styles.textInput}
+                      mode="outlined"
+                      placeholder={field.placeholder || 'Type your answer'}
+                      accessibilityLabel={`${field.label} input field${field.required ? ', required' : ''}`}
+                      accessibilityHint={`Type or pick an option for ${field.label.toLowerCase()}`}
+                      accessibilityRole="text"
+                      autoCapitalize="sentences"
+                    />
+                    {options.length > 0 && (
+                      <View style={styles.scrollOptionsContainer}>
+                        <ThemedText style={styles.scrollOptionsHint} accessibilityRole="text">
+                          Quick select
+                        </ThemedText>
+                        <View style={styles.scrollOptionsChips}>
+                          {options.map((option) => (
+                            <TouchableOpacity
+                              key={option}
+                              style={[
+                                styles.scrollOptionChip,
+                                fieldValue === option && styles.scrollOptionChipSelected,
+                              ]}
+                              onPress={() => updatePersonalInfo(field.key, option)}
+                              accessibilityRole="button"
+                              accessibilityLabel={`Select ${option}`}
+                              accessibilityState={{ selected: fieldValue === option }}
+                            >
+                              <ThemedText
+                                style={[
+                                  styles.scrollOptionChipText,
+                                  fieldValue === option && styles.scrollOptionChipTextSelected,
+                                ]}
+                              >
+                                {option}
+                              </ThemedText>
+                            </TouchableOpacity>
+                          ))}
                     </View>
+                      </View>
+                    )}
                   </View>
                 );
               }
@@ -1103,7 +1306,7 @@ function AddReviewScreen() {
                   accessibilityLabel={`${field.label} input field${field.required ? ', required' : ''}`}
                   accessibilityHint={`Enter your ${field.label.toLowerCase()}`}
                   accessibilityRole="text"
-                  keyboardType={field.type === 'email' ? 'email-address' : field.type === 'phone' ? 'phone-pad' : 'default'}
+                  keyboardType={field.key === 'priceSuggestion' ? 'numeric' : (field.type === 'email' ? 'email-address' : field.type === 'phone' ? 'phone-pad' : 'default')}
                 />
               );
             })}
@@ -1113,7 +1316,9 @@ function AddReviewScreen() {
         {/* Ratings Section */}
         <Card style={styles.sectionCard}>
           <Card.Content>
-            <ThemedText style={styles.sectionTitle}>Flight Simulator Ratings</ThemedText>
+            <ThemedText style={styles.sectionTitle}>
+              {reviewType === 'joyride' ? 'Joyride Experience Ratings' : 'Flight Simulator Ratings'}
+            </ThemedText>
             <ThemedText style={styles.sectionSubtitle}>
               Rate each aspect from 1 to 5 stars
             </ThemedText>
@@ -1340,93 +1545,22 @@ function AddReviewScreen() {
         </View>
       </Modal>
 
-      {/* Handwriting Modal */}
+      {/* Handwriting Modal - Stylus-Only Canvas */}
       <Modal
         visible={showHandwritingModal}
-        transparent={true}
-        onRequestClose={() => setShowHandwritingModal(false)}
+        transparent={false}
+        animationType="slide"
+        onRequestClose={handleStylusCanvasClose}
       >
-        <View style={styles.handwritingModalContainer}>
-          <View style={styles.handwritingModalContent}>
-            <View style={styles.handwritingHeader}>
-              <ThemedText style={styles.handwritingTitle}>Write Your Comment</ThemedText>
-              <IconButton
-                icon="close"
-                size={wp('6%')}
-                onPress={() => setShowHandwritingModal(false)}
-                style={styles.handwritingCloseButton}
-              />
-            </View>
-            <View style={styles.signatureContainer}>
-              <SignatureCanvas
-                ref={signatureRef}
-                onOK={handleSignature}
-                onEmpty={() => console.log('Signature is empty')}
-                descriptionText=""
-                clearText="Clear"
-                confirmText="Save"
+        <View style={styles.stylusCanvasContainer}>
+          <StylusCanvas
+            onSave={handleStylusCanvasSave}
+            onClear={handleStylusCanvasClear}
+            onClose={handleStylusCanvasClose}
                 backgroundColor="#FFFFFF"
                 penColor="#000000"
-                webStyle={`
-                  .m-signature-pad {
-                    box-shadow: none;
-                    border: 1px solid #E0E0E0;
-                    border-radius: 8px;
-                    background-color: #FFFFFF !important;
-                    width: 100vw !important;
-                    height: 100vh !important;
-                    max-width: 100% !important;
-                    max-height: 100% !important;
-                    position: absolute !important;
-                    top: 0 !important;
-                    left: 0 !important;
-                  }
-                  .m-signature-pad--body {
-                    border: none;
-                    background-color: #FFFFFF !important;
-                    width: 100% !important;
-                    height: 100% !important;
-                    position: relative !important;
-                  }
-                  .m-signature-pad--body canvas {
-                    background-color: #FFFFFF !important;
-                    background: #FFFFFF !important;
-                    width: 100% !important;
-                    height: 100% !important;
-                    position: absolute !important;
-                    top: 0 !important;
-                    left: 0 !important;
-                  }
-                  .m-signature-pad--footer {
-                    display: none;
-                  }
-                  body {
-                    background-color: #FFFFFF !important;
-                  }
-                `}
-                style={styles.signatureCanvas}
-              />
-            </View>
-            {/* Floating Action Buttons */}
-            <View style={styles.floatingActions}>
-              <Button
-                mode="outlined"
-                onPress={clearHandwriting}
-                style={styles.floatingActionButton}
-                compact
-              >
-                Clear
-              </Button>
-              <Button
-                mode="contained"
-                onPress={() => signatureRef.current?.readSignature()}
-                style={styles.floatingActionButton}
-                compact
-              >
-                Save
-              </Button>
-            </View>
-          </View>
+            initialImage={formData.handwrittenComment || undefined}
+          />
         </View>
       </Modal>
 
@@ -1442,6 +1576,31 @@ function AddReviewScreen() {
           </Dialog.Actions>
         </Dialog>
       </Portal>
+
+      {/* Camera Modal - custom capture (no OK/Retry, no edit UI) */}
+      <Modal
+        visible={showCameraModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowCameraModal(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.95)' }}>
+          <CameraView
+            ref={(r) => { cameraRef.current = r; }}
+            style={{ flex: 1 }}
+            ratio="16:9"
+          />
+          <View style={{ position: 'absolute', bottom: Math.max(hp('4%'), insets.bottom + hp('2%')), width: '100%', alignItems: 'center' }}>
+            <Button mode="contained" onPress={capturePhoto}>
+              Capture
+            </Button>
+            <View style={{ height: hp('1%') }} />
+            <Button mode="text" onPress={() => setShowCameraModal(false)}>
+              Close
+            </Button>
+          </View>
+        </View>
+      </Modal>
     </ThemedView>
   );
 }
@@ -1475,6 +1634,15 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
     fontSize: rf(isTablet ? 28 : 24),
     textAlign: 'center',
     fontWeight: 'bold',
+    paddingVertical: rf(6),
+  },
+  subtitle: {
+    fontSize: rf(14),
+    textAlign: 'center',
+    opacity: 0.8,
+    lineHeight: rf(20),
+    marginTop: rs(4),
+    paddingVertical: rf(3),
   },
   sectionCard: {
     marginBottom: hp('2%'),
@@ -1485,14 +1653,14 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
     fontWeight: 'bold',
     lineHeight: rf(28),
     marginBottom: hp('1%'),
-    paddingVertical: rf(2),
+    paddingVertical: rf(5),
   },
   sectionSubtitle: {
     fontSize: rf(16),
     opacity: 0.7,
     lineHeight: rf(24),
     marginBottom: hp('1%'),
-    paddingVertical: rf(2),
+    paddingVertical: rf(4),
   },
   textInput: {
     marginBottom: hp('1.5%'),
@@ -1505,12 +1673,12 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
   },
   pickerLabel: {
     fontSize: rf(16),
-    lineHeight: rf(24),
-    marginBottom: hp('0.5%'),
+    lineHeight: rf(38),
+    marginBottom: hp('0%'),
     fontWeight: '500',
     flexShrink: 1,
     paddingHorizontal: wp('1%'),
-    paddingVertical: rf(2),
+    paddingVertical: rf(1),
   },
   picker: {
     borderWidth: 1,
@@ -1534,7 +1702,7 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
     flex: 1,
     flexShrink: 1,
     paddingRight: wp('2%'),
-    paddingVertical: rf(2),
+    paddingVertical: rf(4),
   },
   ratingCard: {
     marginBottom: hp('1.5%'),
@@ -1542,21 +1710,21 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
   },
   ratingTitle: {
     fontSize: rf(18),
-    lineHeight: rf(26),
+    lineHeight: rf(42),
     fontWeight: 'bold',
-    marginBottom: hp('0.5%'),
+    marginBottom: hp('0%'),
     flexShrink: 1,
     paddingHorizontal: wp('2%'),
-    paddingVertical: rf(2),
+    paddingVertical: rf(0),
   },
   ratingDescription: {
     fontSize: rf(14),
-    lineHeight: rf(22),
+    lineHeight: rf(24),
     opacity: 0.7,
-    marginBottom: hp('1%'),
+    marginBottom: hp('0%'),
     flexShrink: 1,
     paddingHorizontal: wp('2%'),
-    paddingVertical: rf(2),
+    paddingVertical: rf(3),
   },
   starContainer: {
     flexDirection: 'row',
@@ -1570,7 +1738,7 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
     minWidth: wp('12%'),
     textAlign: 'center',
     flexShrink: 1,
-    paddingVertical: rf(2),
+    paddingVertical: rf(4),
   },
   photoButtonsContainer: {
     flexDirection: 'row',
@@ -1664,8 +1832,8 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
     borderColor: borderColor,
     borderRadius: 4,
     maxHeight: hp('20%'),
-    zIndex: 1000,
-    elevation: 5,
+    zIndex: 10000,
+    elevation: 20,
   },
   autocompleteList: {
     maxHeight: hp('20%'),
@@ -1683,56 +1851,63 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
     fontSize: rf(18),
     lineHeight: rf(26),
     marginRight: wp('3%'),
-    paddingVertical: rf(2),
+    paddingVertical: rf(4),
   },
   countryText: {
     fontSize: rf(16),
     lineHeight: rf(24),
     flex: 1,
-    paddingVertical: rf(2),
+    paddingVertical: rf(4),
+  },
+  priceNote: {
+    fontSize: rf(15),
+    lineHeight: rf(22),
+    marginBottom: hp('1%'),
   },
   buttonGroup: {
     flexDirection: 'row',
     justifyContent: 'flex-start',
+    gap: wp('2%'),
   },
   yesNoButton: {
     flex: 0.3,
     minWidth: wp('20%'),
+    marginTop: hp('0.8%'),
+    marginBottom: hp('0.8%'),
   },
-  scrollPickerWrapper: {
+  scrollOptionsContainer: {
+    marginTop: hp('1%'),
+  },
+  scrollOptionsHint: {
+    fontSize: rf(13),
+    lineHeight: rf(18),
+    opacity: 0.7,
+    marginBottom: hp('0.5%'),
+  },
+  scrollOptionsChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: wp('2%'),
+  },
+  scrollOptionChip: {
+    paddingVertical: hp('0.8%'),
+    paddingHorizontal: wp('4%'),
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: borderColor,
-    borderRadius: 8,
     backgroundColor: cardBackgroundColor,
-    overflow: 'hidden',
   },
-  scrollPickerComponent: {
-    height: hp('6%'),
-    width: '100%',
+  scrollOptionChipSelected: {
+    backgroundColor: textColor,
+    borderColor: textColor,
+  },
+  scrollOptionChipText: {
+    fontSize: rf(14),
+    lineHeight: rf(20),
     color: textColor,
   },
-  scrollPicker: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: borderColor,
-    borderRadius: 8,
-    paddingHorizontal: wp('4%'),
-    paddingVertical: hp('1.5%'),
-    backgroundColor: cardBackgroundColor,
-  },
-  scrollPickerText: {
-    fontSize: rf(16),
-    lineHeight: rf(24),
-    flex: 1,
-    paddingVertical: rf(2),
-  },
-  scrollPickerArrow: {
-    fontSize: rf(14),
-    lineHeight: rf(22),
-    opacity: 0.6,
-    paddingVertical: rf(2),
+  scrollOptionChipTextSelected: {
+    color: cardBackgroundColor,
   },
   handwritingModalContainer: {
     flex: 1,
@@ -1758,38 +1933,16 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
     fontSize: rf(20),
     lineHeight: rf(28),
     fontWeight: 'bold',
-    paddingVertical: rf(2),
+    paddingVertical: rf(5),
   },
   handwritingCloseButton: {
     margin: 0,
   },
-  signatureContainer: {
-    flex: 1,
-  },
-  signatureCanvas: {
+  stylusCanvasContainer: {
     flex: 1,
     width: '100%',
     height: '100%',
-    borderWidth: 1,
-    borderColor: borderColor,
-    borderRadius: 8,
-  },
-  floatingActions: {
-    position: 'absolute',
-    bottom: wp('2%'),
-    left: wp('2%'),
-    right: wp('2%'),
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    zIndex: 1000,
-  },
-  floatingActionButton: {
-    minWidth: wp('20%'),
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
+    backgroundColor: '#FFFFFF',
   },
   editHandwritingButton: {
     marginRight: wp('2%'),
@@ -1820,7 +1973,7 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
     lineHeight: rf(24),
     fontWeight: '500',
     marginBottom: hp('1%'),
-    paddingVertical: rf(2),
+    paddingVertical: rf(4),
   },
   handwritingImageContainer: {
     position: 'relative',

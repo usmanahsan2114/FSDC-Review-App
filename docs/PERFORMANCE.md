@@ -7,7 +7,7 @@
 
 ## Images
 - Use `OptimizedImage` with `contentFit="contain"` to prevent distortion
-- Consider downscaling for PDFs if memory usage spikes (optional, keep originals in app)
+- Downscale for PDFs to ~1400px width, JPEG ~0.85 to reduce memory while keeping originals intact
 
 ## Storage
 - Keep AsyncStorage payloads small; store only file paths, not base64

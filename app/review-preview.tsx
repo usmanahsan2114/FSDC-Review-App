@@ -8,22 +8,23 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-    Alert,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View
+  Alert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import {
-    Button,
-    Card,
-    Chip,
-    Dialog,
-    IconButton,
-    Paragraph,
-    Portal,
+  Button,
+  Card,
+  Chip,
+  Dialog,
+  IconButton,
+  Paragraph,
+  Portal,
 } from 'react-native-paper';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StarRating from 'react-native-star-rating-widget';
 import { initializeDataStorage, saveReview } from '../utils/dataStorage';
 
@@ -70,6 +71,83 @@ const defaultPersonalInfoFields: PersonalInfoField[] = [
   },
   {
     id: '6',
+    key: 'contact',
+    label: 'Contact Information',
+    placeholder: 'Enter your email or phone',
+    required: false,
+    type: 'email'
+  }
+];
+
+const joyridePersonalInfoFields: PersonalInfoField[] = [
+  {
+    id: '1',
+    key: 'fullName',
+    label: 'Full Name',
+    placeholder: 'Enter your full name',
+    required: true,
+    type: 'text'
+  },
+  {
+    id: '2',
+    key: 'age',
+    label: 'Age',
+    placeholder: 'Enter your age',
+    required: true,
+    type: 'text'
+  },
+  {
+    id: '3',
+    key: 'nationality',
+    label: 'Nationality',
+    placeholder: 'Select your nationality',
+    required: true,
+    type: 'text'
+  },
+  {
+    id: '4',
+    key: 'profession',
+    label: 'Profession / Occupation',
+    placeholder: 'Enter your profession or occupation',
+    required: true,
+    type: 'text'
+  },
+  {
+    id: '5',
+    key: 'simulatorCostEstimate',
+    label: 'Based on your time in the simulator, what’s your estimated value of the entire experience in millions of USD?',
+    placeholder: 'e.g., 2.5',
+    required: false,
+    type: 'text'
+  },
+  {
+    id: '6',
+    key: 'priceSuggestion',
+    label: 'How much would you pay for a 15-minute joyride?',
+    placeholder: 'e.g., 75 (USD)',
+    required: false,
+    type: 'text'
+  },
+  {
+    id: '7',
+    key: 'previousSimulatorExperience',
+    label: 'Previous Simulator Experience',
+    placeholder: '',
+    required: false,
+    type: 'yesno',
+    yesNoValues: { yes: 'Yes', no: 'No' }
+  },
+  {
+    id: '8',
+    key: 'amusementParkInterest',
+    label: 'Would you try this in an amusement park?',
+    placeholder: '',
+    required: false,
+    type: 'yesno',
+    yesNoValues: { yes: 'Yes', no: 'No' }
+  },
+  {
+    id: '9',
     key: 'contact',
     label: 'Contact Information',
     placeholder: 'Enter your email or phone',
@@ -283,7 +361,7 @@ const COUNTRIES: Country[] = [
 
 // Helper function to get flag for nationality
 const getFlagForNationality = (nationality: string): string => {
-  const country = COUNTRIES.find(c => c.name === nationality);
+  const country = COUNTRIES.find((c: Country) => c.name === nationality);
   return country?.flag || '';
 };
 
@@ -293,7 +371,8 @@ interface PersonalInfoField {
   label: string;
   placeholder: string;
   required: boolean;
-  type: 'text' | 'email' | 'phone' | 'multiline';
+  type: 'text' | 'email' | 'phone' | 'multiline' | 'yesno';
+  yesNoValues?: { yes: string; no: string };
 }
 
 interface FormData {
@@ -304,9 +383,71 @@ interface FormData {
   photos: string[];
 }
 
+// Joyride questions (same as in add-review.tsx)
+interface RatingCategory {
+  id?: string;
+  key: string;
+  title: string;
+  description: string;
+}
+
+const joyrideRatingCategories: RatingCategory[] = [
+  { id: '1', key: 'overallExperience', title: 'Overall experience rating', description: '' },
+  { id: '2', key: 'visualQuality', title: 'Visual quality and graphics', description: '' },
+  { id: '3', key: 'motionExperience', title: 'Motion experience and realism', description: '' },
+  { id: '4', key: 'easeOfUse', title: 'Ease of use and controls', description: '' },
+  { id: '5', key: 'safetyFeeling', title: 'Feeling of safety and security', description: '' },
+  { id: '6', key: 'thrillLevel', title: 'Thrill and excitement level', description: '' },
+  { id: '7', key: 'wouldRecommend', title: 'How much would you recommend this to others?', description: '' },
+  { id: '8', key: 'overallSatisfaction', title: 'Overall satisfaction', description: '' },
+];
+
+const defaultRatingCategories: RatingCategory[] = [
+  { id: '1', key: 'cockpitRealismLayout', title: 'Cockpit realism & layout', description: '' },
+  { id: '2', key: 'visualQualityFOV', title: 'Visual quality & field of view', description: '' },
+  { id: '3', key: 'controlLoadingRealism', title: 'Control loading realism (force feedback)', description: '' },
+  { id: '4', key: 'motionFidelity', title: 'Motion fidelity (6-DOF cues & response)', description: '' },
+  { id: '5', key: 'aerodynamicResponse', title: 'Aerodynamic response & flight feel', description: '' },
+  { id: '6', key: 'instrumentSwitchFunctionality', title: 'Instrument & switch functionality', description: '' },
+  { id: '7', key: 'visualMotionSync', title: 'Visual-motion synchronization', description: '' },
+  { id: '8', key: 'instructorControlTrainingFlow', title: 'Instructor control & training flow', description: '' },
+  { id: '9', key: 'aircraftBehaviorMatch', title: 'Aircraft behavior matches real flight characteristics', description: '' },
+  { id: '10', key: 'soundVibrationRealism', title: 'Sound & vibration realism', description: '' },
+  { id: '11', key: 'overallImmersionRealism', title: 'Overall immersion & realism', description: '' },
+];
+
 function ReviewPreviewScreen() {
   const params = useLocalSearchParams();
+  const insets = useSafeAreaInsets();
   const formData: FormData = params.formData ? JSON.parse(params.formData as string) : null;
+  const getFirstParamValue = (value: string | string[] | undefined): string | undefined => {
+    if (Array.isArray(value)) {
+      return value[0];
+    }
+    return value;
+  };
+  const rawTypeParam =
+    getFirstParamValue(params.reviewType as string | string[] | undefined) ??
+    getFirstParamValue(params.type as string | string[] | undefined);
+  const reviewType: 'professional' | 'joyride' = (() => {
+    if (rawTypeParam === 'joyride') {
+      return 'joyride';
+    }
+    if (rawTypeParam === 'professional') {
+      return 'professional';
+    }
+    if (formData?.personalInfo) {
+      const joyrideSignals = ['priceSuggestion', 'simulatorCostEstimate', 'age', 'amusementParkInterest'];
+      const hasJoyrideData = joyrideSignals.some((key) => {
+        const value = formData.personalInfo[key];
+        return typeof value === 'string' && value.trim().length > 0;
+      });
+      if (hasJoyrideData) {
+        return 'joyride';
+      }
+    }
+    return 'professional';
+  })();
   
   // Theme hooks
   const { isDark } = useTheme();
@@ -326,20 +467,24 @@ function ReviewPreviewScreen() {
   const [hasSubmittedSuccessfully, setHasSubmittedSuccessfully] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [personalInfoFields, setPersonalInfoFields] = useState<PersonalInfoField[]>(defaultPersonalInfoFields);
-  const [ratingCategories, setRatingCategories] = useState([
-    { key: 'generalFlying', title: 'General Flying / Handling Characteristics' },
-    { key: 'emergencyProcedures', title: 'Emergency Procedures' },
-    { key: 'instrumentFlying', title: 'Instrument Flying System Integration' },
-    { key: 'visualEffects', title: 'Visual Effects Take-Off & Landing' },
-    { key: 'fidelityRealism', title: 'Characteristics Fidelity & Realism' },
-    { key: 'simulatorPerformance', title: 'Simulator Performance' },
-  ]);
+  const [personalInfoFields, setPersonalInfoFields] = useState<PersonalInfoField[]>(
+    reviewType === 'joyride' ? joyridePersonalInfoFields : defaultPersonalInfoFields
+  );
+  const [ratingCategories, setRatingCategories] = useState<RatingCategory[]>(
+    reviewType === 'joyride' ? joyrideRatingCategories : defaultRatingCategories
+  );
 
-  // Load personal info fields and rating categories from AsyncStorage
+  // Load personal info fields and rating categories from AsyncStorage (only for professional reviews)
   useEffect(() => {
     const loadPersonalInfoFields = async () => {
       try {
+        // For joyride reviews, use joyride fields directly
+        if (reviewType === 'joyride') {
+          setPersonalInfoFields(joyridePersonalInfoFields);
+          return;
+        }
+        
+        // For professional reviews, load from admin settings
         const saved = await AsyncStorage.getItem('admin_personal_info_fields');
         if (saved) {
           const fields = JSON.parse(saved);
@@ -352,10 +497,29 @@ function ReviewPreviewScreen() {
 
     const loadRatingCategories = async () => {
       try {
+        // For joyride reviews, use joyride questions directly
+        if (reviewType === 'joyride') {
+          setRatingCategories(joyrideRatingCategories);
+          return;
+        }
+        
+        // For professional reviews, load from admin settings
         const saved = await AsyncStorage.getItem('admin_rating_categories');
         if (saved) {
           const categories = JSON.parse(saved);
+          const expectedKeys = new Set(defaultRatingCategories.map(c => c.key));
+          const isMismatch = !Array.isArray(categories) || categories.length !== defaultRatingCategories.length || categories.some((c: any) => !expectedKeys.has(c.key));
+          if (isMismatch) {
+            await AsyncStorage.setItem('admin_rating_categories', JSON.stringify(defaultRatingCategories));
+            await AsyncStorage.setItem('ratingCategories', JSON.stringify(defaultRatingCategories));
+            setRatingCategories(defaultRatingCategories);
+          } else {
           setRatingCategories(categories);
+          }
+        } else {
+          await AsyncStorage.setItem('admin_rating_categories', JSON.stringify(defaultRatingCategories));
+          await AsyncStorage.setItem('ratingCategories', JSON.stringify(defaultRatingCategories));
+          setRatingCategories(defaultRatingCategories);
         }
       } catch (error) {
         console.error('Error loading rating categories:', error);
@@ -364,7 +528,7 @@ function ReviewPreviewScreen() {
 
     loadPersonalInfoFields();
     loadRatingCategories();
-  }, []);
+  }, [reviewType]);
 
   const handleBackNavigation = () => {
     if (hasSubmittedSuccessfully) {
@@ -397,7 +561,8 @@ function ReviewPreviewScreen() {
       pathname: '/add-review',
       params: { 
         editData: JSON.stringify(formData),
-        editSection: section
+        editSection: section,
+        type: reviewType
       }
     });
   };
@@ -430,6 +595,7 @@ function ReviewPreviewScreen() {
       
       // Create review data with proper structure
       const reviewData = {
+        reviewType: reviewType, // Include review type
         personalInfo: {
           // Persist ALL dynamic fields from the admin configuration
           ...formData.personalInfo,
@@ -470,12 +636,12 @@ function ReviewPreviewScreen() {
 
   const handleSuccessDialogClose = () => {
     setShowSuccessDialog(false);
-    router.push('/add-review?fromSubmission=true'); // Navigate to new add-review page for next user
+    router.replace('/(tabs)');
   };
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, rs(24)) }}>
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <View style={styles.headerTitles}>
@@ -505,10 +671,20 @@ function ReviewPreviewScreen() {
               </Button>
             </View>
             
+            {(() => {
+              const renderedKeys = new Set<string>();
+              return (
+                <>
             {personalInfoFields.map((field) => {
+                    if (reviewType === 'joyride' && (field.key === 'priceSuggestion' || field.key === 'simulatorCostEstimate')) {
+                      return null;
+                    }
+                    
               const fieldValue = formData.personalInfo[field.key] || '';
               
               if (!fieldValue || fieldValue.trim() === '') return null;
+                    
+                    renderedKeys.add(field.key);
               
               return (
                 <View key={field.id} style={styles.infoRow}>
@@ -519,10 +695,12 @@ function ReviewPreviewScreen() {
                       <ThemedText style={styles.flagText}>{getFlagForNationality(fieldValue)}</ThemedText>
                       <ThemedText style={styles.value}>{fieldValue}</ThemedText>
                     </View>
+                        ) : field.key === 'profession' ? (
+                          <Chip style={styles.chip}>{fieldValue}</Chip>
                   ) : field.key === 'previousSimulatorExperience' || field.key === 'previousFlyingExperience' ? (
                     <Chip 
                       mode="outlined" 
-                      style={[styles.chip, (fieldValue?.toLowerCase() === 'yes') ? styles.chipYes : styles.chipNo]}
+                            style={[styles.chip, (fieldValue?.toLowerCase() === 'yes') ? styles.chipYes : styles.chipNo]}
                     >
                       {fieldValue}
                     </Chip>
@@ -532,6 +710,41 @@ function ReviewPreviewScreen() {
                 </View>
               );
             })}
+                  
+                  {reviewType === 'joyride' && (
+                    <>
+                      {(() => {
+                        const rawEstimate = formData.personalInfo.simulatorCostEstimate;
+                        const estimateValue = typeof rawEstimate === 'string' ? rawEstimate.trim() : '';
+                        if (!estimateValue) return null;
+                        return (
+                          <View key="simulatorCostEstimate" style={styles.infoRow}>
+                            <ThemedText style={styles.label}>
+                              Based on your time in the simulator, what’s your estimated value of the entire experience in millions of USD?
+                            </ThemedText>
+                            <Chip style={styles.chip}>
+                              {estimateValue.toLowerCase().endsWith('m') ? estimateValue : `${estimateValue}M`}
+                            </Chip>
+                          </View>
+                        );
+                      })()}
+                      
+                      {(() => {
+                        const rawPrice = formData.personalInfo.priceSuggestion;
+                        const priceValue = typeof rawPrice === 'string' ? rawPrice.trim() : '';
+                        if (!priceValue) return null;
+                        return (
+                          <View key="priceSuggestion" style={styles.infoRow}>
+                            <ThemedText style={styles.label}>How much would you pay for a 15-minute joyride?</ThemedText>
+                            <Chip style={styles.chip}>{priceValue.startsWith('$') ? priceValue : `$${priceValue}`}</Chip>
+                          </View>
+                        );
+                      })()}
+                    </>
+                  )}
+                </>
+              );
+            })()}
           </Card.Content>
         </Card>
 
@@ -683,7 +896,7 @@ function ReviewPreviewScreen() {
         )}
 
         {/* Action Buttons */}
-        <View style={styles.actionContainer}>
+        <View style={[styles.actionContainer, { paddingBottom: Math.max(insets.bottom, rs(12)) }]}>
           <Button
             mode="contained"
             onPress={handleSubmitFinal}
@@ -723,11 +936,16 @@ function ReviewPreviewScreen() {
           <Dialog.Title>Success!</Dialog.Title>
           <Dialog.Content>
             <Paragraph>
-              Your review has been successfully submitted and saved. Thank you for your feedback! A new review form will be opened for the next user.
+              Your review has been submitted successfully.
             </Paragraph>
           </Dialog.Content>
           <Dialog.Actions>
-            <Button onPress={handleSuccessDialogClose}>Add New Review</Button>
+            <Button onPress={() => { setShowSuccessDialog(false); router.replace('/(tabs)'); }}>
+              Go to Home
+            </Button>
+            <Button onPress={() => { setShowSuccessDialog(false); router.replace('/add-review'); }}>
+              Add another Review
+            </Button>
           </Dialog.Actions>
         </Dialog>
       </Portal>
@@ -798,12 +1016,14 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
     fontSize: hp('3%'),
     textAlign: 'center',
     fontWeight: 'bold',
+    paddingVertical: rs(6),
   },
   subtitle: {
     fontSize: hp('1.8%'),
     textAlign: 'center',
     opacity: 0.7,
     marginTop: hp('1%'),
+    paddingVertical: rs(5),
   },
   sectionCard: {
     marginBottom: hp('2%'),
@@ -819,6 +1039,7 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
     fontSize: hp('2.2%'),
     fontWeight: 'bold',
     flex: 1,
+    paddingVertical: rs(5),
   },
   editButton: {
     minWidth: wp('15%'),
@@ -834,10 +1055,12 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
     fontWeight: '600',
     minWidth: wp('30%'),
     marginRight: wp('2%'),
+    paddingVertical: rs(4),
   },
   value: {
     fontSize: hp('1.8%'),
     flex: 1,
+    paddingBottom: rs(3),
   },
   nationalityContainer: {
     flexDirection: 'row',
@@ -847,6 +1070,7 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
   flagText: {
     fontSize: hp('2%'),
     marginRight: wp('2%'),
+    paddingBottom: rs(3),
   },
   chip: {
     marginLeft: wp('2%'),
@@ -870,6 +1094,7 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
     marginBottom: hp('1%'),
     textAlign: 'center',
     flexShrink: 1,
+    paddingVertical: rs(6),
   },
   ratingRow: {
     marginBottom: hp('1.5%'),
@@ -880,7 +1105,9 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
   ratingTitle: {
     fontSize: hp('1.8%'),
     fontWeight: '500',
+    lineHeight: hp('2.6%'),
     marginBottom: hp('0.5%'),
+    paddingBottom: rs(3),
   },
   ratingDisplay: {
     flexDirection: 'row',
@@ -892,6 +1119,7 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
     fontWeight: 'bold',
     minWidth: wp('10%'),
     textAlign: 'center',
+    paddingBottom: rs(2),
   },
   commentSection: {
     marginBottom: hp('2%'),
@@ -900,11 +1128,14 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
     fontSize: hp('1.8%'),
     fontWeight: '600',
     marginBottom: hp('1%'),
+    paddingVertical: rs(4),
   },
   commentText: {
     fontSize: hp('1.8%'),
     lineHeight: hp('2.5%'),
     textAlign: 'justify',
+    paddingVertical: rs(4),
+    paddingBottom: rs(5),
   },
   handwrittenCommentImage: {
     width: '100%',
@@ -955,6 +1186,7 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
     fontSize: hp('2.5%'),
     textAlign: 'center',
     marginBottom: hp('3%'),
+    paddingBottom: rs(5),
   },
   modalContainer: {
     flex: 1,

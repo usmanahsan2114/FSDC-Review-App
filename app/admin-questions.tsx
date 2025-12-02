@@ -9,7 +9,7 @@ import React, { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Button, Card, IconButton, TextInput } from 'react-native-paper';
 
-import { hp, rf, wp } from '../utils/responsive';
+import { hp, rf, rs, wp } from '../utils/responsive';
 
 interface RatingCategory {
   id: string;
@@ -30,42 +30,17 @@ interface PersonalInfoField {
 }
 
 const defaultRatingCategories: RatingCategory[] = [
-  {
-    id: '1',
-    key: 'generalFlying',
-    title: 'General Flying / Handling Characteristics',
-    description: 'How realistic are the aircraft controls and flight dynamics?'
-  },
-  {
-    id: '2',
-    key: 'emergencyProcedures',
-    title: 'Emergency Procedures',
-    description: 'How well does the simulator handle emergency scenarios?'
-  },
-  {
-    id: '3',
-    key: 'instrumentFlying',
-    title: 'Instrument Flying System Integration',
-    description: 'How accurate and functional are the aircraft instruments?'
-  },
-  {
-    id: '4',
-    key: 'visualEffects',
-    title: 'Visual Effects Take-Off & Landing',
-    description: 'How realistic are the visual effects during critical phases?'
-  },
-  {
-    id: '5',
-    key: 'fidelityRealism',
-    title: 'Characteristics Fidelity & Realism',
-    description: 'Overall realism and attention to detail in the simulation'
-  },
-  {
-    id: '6',
-    key: 'simulatorPerformance',
-    title: 'Simulator Performance',
-    description: 'Technical performance, frame rate, and system stability'
-  }
+  { id: '1',  key: 'cockpitRealismLayout',            title: 'Cockpit realism & layout',               description: '' },
+  { id: '2',  key: 'visualQualityFOV',                title: 'Visual quality & field of view',         description: '' },
+  { id: '3',  key: 'controlLoadingRealism',           title: 'Control loading realism (force feedback)', description: '' },
+  { id: '4',  key: 'motionFidelity',                  title: 'Motion fidelity (6-DOF cues & response)', description: '' },
+  { id: '5',  key: 'aerodynamicResponse',             title: 'Aerodynamic response & flight feel',      description: '' },
+  { id: '6',  key: 'instrumentSwitchFunctionality',   title: 'Instrument & switch functionality',       description: '' },
+  { id: '7',  key: 'visualMotionSync',                title: 'Visual-motion synchronization',           description: '' },
+  { id: '8',  key: 'instructorControlTrainingFlow',   title: 'Instructor control & training flow',      description: '' },
+  { id: '9',  key: 'aircraftBehaviorMatch',           title: 'Aircraft behavior matches real flight characteristics', description: '' },
+  { id: '10', key: 'soundVibrationRealism',           title: 'Sound & vibration realism',               description: '' },
+  { id: '11', key: 'overallImmersionRealism',         title: 'Overall immersion & realism',             description: '' },
 ];
 
 const defaultPersonalInfoFields: PersonalInfoField[] = [
@@ -145,7 +120,20 @@ export default function AdminQuestionsScreen() {
     try {
       const saved = await AsyncStorage.getItem('admin_rating_categories');
       if (saved) {
-        setRatingCategories(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        const expectedKeys = new Set(defaultRatingCategories.map(c => c.key));
+        const isMismatch = !Array.isArray(parsed) || parsed.length !== defaultRatingCategories.length || parsed.some((c: any) => !expectedKeys.has(c.key));
+        if (isMismatch) {
+          await AsyncStorage.setItem('admin_rating_categories', JSON.stringify(defaultRatingCategories));
+          await AsyncStorage.setItem('ratingCategories', JSON.stringify(defaultRatingCategories));
+          setRatingCategories(defaultRatingCategories);
+        } else {
+          setRatingCategories(parsed);
+        }
+      } else {
+        await AsyncStorage.setItem('admin_rating_categories', JSON.stringify(defaultRatingCategories));
+        await AsyncStorage.setItem('ratingCategories', JSON.stringify(defaultRatingCategories));
+        setRatingCategories(defaultRatingCategories);
       }
     } catch (error) {
       console.error('Error loading rating categories:', error);
@@ -327,6 +315,15 @@ export default function AdminQuestionsScreen() {
           Admin: Manage Questions
         </ThemedText>
         <View style={styles.headerActions}>
+          <Button
+            mode="outlined"
+            icon="briefcase"
+            style={styles.filterButton}
+            compact
+            disabled
+          >
+            Professional Only
+          </Button>
           <ThemeToggle />
           <IconButton
             icon="refresh"
@@ -364,8 +361,11 @@ export default function AdminQuestionsScreen() {
               <Card.Content>
                 <ThemedText style={styles.infoTitle}>Rating Categories Management</ThemedText>
                 <ThemedText style={styles.infoText}>
-                  Here you can edit the rating questions that appear in the review form. 
+                  Here you can edit the rating questions that appear in the PROFESSIONAL review form. 
                   Each category will be displayed with a 5-star rating system.
+                </ThemedText>
+                <ThemedText style={[styles.infoText, { marginTop: hp('1%'), fontStyle: 'italic', opacity: 0.8 }]}>
+                  Note: Joyride reviews use fixed questions and cannot be modified here.
                 </ThemedText>
               </Card.Content>
             </Card>
@@ -378,8 +378,11 @@ export default function AdminQuestionsScreen() {
               <Card.Content>
                 <ThemedText style={styles.infoTitle}>Personal Information Fields Management</ThemedText>
                 <ThemedText style={styles.infoText}>
-                  Here you can manage the personal information fields that appear in the review form.
+                  Here you can manage the personal information fields that appear in the PROFESSIONAL review form.
                   Configure which fields are required and their display properties.
+                </ThemedText>
+                <ThemedText style={[styles.infoText, { marginTop: hp('1%'), fontStyle: 'italic', opacity: 0.8 }]}>
+                  Note: Joyride reviews use fixed fields and cannot be modified here.
                 </ThemedText>
               </Card.Content>
             </Card>
@@ -389,7 +392,7 @@ export default function AdminQuestionsScreen() {
         {activeTab === 'ratings' && (
           <>
             {ratingCategories.map((category, index) => (
-              <Card key={category.id} style={styles.categoryCard}>
+              <Card key={category.id ?? category.key ?? String(index)} style={styles.categoryCard}>
                 <Card.Content>
                   <View style={styles.categoryHeader}>
                     <ThemedText style={styles.categoryNumber}>#{index + 1}</ThemedText>
@@ -457,7 +460,7 @@ export default function AdminQuestionsScreen() {
         {activeTab === 'personal' && (
           <>
             {personalInfoFields.map((field, index) => (
-              <Card key={field.id} style={styles.categoryCard}>
+              <Card key={field.id ?? field.key ?? String(index)} style={styles.categoryCard}>
                 <Card.Content>
                   <View style={styles.categoryHeader}>
                     <ThemedText style={styles.categoryNumber}>#{index + 1}</ThemedText>
@@ -647,14 +650,19 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
     flex: 1,
     textAlign: 'center',
     fontSize: rf(22),
-    lineHeight: rf(30),
+    lineHeight: rf(32),
     marginHorizontal: wp('2%'),
     flexShrink: 1,
     paddingHorizontal: wp('2%'),
-    paddingVertical: rf(2),
+    paddingVertical: rf(6),
   },
   headerActions: {
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: rs(8),
+  },
+  filterButton: {
+    marginRight: rs(4),
   },
   resetButton: {
     margin: 0,
@@ -679,11 +687,11 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
   },
   tabText: {
     fontSize: rf(16),
-    lineHeight: rf(24),
+    lineHeight: rf(40),
     fontWeight: '500',
     flexShrink: 1,
     textAlign: 'center',
-    paddingVertical: rf(2),
+    paddingVertical: rf(4),
   },
   activeTabText: {
     color: '#FFFFFF',
@@ -700,20 +708,20 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
   },
   infoTitle: {
     fontSize: rf(18),
-    lineHeight: rf(26),
+    lineHeight: rf(42),
     fontWeight: 'bold',
     marginBottom: hp('1%'),
     flexShrink: 1,
     paddingRight: wp('2%'),
-    paddingVertical: rf(2),
+    paddingVertical: rf(5),
   },
   infoText: {
     fontSize: rf(14),
     opacity: 0.8,
-    lineHeight: rf(22),
+    lineHeight: rf(35),
     flexShrink: 1,
     paddingRight: wp('2%'),
-    paddingVertical: rf(2),
+    paddingVertical: rf(3),
   },
   categoryCard: {
     backgroundColor: cardBackgroundColor,
@@ -728,11 +736,11 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
   },
   categoryNumber: {
     fontSize: rf(16),
-    lineHeight: rf(24),
+    lineHeight: rf(28),
     fontWeight: 'bold',
     color: '#FF6B35',
     flexShrink: 1,
-    paddingVertical: rf(2),
+    paddingVertical: rf(4),
   },
   categoryActions: {
     flexDirection: 'row',
@@ -759,19 +767,19 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
   },
   categoryTitle: {
     fontSize: rf(16),
-    lineHeight: rf(24),
+    lineHeight: rf(40),
     fontWeight: '600',
     flexShrink: 1,
     paddingRight: wp('2%'),
-    paddingVertical: rf(2),
+    paddingVertical: rf(4),
   },
   categoryDescription: {
     fontSize: rf(14),
     opacity: 0.7,
-    lineHeight: rf(22),
+    lineHeight: rf(24),
     flexShrink: 1,
     paddingRight: wp('2%'),
-    paddingVertical: rf(2),
+    paddingVertical: rf(3),
   },
   bottomActions: {
     gap: hp('1.5%'),
@@ -790,12 +798,12 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
   },
   fieldTypeLabel: {
     fontSize: rf(14),
-    lineHeight: rf(22),
+    lineHeight: rf(24),
     fontWeight: '600',
     marginBottom: hp('0.5%'),
     flexShrink: 1,
     paddingRight: wp('2%'),
-    paddingVertical: rf(2),
+    paddingVertical: rf(3),
   },
   fieldTypeButtons: {
     flexDirection: 'row',
@@ -815,11 +823,11 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
   },
   fieldTypeButtonText: {
     fontSize: rf(12),
-    lineHeight: rf(20),
+    lineHeight: rf(22),
     fontWeight: '500',
     flexShrink: 1,
     textAlign: 'center',
-    paddingVertical: rf(2),
+    paddingVertical: rf(3),
   },
   activeFieldTypeButtonText: {
     color: '#FFFFFF',
@@ -832,11 +840,11 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
   },
   requiredLabel: {
     fontSize: rf(14),
-    lineHeight: rf(22),
+    lineHeight: rf(24),
     fontWeight: '600',
     flexShrink: 1,
     paddingRight: wp('2%'),
-    paddingVertical: rf(2),
+    paddingVertical: rf(3),
   },
   requiredToggle: {
     paddingVertical: hp('0.8%'),
@@ -852,11 +860,11 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
   },
   requiredToggleText: {
     fontSize: rf(12),
-    lineHeight: rf(20),
+    lineHeight: rf(22),
     fontWeight: '500',
     flexShrink: 1,
     textAlign: 'center',
-    paddingVertical: rf(2),
+    paddingVertical: rf(3),
   },
   requiredToggleTextActive: {
     color: '#FFFFFF',

@@ -1,6 +1,7 @@
 import { useTheme } from '@/contexts/ThemeContext';
 import React, { useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hapticsButtonPress } from '../utils/haptics';
 import { hp, rs, wp } from '../utils/responsive';
 import { ThemedText } from './themed-text';
@@ -24,6 +25,7 @@ export const FAB: React.FC<FABProps> = ({
   mainColor = '#2196F3',
 }) => {
   const { isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const [isOpen, setIsOpen] = useState(false);
   const animation = useRef(new Animated.Value(0)).current;
   const rotation = useRef(new Animated.Value(0)).current;
@@ -62,7 +64,7 @@ export const FAB: React.FC<FABProps> = ({
   });
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { bottom: hp('3%') + insets.bottom }]}>
       {/* Action buttons */}
       {actions.map((action, index) => {
         const translateY = animation.interpolate({

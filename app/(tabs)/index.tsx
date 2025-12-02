@@ -7,13 +7,19 @@ import { router } from 'expo-router';
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Button } from 'react-native-paper';
-import { getDevicePadding, hp, isTablet, minTouchTarget, rf, rs, wp } from '../../utils/responsive';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getDevicePadding, hp, isTablet, rf, rs, wp } from '../../utils/responsive';
 
 export default function HomeScreen() {
   const { isDark } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const handleAddReview = () => {
     router.push('/add-review');
+  };
+
+  const handleAddJoyrideReview = () => {
+    router.push('/add-review?type=joyride');
   };
 
   const handleViewReviews = () => {
@@ -34,7 +40,13 @@ export default function HomeScreen() {
         <ThemeToggle />
       </View>
       
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          { paddingTop: rs(16), paddingBottom: Math.max(insets.bottom, rs(24)) },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
         <OptimizedImage 
           source={isDark ? require('@/assets/images/white-logo.png') : require('@/assets/images/black-logo.png')} 
           style={styles.logo}
@@ -50,7 +62,7 @@ export default function HomeScreen() {
         </ThemedText>
         
         <ThemedText style={styles.subtitle}>
-          Welcome! Choose an option below to get started.
+          Welcome! Choose an action below.
         </ThemedText>
 
         <View style={styles.buttonContainer}>
@@ -77,6 +89,17 @@ export default function HomeScreen() {
           </Button>
 
           <Button
+            mode="contained"
+            onPress={handleAddJoyrideReview}
+            style={[styles.button, styles.joyrideButton]}
+            contentStyle={styles.buttonContent}
+            labelStyle={styles.buttonLabel}
+            icon="airplane-takeoff"
+          >
+            Joyride
+          </Button>
+
+          <Button
             mode="outlined"
             onPress={handleViewReviews}
             style={styles.button}
@@ -98,7 +121,7 @@ export default function HomeScreen() {
             Admin: Manage Questions
           </Button>
         </View>
-
+        
       </ScrollView>
     </ThemedView>
   );
@@ -114,8 +137,7 @@ const styles = StyleSheet.create({
     marginBottom: rs(16),
   },
   content: {
-    flex: 1,
-    justifyContent: 'center',
+    // Avoid vertical centering so content can scroll on small screens and landscape
     alignItems: 'center',
     width: '100%',
     maxWidth: isTablet ? wp(70) : wp(90),
@@ -147,28 +169,33 @@ const styles = StyleSheet.create({
   },
   button: {
     width: '100%',
-    minHeight: minTouchTarget,
+    // Keep touch target reasonable but not oversized on small screens
+    minHeight: isTablet ? rs(56) : rs(44),
     borderRadius: rs(8),
   },
   buttonContent: {
-    paddingVertical: rs(12),
+    paddingVertical: isTablet ? rs(12) : rs(10),
     paddingHorizontal: rs(16),
-    minHeight: minTouchTarget,
+    minHeight: isTablet ? rs(56) : rs(44),
     justifyContent: 'center',
     alignItems: 'center',
   },
   buttonLabel: {
-    fontSize: rf(16),
-    // Let platform compute safe line height
+    fontSize: rf(isTablet ? 16 : 15),
+   lineHeight: rf(40),
     textAlign: 'center',
   },
   dashboardButton: {
     backgroundColor: '#2196F3',
-    minHeight: minTouchTarget,
+    minHeight: isTablet ? rs(56) : rs(44),
   },
   adminButton: {
     backgroundColor: '#FF6B35',
     marginTop: rs(16),
-    minHeight: minTouchTarget,
+    minHeight: isTablet ? rs(56) : rs(44),
+  },
+  joyrideButton: {
+    backgroundColor: '#9C27B0',
+    minHeight: isTablet ? rs(56) : rs(44),
   },
 });

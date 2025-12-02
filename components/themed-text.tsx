@@ -1,4 +1,4 @@
-import { StyleSheet, Text, type TextProps } from 'react-native';
+import { Platform, StyleSheet, Text, type TextProps } from 'react-native';
 import { rf } from '../utils/responsive';
 
 import { useThemeColor } from '@/hooks/use-theme-color';
@@ -38,30 +38,35 @@ const styles = StyleSheet.create({
   default: {
     fontSize: rf(16),
     lineHeight: rf(24),
-    paddingVertical: rf(2), // Add padding to prevent cutoff
+    paddingVertical: rf(4), // Increased padding to prevent descender clipping
+    fontFamily: Platform.select({ ios: 'System', android: 'sans-serif' }),
   },
   defaultSemiBold: {
     fontSize: rf(16),
     lineHeight: rf(24),
     fontWeight: '600',
-    paddingVertical: rf(2), // Add padding to prevent cutoff
+    paddingVertical: rf(4), // Increased padding to prevent descender clipping
+    fontFamily: Platform.select({ ios: 'System', android: 'sans-serif-medium' }),
   },
   title: {
     fontSize: rf(32),
     fontWeight: 'bold',
-    lineHeight: rf(40), // Increased from rf(32) to accommodate descenders
-    paddingVertical: rf(4), // Add padding to prevent cutoff
+    lineHeight: rf(44), // Increased to accommodate descenders
+    paddingVertical: rf(8), // Increased padding to prevent descender clipping
+    fontFamily: Platform.select({ ios: 'System', android: 'sans-serif' }),
   },
   subtitle: {
     fontSize: rf(20),
     fontWeight: 'bold',
-    lineHeight: rf(28), // Added line height to prevent cutoff
-    paddingVertical: rf(3), // Add padding to prevent cutoff
+    lineHeight: rf(30), // Increased line height to prevent cutoff
+    paddingVertical: rf(6), // Increased padding to prevent descender clipping
+    fontFamily: Platform.select({ ios: 'System', android: 'sans-serif' }),
   },
   link: {
     lineHeight: rf(30),
     fontSize: rf(16),
     color: '#0a7ea4',
-    paddingVertical: rf(2), // Add padding to prevent cutoff
+    paddingVertical: rf(4), // Increased padding to prevent descender clipping
+    fontFamily: Platform.select({ ios: 'System', android: 'sans-serif' }),
   },
 });

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { deviceInfo, getDevicePadding, isSmallPhone, isTablet, rf, rs, wp } from '../utils/responsive';
 
 interface ResponsiveLayoutProps {
@@ -125,12 +125,15 @@ export const ResponsiveText: React.FC<ResponsiveTextProps> = ({
   return (
     <Text
       style={[
-        styles.text,
-        {
-          fontSize: getFontSize(),
-          fontWeight: weight === 'bold' ? 'bold' : 'normal',
-        },
-        style,
+      styles.text,
+      {
+        fontSize: getFontSize(),
+        fontWeight: weight === 'bold' ? 'bold' : 'normal',
+          lineHeight: getFontSize() * 1.35,
+          paddingVertical: rs(3),
+          fontFamily: Platform.select({ ios: 'System', android: 'sans-serif' }),
+      },
+      style,
       ]}
     >
       {children}

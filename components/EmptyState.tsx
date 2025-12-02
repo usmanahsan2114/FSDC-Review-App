@@ -117,6 +117,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     opacity: 0.7,
     lineHeight: rf(24),
+    paddingVertical: rf(2),
     marginBottom: rs(32),
   },
   button: {

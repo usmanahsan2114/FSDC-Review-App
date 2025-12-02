@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "258720459688",
+    "project_id": "fsdc-reviews",
+    "storage_bucket": "fsdc-reviews.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:258720459688:android:3732edba0c512fd6a6cb9d",
+        "android_client_info": {
+          "package_name": "reviews.fsdc.com"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCQgSxA0nMeTCFp3_I9Qv64j--BPDisMkA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

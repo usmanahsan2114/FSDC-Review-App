@@ -7,6 +7,7 @@ export function HelloWave() {
       style={{
         fontSize: rf(28),
         lineHeight: rf(32),
+        paddingVertical: rf(2),
         marginTop: -6,
         animationName: {
           '50%': { transform: [{ rotate: '25deg' }] },

@@ -78,11 +78,13 @@ const styles = StyleSheet.create({
   stepText: {
     fontSize: rf(14),
     fontWeight: '600',
+    paddingVertical: rs(2),
   },
   percentageText: {
     fontSize: rf(14),
     fontWeight: 'bold',
     color: '#2196F3',
+    paddingVertical: rs(2),
   },
   progressBar: {
     height: rs(8),

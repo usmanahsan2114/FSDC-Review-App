@@ -1,13 +1,13 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Provider as PaperProvider, MD3DarkTheme, MD3LightTheme } from 'react-native-paper';
 import { useEffect } from 'react';
+import { MD3DarkTheme, MD3LightTheme, Provider as PaperProvider } from 'react-native-paper';
 import 'react-native-reanimated';
 
-import { ThemeProvider as CustomThemeProvider, useTheme } from '@/contexts/ThemeContext';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import { migrateExistingData, isMigrationNeeded } from '@/utils/dataMigration';
+import { ThemeProvider as CustomThemeProvider, useTheme } from '@/contexts/ThemeContext';
+import { isMigrationNeeded, migrateExistingData } from '@/utils/dataMigration';
 
 export const unstable_settings = {
   anchor: '(tabs)',

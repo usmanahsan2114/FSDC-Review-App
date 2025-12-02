@@ -1,34 +1,88 @@
-# Known Issues, Warnings, and Fixes
+# Known Issues and Warnings
 
-## 1) Descenders (g/j/p/q/y) clipped on tablet
-- Cause: tight `lineHeight` overrides on some text styles.
-- Fix: Use ThemedText defaults or set lineHeight ≥ 1.25× fontSize and add `paddingVertical`. Home screen adjusted.
+## Critical Issues
 
-## 2) PDF not generated in APK (release)
-- Cause: Android lean builds stripping needed native modules (e.g., `expo-print`).
-- Fix: `app.json` → `android.enableDangerousExperimentalLeanBuilds: false`.
+### 1. Data Persistence Reliability
 
-## 3) Expo Go cannot save to gallery on Android 13+
-- Cause: permission limitations in Expo Go.
-- Fix: Works in dev/production builds; request Media Library permission. In-app logic now optional.
+**Location**: `storage/reviewStorage.js`
+**Issue**: AsyncStorage operations lack proper error boundaries.
+**Impact**: High - Data loss possible.
+**Details**: No retry mechanism for failed storage operations. Silent failures in some error cases.
+**Recommendation**: Implement robust error handling with retry logic and user feedback.
 
-## 4) Deprecated file system APIs
-- Cause: Using `expo-file-system` methods deprecated in SDK 54.
-- Fix: Use `expo-file-system/legacy` consistently.
+### 2. Memory Management Issues
 
-## 5) PDF images missing/blank
-- Cause: using `readAsStringAsync` for base64 conversion.
-- Fix: Convert with `expo-image-manipulator` (`manipulateAsync(...,{base64:true})`).
+**Location**: Multiple components with large lists.
+**Issue**: No virtualization for large datasets.
+**Impact**: High - App crashes with many reviews.
+**Details**: `reviews-list.tsx` renders all reviews at once. No pagination or lazy loading.
+**Recommendation**: Implement FlatList with virtualization and image lazy loading.
 
-## 6) Router build error: `expo-router/build/qualified-entry`
-- Cause: cache or mismatched deps.
-- Fix: Align package versions; clear node_modules + lockfile; reinstall; clear Metro cache.
+### 3. Image Storage Inefficiency
 
-## 7) Menus stuck in Reviews List
-- Fix: Dynamic `key` on `Menu`, proper toggle handlers, and container `overflow: 'visible'`.
+**Location**: `add-review.tsx`, `review-detail.tsx`
+**Issue**: Images stored as base64 in AsyncStorage (legacy data).
+**Impact**: High - Storage bloat and performance issues.
+**Details**: Base64 encoding increases file size. AsyncStorage has size limitations.
+**Recommendation**: Ensure all images are migrated to FileSystem storage (partially implemented).
 
-## 8) Hook order warning
-- Fix: Move hooks above conditional returns.
+## Major Issues
 
-## 9) VirtualizedList perf warning
-- Fix: Memoize ReviewCard, stable deps, remove inaccurate `getItemLayout`.
+### 4. Navigation State Management
+
+**Location**: Multiple navigation components.
+**Issue**: Inconsistent navigation patterns (mix of expo-router and react-navigation).
+**Impact**: Medium-High - UX inconsistencies.
+**Recommendation**: Standardize on expo-router throughout the app.
+
+### 5. Form Validation Gaps
+
+**Location**: `add-review.tsx`
+**Issue**: Incomplete form validation (basic regex for email, no phone validation).
+**Impact**: Medium-High - Invalid data entry possible.
+**Recommendation**: Implement comprehensive validation library (e.g., Yup or Zod).
+
+### 6. Performance Issues with Responsive Calculations
+
+**Location**: `utils/responsive.ts`, `hooks/useResponsive.ts`
+**Issue**: Redundant responsive calculations on every render.
+**Impact**: Medium - Unnecessary re-renders.
+**Recommendation**: Consolidate responsive systems and add memoization.
+
+## Warnings and Code Smells
+
+### TypeScript Strict Mode Violations
+
+**Location**: Multiple files (`add-review.tsx`, `review-detail.tsx`).
+**Details**: Use of type assertions (`as FormData`) bypassing type checking.
+**Recommendation**: Initialize with proper default values.
+
+### Unused Import Warnings
+
+**Location**: Various components.
+**Details**: Imports like `Platform` defined but never used.
+**Recommendation**: Remove unused imports.
+
+### Any Type Usage
+
+**Location**: `storage/reviewStorage.js`, `screens/ReviewPreviewScreen.js`.
+**Details**: Missing type definitions, implicit `any`.
+**Recommendation**: Define proper TypeScript interfaces.
+
+### React Native Deprecation Warnings
+
+**Location**: `utils/responsive.ts`.
+**Details**: Usage of `Dimensions.get` instead of `useWindowDimensions` hook.
+**Recommendation**: Migrate to modern React Native APIs.
+
+### Performance Warnings
+
+**Location**: `reviews-list.tsx`.
+**Details**: Mapping over arrays instead of using `FlatList` (addressed in recent updates, verify).
+**Recommendation**: Ensure `FlatList` is used for all lists.
+
+### Expo Go Limitations
+
+**Location**: `app/add-review.tsx`.
+**Details**: Camera and FileSystem usage may have limitations in Expo Go vs Development Build.
+**Recommendation**: Use Development Build for full native capability testing.

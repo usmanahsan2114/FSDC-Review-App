@@ -1,10 +1,10 @@
+import { useThemeColor } from '@/hooks/use-theme-color';
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Button, Card } from 'react-native-paper';
+import { hp, rf, rs, wp } from '../utils/responsive';
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
-import { useThemeColor } from '@/hooks/use-theme-color';
-import { wp, hp, rf, rs } from '../utils/responsive';
 
 interface Props {
   children: ReactNode;
@@ -149,6 +149,7 @@ const createStyles = (backgroundColor: string, textColor: string, cardBackground
       textAlign: 'center',
       marginBottom: hp('3%'),
       lineHeight: rf(24),
+      paddingVertical: rf(2),
     },
     errorDetails: {
       width: '100%',

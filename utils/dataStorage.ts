@@ -1,11 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import { decryptObject, encryptObject, isEncrypted } from './encryption';
-import {
+import { 
     batchMigrateImages,
     cleanupOrphanedImages,
-    deleteImagePermanently,
-    getAllStoredImages,
+  deleteImagePermanently, 
+  getAllStoredImages,
     saveImagePermanently
 } from './imageStorage';
 
@@ -25,6 +25,7 @@ const CURRENT_STORAGE_VERSION = '2.0';
 export interface Review {
   id: string;
   timestamp: number;
+  reviewType: 'professional' | 'joyride'; // Type of review: professional or joyride
   personalInfo: { [key: string]: string };
   ratings: {
     [key: string]: number;
@@ -90,6 +91,7 @@ export const saveReview = async (reviewData: Omit<Review, 'id' | 'timestamp'>): 
     const review: Review = {
       id: reviewId,
       timestamp,
+      reviewType: reviewData.reviewType || 'professional', // Default to professional for backward compatibility
       personalInfo: reviewData.personalInfo,
       ratings: reviewData.ratings,
       overallRating: reviewData.overallRating,
@@ -185,6 +187,12 @@ export const getAllReviews = async (): Promise<Review[]> => {
         review.id && 
         typeof review.timestamp === 'number'
       );
+      
+      // Add reviewType for backward compatibility (old reviews default to 'professional')
+      reviews = reviews.map(review => ({
+        ...review,
+        reviewType: review.reviewType || 'professional'
+      }));
       
       return reviews.sort((a, b) => b.timestamp - a.timestamp); // Sort by newest first
     }

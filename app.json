@@ -51,16 +51,14 @@
       "typedRoutes": true,
       "reactCompiler": true
     },
-    "extra": {
-      "eas": {
-        "projectId": "6ee7f2d9-4656-404a-9aef-e93374d9576f"
-      }
-    },
     "runtimeVersion": {
       "policy": "appVersion"
     },
-    "updates": {
-      "url": "https://u.expo.dev/6ee7f2d9-4656-404a-9aef-e93374d9576f"
-    }
+    "extra": {
+      "eas": {
+        "projectId": "5c5f44c3-1c1b-4ce5-b06f-e930fcf4e90d"
+      }
+    },
+    "owner": "usmanahsan2114"
   }
 }

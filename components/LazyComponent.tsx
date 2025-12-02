@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef, memo, useCallback } from 'react';
-import { View, StyleSheet, Dimensions, ActivityIndicator, ScrollView } from 'react-native';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Dimensions, StyleSheet, View } from 'react-native';
 
 interface LazyComponentProps {
   children: React.ReactNode;

@@ -10,24 +10,31 @@ import { router } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, FlatList, ListRenderItem, RefreshControl, StyleSheet, View } from 'react-native';
 import { Button, Card, Chip, Divider, Menu, TextInput } from 'react-native-paper';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StarRating from 'react-native-star-rating-widget';
 import { deleteReview, getAllReviews, initializeDataStorage, Review } from '../utils/dataStorage';
 import { hapticsButtonPress, hapticsDelete, hapticsFilterSelect } from '../utils/haptics';
 import { getDevicePadding, hp, isTablet, minTouchTarget, rf, rs, wp } from '../utils/responsive';
 
 interface RatingCategory {
+  id?: string; // Optional for backward compatibility
   key: string;
   title: string;
   description: string;
 }
 
 const defaultRatingCategories: RatingCategory[] = [
-  { key: 'generalFlying', title: 'General Flying / Handling Characteristics', description: 'How realistic are the aircraft controls and flight dynamics?' },
-  { key: 'emergencyProcedures', title: 'Emergency Procedures', description: 'How well does the simulator handle emergency scenarios?' },
-  { key: 'instrumentFlying', title: 'Instrument Flying System Integration', description: 'How accurate and functional are the aircraft instruments?' },
-  { key: 'visualEffects', title: 'Visual Effects Take-Off & Landing', description: 'How realistic are the visual effects during critical phases?' },
-  { key: 'fidelityRealism', title: 'Characteristics Fidelity & Realism', description: 'Overall realism and attention to detail in the simulation' },
-  { key: 'simulatorPerformance', title: 'Simulator Performance', description: 'Technical performance, frame rate, and system stability' },
+  { id: '1', key: 'cockpitRealismLayout', title: 'Cockpit realism & layout', description: '' },
+  { id: '2', key: 'visualQualityFOV', title: 'Visual quality & field of view', description: '' },
+  { id: '3', key: 'controlLoadingRealism', title: 'Control loading realism (force feedback)', description: '' },
+  { id: '4', key: 'motionFidelity', title: 'Motion fidelity (6-DOF cues & response)', description: '' },
+  { id: '5', key: 'aerodynamicResponse', title: 'Aerodynamic response & flight feel', description: '' },
+  { id: '6', key: 'instrumentSwitchFunctionality', title: 'Instrument & switch functionality', description: '' },
+  { id: '7', key: 'visualMotionSync', title: 'Visual-motion synchronization', description: '' },
+  { id: '8', key: 'instructorControlTrainingFlow', title: 'Instructor control & training flow', description: '' },
+  { id: '9', key: 'aircraftBehaviorMatch', title: 'Aircraft behavior matches real flight characteristics', description: '' },
+  { id: '10', key: 'soundVibrationRealism', title: 'Sound & vibration realism', description: '' },
+  { id: '11', key: 'overallImmersionRealism', title: 'Overall immersion & realism', description: '' },
 ];
 
 interface PersonalInfoField {
@@ -61,8 +68,11 @@ function ReviewsListScreen() {
   const [filterHasPhotos, setFilterHasPhotos] = useState(false);
   const [filterHasHandwriting, setFilterHasHandwriting] = useState(false);
   const [avgMenuVisible, setAvgMenuVisible] = useState(false);
+  const [reviewTypeFilter, setReviewTypeFilter] = useState<'all' | 'professional' | 'joyride'>('professional');
+  const [typeFilterMenuVisible, setTypeFilterMenuVisible] = useState(false);
 
   const { isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
   const cardBackgroundColor = useThemeColor({ light: '#FFFFFF', dark: '#1E1E1E' }, 'background');
@@ -107,7 +117,20 @@ function ReviewsListScreen() {
     try {
       const stored = await AsyncStorage.getItem('ratingCategories');
       if (stored) {
-        setRatingCategories(JSON.parse(stored));
+        const parsed = JSON.parse(stored);
+        const expectedKeys = new Set(defaultRatingCategories.map(c => c.key));
+        const isMismatch = !Array.isArray(parsed) || parsed.length !== defaultRatingCategories.length || parsed.some((c: any) => !expectedKeys.has(c.key));
+        if (isMismatch) {
+          await AsyncStorage.setItem('admin_rating_categories', JSON.stringify(defaultRatingCategories));
+          await AsyncStorage.setItem('ratingCategories', JSON.stringify(defaultRatingCategories));
+          setRatingCategories(defaultRatingCategories);
+        } else {
+          setRatingCategories(parsed);
+        }
+      } else {
+        await AsyncStorage.setItem('admin_rating_categories', JSON.stringify(defaultRatingCategories));
+        await AsyncStorage.setItem('ratingCategories', JSON.stringify(defaultRatingCategories));
+        setRatingCategories(defaultRatingCategories);
       }
     } catch (error) {
       console.error('Error loading rating categories:', error);
@@ -177,12 +200,13 @@ function ReviewsListScreen() {
   }, []);
 
   const overallAverageRating = useMemo(() => {
-    if (reviews.length === 0) return 0;
-    const totalRating = reviews.reduce((sum, review) => {
+    const filtered = reviewTypeFilter === 'all' ? reviews : reviews.filter(r => (r.reviewType || 'professional') === reviewTypeFilter);
+    if (filtered.length === 0) return 0;
+    const totalRating = filtered.reduce((sum, review) => {
       return sum + calculateAverageRating(review.ratings);
     }, 0);
-    return totalRating / reviews.length;
-  }, [reviews, calculateAverageRating]);
+    return totalRating / filtered.length;
+  }, [reviews, reviewTypeFilter, calculateAverageRating]);
 
   // Label for current sort option (for UI)
   const sortLabel = useMemo(() => {
@@ -201,6 +225,11 @@ function ReviewsListScreen() {
   const filteredReviews = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     let list = reviews;
+
+    // Review type filter
+    if (reviewTypeFilter !== 'all') {
+      list = list.filter(r => (r.reviewType || 'professional') === reviewTypeFilter);
+    }
 
     // Search filter
     if (q) {
@@ -248,7 +277,7 @@ function ReviewsListScreen() {
     });
 
     return sorted;
-  }, [reviews, searchQuery, sortOption, filterMinRating, filterHasPhotos, filterHasHandwriting, calculateAverageRating]);
+  }, [reviews, reviewTypeFilter, searchQuery, sortOption, filterMinRating, filterHasPhotos, filterHasHandwriting, calculateAverageRating]);
 
   // Average to display in header section based on dropdown selection
   const { displayAverage, displayCount } = useMemo(() => {
@@ -283,29 +312,29 @@ function ReviewsListScreen() {
     const flyingExperience = useMemo(() => getPersonalInfoValue(review, 'previousFlyingExperience'), [review]);
     
     return (
-      <Card style={styles.reviewCard}>
-        <Card.Content>
-          <View style={styles.cardHeader}>
-            <ThemedText type="subtitle" style={styles.reviewerName}>
+    <Card style={styles.reviewCard}>
+      <Card.Content>
+        <View style={styles.cardHeader}>
+            <ThemedText style={styles.reviewerName}>
               {reviewerName}
-            </ThemedText>
-            <ThemedText style={styles.submittedDate}>
+          </ThemedText>
+          <ThemedText style={styles.submittedDate}>
               {reviewDate}
-            </ThemedText>
-          </View>
+          </ThemedText>
+        </View>
 
-          <View style={styles.reviewInfo}>
+        <View style={styles.reviewInfo}>
             {nationality && (
               <Chip style={styles.chip} textStyle={styles.chipText}>
                 {nationality}
-              </Chip>
+                </Chip>
             )}
             {profession && (
               <Chip style={styles.chip} textStyle={styles.chipText}>
                 {profession}
               </Chip>
             )}
-          </View>
+        </View>
 
           {/* Experience Row */}
           <View style={styles.experienceRow}>
@@ -336,33 +365,33 @@ function ReviewsListScreen() {
           {/* Overall Rating */}
           <View style={styles.cardOverallRatingContainer}>
             <ThemedText style={styles.overallRatingLabel}>Overall Rating:</ThemedText>
-            <View style={styles.overallRatingDisplay}>
-              <StarRating
+          <View style={styles.overallRatingDisplay}>
+            <StarRating
                 rating={reviewRating}
-                onChange={() => {}}
-                starSize={wp('4%')}
-                color="#FFD700"
+              onChange={() => {}}
+              starSize={wp('4%')}
+              color="#FFD700"
                 emptyColor={isDark ? '#404040' : '#E0E0E0'}
-                enableHalfStar={false}
-              />
-              <ThemedText style={styles.overallRatingText}>
+              enableHalfStar={false}
+            />
+            <ThemedText style={styles.overallRatingText}>
                 {reviewRating.toFixed(1)}/5.0
-              </ThemedText>
-            </View>
+            </ThemedText>
           </View>
+        </View>
 
           {/* Comments Preview */}
-          {review.textComment && (
-            <View style={styles.commentsContainer}>
+        {review.textComment && (
+          <View style={styles.commentsContainer}>
               <ThemedText style={styles.commentsLabel}>Comment:</ThemedText>
-              <ThemedText style={styles.comments} numberOfLines={2}>
-                {review.textComment}
-              </ThemedText>
-            </View>
-          )}
+            <ThemedText style={styles.comments} numberOfLines={2}>
+              {review.textComment}
+            </ThemedText>
+          </View>
+        )}
 
           {/* Handwritten and Photos Status */}
-          <View style={styles.additionalInfo}>
+        <View style={styles.additionalInfo}>
             <View style={styles.statusItem}>
               <ThemedText style={styles.statusLabel}>Handwritten:</ThemedText>
               <Chip 
@@ -370,7 +399,7 @@ function ReviewsListScreen() {
                 textStyle={styles.statusChipText}
               >
                 {review.handwrittenComment ? 'Yes' : 'No'}
-              </Chip>
+            </Chip>
             </View>
             <View style={styles.statusItem}>
               <ThemedText style={styles.statusLabel}>Photos:</ThemedText>
@@ -379,35 +408,35 @@ function ReviewsListScreen() {
                 textStyle={styles.statusChipText}
               >
                 {review.photos && review.photos.length > 0 ? 'Yes' : 'No'}
-              </Chip>
+            </Chip>
             </View>
-          </View>
+        </View>
 
-          <View style={styles.cardActions}>
-            <Button
-              mode="contained"
-              onPress={() => handleViewDetail(review)}
-              style={styles.actionButton}
+        <View style={styles.cardActions}>
+          <Button
+            mode="contained"
+            onPress={() => handleViewDetail(review)}
+            style={styles.actionButton}
               accessibilityLabel={`View details for review by ${reviewerName}`}
-              accessibilityHint="Opens detailed view of this review"
-              accessibilityRole="button"
-            >
-              View Details
-            </Button>
-            <Button
-              mode="outlined"
-              onPress={() => handleDeleteReview(review.id)}
-              style={styles.deleteButton}
-              textColor="#d32f2f"
+            accessibilityHint="Opens detailed view of this review"
+            accessibilityRole="button"
+          >
+            View Details
+          </Button>
+          <Button
+            mode="outlined"
+            onPress={() => handleDeleteReview(review.id)}
+            style={styles.deleteButton}
+            textColor="#d32f2f"
               accessibilityLabel={`Delete review by ${reviewerName}`}
-              accessibilityHint="Permanently removes this review"
-              accessibilityRole="button"
-            >
-              Delete
-            </Button>
-          </View>
-        </Card.Content>
-      </Card>
+            accessibilityHint="Permanently removes this review"
+            accessibilityRole="button"
+          >
+            Delete
+          </Button>
+        </View>
+      </Card.Content>
+    </Card>
     );
   }, (prevProps, nextProps) => {
     // Custom comparison function for better memoization
@@ -440,18 +469,18 @@ function ReviewsListScreen() {
       return <NoSearchResultsEmptyState onClearFilters={clearAllFilters} />;
     }
     return (
-      <View style={styles.emptyState}>
-        <ThemedText style={styles.emptyText}>
-          No reviews yet. Add your first review!
-        </ThemedText>
-        <Button
-          mode="contained"
-          onPress={() => router.push('/add-review')}
-          style={styles.addButton}
-        >
-          Add Review
-        </Button>
-      </View>
+    <View style={styles.emptyState}>
+      <ThemedText style={styles.emptyText}>
+        No reviews yet. Add your first review!
+      </ThemedText>
+      <Button
+        mode="contained"
+        onPress={() => router.push('/add-review')}
+        style={styles.addButton}
+      >
+        Add Review
+      </Button>
+    </View>
     );
   }, [reviews.length, hasActiveFilters, clearAllFilters]);
 
@@ -463,7 +492,7 @@ function ReviewsListScreen() {
             <View style={styles.headerTitles}>
               <ThemedText style={styles.title}>Reviews</ThemedText>
               <ThemedText style={styles.subtitle}>Loading...</ThemedText>
-            </View>
+        </View>
             <ThemeToggle />
           </View>
         </View>
@@ -482,9 +511,71 @@ function ReviewsListScreen() {
               {filteredReviews.length} review{filteredReviews.length !== 1 ? 's' : ''} found
             </ThemedText>
           </View>
+          <View style={styles.headerActions}>
+            <Menu
+              key={`type-filter-menu-${reviewTypeFilter}-${typeFilterMenuVisible}`}
+              visible={typeFilterMenuVisible}
+              onDismiss={() => {
+                setTypeFilterMenuVisible(false);
+              }}
+              anchor={
+                <Button
+                  mode="outlined"
+                  onPress={() => {
+                    setTypeFilterMenuVisible(true);
+                  }}
+                  icon="filter-variant"
+                  style={styles.filterButton}
+                  compact
+                >
+                  {reviewTypeFilter === 'all' ? 'All Reviews' : reviewTypeFilter === 'professional' ? 'Professional' : 'Joyride'}
+                </Button>
+              }
+            >
+              <Menu.Item
+                onPress={() => {
+                  const newFilter: 'all' | 'professional' | 'joyride' = 'all';
+                  setTypeFilterMenuVisible(false);
+                  hapticsFilterSelect();
+                  // Always update state, even if same, to ensure menu closes
+                  setTimeout(() => {
+                    setReviewTypeFilter(newFilter);
+                  }, 0);
+                }}
+                title="All Reviews"
+                leadingIcon={reviewTypeFilter === 'all' ? 'check' : undefined}
+              />
+              <Menu.Item
+                onPress={() => {
+                  const newFilter: 'all' | 'professional' | 'joyride' = 'professional';
+                  setTypeFilterMenuVisible(false);
+                  hapticsFilterSelect();
+                  // Always update state, even if same, to ensure menu closes
+                  setTimeout(() => {
+                    setReviewTypeFilter(newFilter);
+                  }, 0);
+                }}
+                title="Professional"
+                leadingIcon={reviewTypeFilter === 'professional' ? 'check' : undefined}
+              />
+              <Menu.Item
+                onPress={() => {
+                  const newFilter: 'all' | 'professional' | 'joyride' = 'joyride';
+                  setTypeFilterMenuVisible(false);
+                  hapticsFilterSelect();
+                  // Always update state, even if same, to ensure menu closes
+                  setTimeout(() => {
+                    setReviewTypeFilter(newFilter);
+                  }, 0);
+                }}
+                title="Joyride"
+                leadingIcon={reviewTypeFilter === 'joyride' ? 'check' : undefined}
+              />
+            </Menu>
           <ThemeToggle />
+          </View>
         </View>
-        
+
         {/* Search, sort and filter controls */}
         <View style={styles.controlsRow}>
           <TextInput
@@ -492,7 +583,8 @@ function ReviewsListScreen() {
             placeholder="Search by name, profession, nationality, comments"
             value={searchQuery}
             onChangeText={setSearchQuery}
-            style={styles.searchInput}
+            style={[styles.searchInput, { flex: 0, width: wp('40%') }]}
+            dense
           />
           <Menu
             key={`sort-menu-${menuVisible}`}
@@ -503,7 +595,8 @@ function ReviewsListScreen() {
                 mode="outlined" 
                 onPress={() => setMenuVisible(!menuVisible)} 
                 style={styles.menuAnchorButton} 
-                contentStyle={{ minHeight: minTouchTarget }}
+                compact
+                contentStyle={{ minHeight: minTouchTarget, paddingHorizontal: rs(6) }}
               >
                 Sort by: {sortLabel}
               </Button>
@@ -533,7 +626,8 @@ function ReviewsListScreen() {
               const clamped = Math.max(0, Math.min(5, num));
               setFilterMinRating(clamped);
             }}
-            style={{ flex: 1 }}
+            style={{ width: wp('22%') }}
+            dense
           />
           <Chip
             selected={filterHasPhotos}
@@ -542,6 +636,7 @@ function ReviewsListScreen() {
               setFilterHasPhotos(prev => !prev);
             }}
             icon="image-outline"
+            compact
             style={[styles.filterChip, filterHasPhotos && styles.filterChipSelected]}
             textStyle={[styles.chipText, filterHasPhotos && styles.filterChipTextSelected]}
           >
@@ -554,6 +649,7 @@ function ReviewsListScreen() {
               setFilterHasHandwriting(prev => !prev);
             }}
             icon="pen"
+            compact
             style={[styles.filterChip, filterHasHandwriting && styles.filterChipSelected]}
             textStyle={[styles.chipText, filterHasHandwriting && styles.filterChipTextSelected]}
           >
@@ -574,7 +670,8 @@ function ReviewsListScreen() {
                     mode="outlined" 
                     onPress={() => setAvgMenuVisible(!avgMenuVisible)} 
                     style={styles.menuAnchorButton} 
-                    contentStyle={{ minHeight: minTouchTarget }}
+                    compact
+                    contentStyle={{ minHeight: minTouchTarget, paddingHorizontal: rs(6) }}
                   >
                     Showing: {selectedCategoryKey === 'overall' ? 'Overall' : (ratingCategories.find(rc => rc.key === selectedCategoryKey)?.title || 'Category')}
                   </Button>
@@ -591,7 +688,7 @@ function ReviewsListScreen() {
               <StarRating
                 rating={displayAverage}
                 onChange={() => {}}
-                starSize={wp('5%')}
+                starSize={wp('3.5%')}
                 color="#FFD700"
                 emptyColor="#E0E0E0"
                 enableHalfStar={true}
@@ -616,7 +713,7 @@ function ReviewsListScreen() {
         ListEmptyComponent={ListEmptyComponent}
         showsVerticalScrollIndicator={false}
         style={styles.scrollView}
-        contentContainerStyle={filteredReviews.length === 0 ? styles.emptyContainer : undefined}
+        contentContainerStyle={filteredReviews.length === 0 ? styles.emptyContainer : { paddingBottom: Math.max(insets.bottom, rs(20)) }}
         removeClippedSubviews={true}
         maxToRenderPerBatch={10}
         updateCellsBatchingPeriod={50}
@@ -636,7 +733,7 @@ function ReviewsListScreen() {
         accessibilityRole="list"
       />
 
-      <View style={styles.bottomActions}>
+      <View style={[styles.bottomActions, { paddingBottom: Math.max(insets.bottom, hp('1%')) }]}>
         <Button
           mode="outlined"
           onPress={handleGoBack}
@@ -659,37 +756,46 @@ const createStyles = (isDark: boolean, cardBackgroundColor: string, borderColor:
   },
   header: {
     paddingHorizontal: getDevicePadding().horizontal,
-    paddingBottom: rs(8), // Reduced from getDevicePadding().vertical
+    paddingBottom: rs(4), // Further reduced
   },
   headerTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: rs(8), // Reduced from 12
-    marginBottom: rs(4), // Reduced from 8
+    gap: rs(6), // Further reduced
+    marginBottom: rs(2), // Further reduced
   },
   headerTitles: {
     flex: 1,
   },
-
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: rs(8),
+  },
+  filterButton: {
+    marginRight: rs(4),
+  },
   title: {
     fontSize: rf(isTablet ? 22 : 20), // Reduced from 28:24
     fontWeight: 'bold',
-    marginBottom: rs(2), // Reduced from 8
+    marginBottom: rs(2), // Keep tight
     textAlign: 'center',
     flexShrink: 1,
     paddingHorizontal: wp('2%'),
+    paddingVertical: rs(4),
   },
   subtitle: {
     fontSize: rf(14), // Reduced from 16
     textAlign: 'center',
     opacity: 0.7,
+    paddingVertical: rs(2),
   },
   overallAverageContainer: {
-    marginTop: hp('1%'), // Reduced from 2%
-    paddingVertical: hp('1%'), // Reduced from 2%
-    paddingHorizontal: wp('3%'), // Reduced from 4%
+    marginTop: hp('0.5%'),
+    paddingVertical: hp('0.5%'),
+    paddingHorizontal: wp('2%'),
     backgroundColor: isDark ? '#2A2A2A' : '#f8f9fa',
-    borderRadius: rs(12), // Reduced from wp('3%')
+    borderRadius: rs(10),
     borderWidth: 1,
     borderColor: borderColor,
     alignItems: 'center',
@@ -702,31 +808,35 @@ const createStyles = (isDark: boolean, cardBackgroundColor: string, borderColor:
     alignItems: 'center',
     justifyContent: 'space-between',
     flexWrap: 'wrap',
-    gap: rs(12),
-    marginBottom: rs(8),
+    gap: rs(8),
+    marginBottom: rs(4),
   },
   overallAverageLabel: {
-    fontSize: rf(15), // Reduced from 18
+    fontSize: rf(14),
     fontWeight: '600',
-    marginBottom: rs(4), // Reduced
+    marginBottom: rs(2),
     color: isDark ? '#FFFFFF' : '#333',
+    paddingVertical: rs(2),
+    lineHeight: rf(32),
   },
   overallAverageDisplay: {
     alignItems: 'center',
-    gap: rs(4), // Reduced
+    gap: rs(1),
   },
   overallAverageText: {
-    fontSize: rf(18), // Reduced from 20
+    fontSize: rf(16),
     fontWeight: 'bold',
     color: '#FFD700',
-    marginTop: rs(2), // Reduced
+    marginTop: rs(1),
     textAlign: 'center',
     flexShrink: 1,
+    paddingVertical: rs(2),
   },
   overallAverageSubtext: {
     fontSize: wp('3.5%'),
     opacity: 0.7,
-    marginTop: hp('0.5%'),
+    marginTop: hp('0.3%'),
+    paddingBottom: rs(1),
   },
   scrollView: {
     flex: 1,
@@ -736,16 +846,16 @@ const createStyles = (isDark: boolean, cardBackgroundColor: string, borderColor:
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
-    gap: rs(12),
-    marginTop: rs(8),
-    marginBottom: rs(8),
+    gap: rs(8),
+    marginTop: rs(4),
+    marginBottom: rs(4),
   },
   filtersRow: {
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
-    gap: rs(12),
-    marginBottom: rs(8),
+    gap: rs(8),
+    marginBottom: rs(6),
   },
   searchInput: {
     flex: 1,
@@ -766,6 +876,7 @@ const createStyles = (isDark: boolean, cardBackgroundColor: string, borderColor:
     textAlign: 'center',
     marginBottom: hp('3%'),
     opacity: 0.7,
+    paddingBottom: rs(5),
   },
   addButton: {
     borderRadius: rs(12),
@@ -792,11 +903,14 @@ const createStyles = (isDark: boolean, cardBackgroundColor: string, borderColor:
     flex: 1,
     flexShrink: 1,
     paddingRight: wp('2%'),
+    paddingBottom: rs(4),
+    lineHeight: rf(26),
   },
   submittedDate: {
     fontSize: wp('3%'),
     opacity: 0.6,
     marginLeft: wp('2%'),
+    paddingBottom: rs(2),
   },
   reviewInfo: {
     flexDirection: 'row',
@@ -810,6 +924,8 @@ const createStyles = (isDark: boolean, cardBackgroundColor: string, borderColor:
   chipText: {
     fontSize: wp('3%'),
     color: isDark ? '#90CAF9' : '#1976d2',
+    paddingBottom: rs(2),
+    lineHeight: wp('4.2%'),
   },
   chipYes: {
     backgroundColor: isDark ? '#1B4D1B' : '#E8F5E8',
@@ -831,6 +947,7 @@ const createStyles = (isDark: boolean, cardBackgroundColor: string, borderColor:
   experienceLabel: {
     fontSize: wp('3%'),
     fontWeight: '500',
+    paddingBottom: rs(2),
   },
   experienceChip: {
     minHeight: hp('3%'),
@@ -846,6 +963,8 @@ const createStyles = (isDark: boolean, cardBackgroundColor: string, borderColor:
     fontSize: wp('3.5%'),
     fontWeight: '600',
     marginBottom: hp('0.5%'),
+    paddingBottom: rs(3),
+    lineHeight: wp('6%'),
   },
   overallRatingDisplay: {
     flexDirection: 'row',
@@ -858,6 +977,8 @@ const createStyles = (isDark: boolean, cardBackgroundColor: string, borderColor:
     color: '#FFD700',
     textAlign: 'center',
     flexShrink: 1,
+    paddingBottom: rs(4),
+    lineHeight: rf(24),
   },
   commentsContainer: {
     marginBottom: hp('1.5%'),
@@ -866,6 +987,7 @@ const createStyles = (isDark: boolean, cardBackgroundColor: string, borderColor:
     fontSize: wp('3.5%'),
     fontWeight: '600',
     marginBottom: hp('0.5%'),
+    paddingBottom: rs(3),
   },
   comments: {
     fontSize: wp('3.5%'),
@@ -873,6 +995,7 @@ const createStyles = (isDark: boolean, cardBackgroundColor: string, borderColor:
     opacity: 0.8,
     lineHeight: wp('5%'),
     padding: wp('2%'),
+    paddingBottom: wp('2.5%'),
     backgroundColor: isDark ? '#3A3A3A' : '#f5f5f5', // Lighter background in dark mode for better visibility
     borderRadius: wp('1%'),
     borderLeftWidth: 2,
@@ -893,12 +1016,14 @@ const createStyles = (isDark: boolean, cardBackgroundColor: string, borderColor:
   statusLabel: {
     fontSize: wp('3%'),
     fontWeight: '500',
+    paddingBottom: rs(2),
   },
   statusChip: {
     minHeight: hp('3%'),
   },
   statusChipText: {
     fontSize: wp('2.8%'),
+    paddingBottom: rs(2),
   },
   statusYes: {
     backgroundColor: isDark ? '#1B5E20' : '#C8E6C9',
@@ -930,10 +1055,11 @@ const createStyles = (isDark: boolean, cardBackgroundColor: string, borderColor:
     borderRadius: wp('3%'),
   },
   menuAnchorButton: {
-    minHeight: minTouchTarget,
+    minHeight: rs(34),
   },
   filterChip: {
-    minHeight: minTouchTarget,
+    minHeight: rs(30),
+    paddingHorizontal: rs(4),
   },
   filterChipSelected: {
     backgroundColor: isDark ? '#1976d2' : '#2196F3',

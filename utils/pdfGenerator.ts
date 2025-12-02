@@ -38,11 +38,11 @@ const calculateAverageRating = (ratings: { [key: string]: number }): string => {
 
 const convertImageToBase64 = async (imageUri: string): Promise<string> => {
   try {
-    // Use image-manipulator to read and export base64 without transforming
+    // Downscale and compress slightly to avoid memory issues with multiple photos
     const result = await manipulateAsync(
       imageUri,
-      [],
-      { base64: true, compress: 1.0, format: SaveFormat.JPEG }
+      [{ resize: { width: 1400 } }],
+      { base64: true, compress: 0.85, format: SaveFormat.JPEG }
     );
     if (result.base64) {
       return `data:image/jpeg;base64,${result.base64}`;
@@ -154,20 +154,21 @@ const generatePage2HTML = async (review: ReviewData): Promise<string> => {
 const generatePage3HTML = async (review: ReviewData): Promise<string> => {
   if (!review.photos || review.photos.length === 0) return '';
 
-  const photoPromises = review.photos.map(async (photo, index) => {
+  // Convert sequentially to reduce peak memory usage on low-memory devices
+  const validPhotos: string[] = [];
+  let idx = 0;
+  for (const photo of review.photos) {
     const base64Image = await convertImageToBase64(photo);
-    if (!base64Image) return '';
-    
-    return `
-      <div style="margin-bottom: 20px; text-align: center;">
-        <h4 style="margin-bottom: 10px;">Photo ${index + 1}</h4>
-        <img src="${base64Image}" style="max-width: 100%; max-height: 40vh; border: 1px solid #ddd; border-radius: 8px;" />
-      </div>
-    `;
-  });
-
-  const photoHTMLs = await Promise.all(photoPromises);
-  const validPhotos = photoHTMLs.filter(html => html);
+    if (base64Image) {
+      validPhotos.push(`
+        <div style="margin-bottom: 20px; text-align: center;">
+          <h4 style="margin-bottom: 10px;">Photo ${idx + 1}</h4>
+          <img src="${base64Image}" style="max-width: 100%; max-height: 40vh; border: 1px solid #ddd; border-radius: 8px;" />
+        </div>
+      `);
+    }
+    idx++;
+  }
 
   if (validPhotos.length === 0) return '';
 
@@ -185,44 +186,7 @@ export const generateReviewPDF = async (
   ratingCategories: RatingCategory[]
 ): Promise<string> => {
   try {
-    // Generate all pages
-    const page1HTML = generatePage1HTML(review, personalInfoFields, ratingCategories);
-    const page2HTML = await generatePage2HTML(review);
-    const page3HTML = await generatePage3HTML(review);
-
-    // Combine pages that have content
-    const pages = [page1HTML, page2HTML, page3HTML].filter(page => page && page.trim().length > 0);
-    
-    if (pages.length === 0) {
-      throw new Error('No content available to generate PDF');
-    }
-
-    // Join pages with page breaks
-    const fullHTML = `
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <style>
-            @page {
-              margin: 20px;
-              size: A4;
-            }
-            .page-break {
-              page-break-before: always;
-            }
-            body {
-              margin: 0;
-              padding: 0;
-            }
-          </style>
-        </head>
-        <body>
-          ${pages.map((page, index) => 
-            index === 0 ? page : `<div class="page-break">${page}</div>`
-          ).join('')}
-        </body>
-      </html>
-    `;
+    const fullHTML = await buildReviewHTML(review, personalInfoFields, ratingCategories);
 
     // Generate PDF
     const { uri } = await Print.printToFileAsync({
@@ -235,6 +199,63 @@ export const generateReviewPDF = async (
     console.error('Error generating PDF:', error);
     throw new Error('Failed to generate PDF');
   }
+};
+
+export const buildReviewHTML = async (
+  review: ReviewData,
+  personalInfoFields: PersonalInfoField[],
+  ratingCategories: RatingCategory[]
+): Promise<string> => {
+  // Generate all pages
+  const page1HTML = generatePage1HTML(review, personalInfoFields, ratingCategories);
+  const page2HTML = await generatePage2HTML(review);
+  const page3HTML = await generatePage3HTML(review);
+
+  // Combine pages that have content
+  const pages = [page1HTML, page2HTML, page3HTML].filter(page => page && page.trim().length > 0);
+  
+  if (pages.length === 0) {
+    throw new Error('No content available to generate PDF');
+  }
+
+  // Join pages with page breaks
+  const fullHTML = `
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          @page {
+            margin: 20px;
+            size: A4;
+          }
+          .page-break {
+            page-break-before: always;
+          }
+          body {
+            margin: 0;
+            padding: 0;
+            line-height: 1.4;
+            font-family: Arial, sans-serif;
+          }
+          h1,h2,h3,h4,p,div,span { line-height: 1.4; }
+          h1,h2,h3 { margin: 12px 0; }
+          p { margin: 8px 0; }
+        </style>
+      </head>
+      <body>
+        ${pages.map((page, index) => 
+          index === 0 ? page : `<div class="page-break">${page}</div>`
+        ).join('')}
+      </body>
+    </html>
+  `;
+
+  return fullHTML;
+};
+
+export const previewHTMLWithPrintDialog = async (html: string): Promise<void> => {
+  // Show native print preview (Android shares to Save as PDF)
+  await Print.printAsync({ html });
 };
 
 export const previewAndSavePDF = async (pdfUri: string): Promise<void> => {
