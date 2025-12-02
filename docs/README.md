@@ -2,6 +2,8 @@
 
 Welcome to the ReviewsApp documentation. Here you will find detailed information about the application's architecture, workflow, setup, and more.
 
+**Repository:** [https://github.com/usmanahsan2114/FSDC-Review-App](https://github.com/usmanahsan2114/FSDC-Review-App)
+
 ## Core Documentation
 
 - **[Architecture](ARCHITECTURE.md)**: High-level overview of the app's structure, data model, and key technologies.

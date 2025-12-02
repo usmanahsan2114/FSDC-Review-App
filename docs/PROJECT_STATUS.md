@@ -1,31 +1,3 @@
-# Project Status & Recommendations
-
-## 1. Current State
-
-- **Stability**: The application appears stable with robust error handling in data loading and saving.
-- **Type Safety**: TypeScript is used throughout, with interfaces defined for Reviews, Categories, and Form Data.
-- **Performance**: Large lists use `FlatList` with memoized items (`ReviewCard`). Images are offloaded to the file system.
-
-## 2. Completed Improvements
-
-### A. Analytics Dashboard 📊
-
-**File Created:** `app/dashboard.tsx`
-A comprehensive analytics screen with:
-
-- **Top Stats Cards**: Total Reviews, Average Rating, This Month count
-- **Rating Distribution Chart**: Horizontal bar chart showing 1-5 star distribution
-- **Category Performance**: Visual bars for each rating category average
-- **Top Nationalities**: Bar chart showing most common reviewer nationalities
-- **Experience Statistics**: Cards showing simulator/flying experience ratios
-- **Content Stats**: Photo and handwritten comment counts
-- **Quick Actions**: Buttons to add review, view all, or return home
-
-### B. Pull-to-Refresh 🔄
-
-**File Modified:** `app/reviews-list.tsx`
-
-- Added `RefreshControl` to the reviews list
 - Smooth refresh animation
 - Theme-aware colors (dark/light mode)
 - Haptic feedback on pull
@@ -85,14 +57,40 @@ Added new Dashboard button:
 - **Layout Adjustments**: 3-column dashboard, optimized spacing, larger fonts.
 - **Performance**: FlatList virtualization, skeleton loaders, React.memo.
 
-### I. FSDC Features & Simulator Context ✈️
+### I. FSDC Features & Simulator Context ✈️ (COMPLETED)
 
-**Files Modified:** `app/add-review.tsx`, `app/dashboard.tsx`, `utils/dataStorage.ts`
+**Files Modified:** `app/add-review.tsx`, `app/dashboard.tsx`, `utils/dataStorage.ts`, `constants/simulators.ts`, `utils/simulatorStorage.ts`
 
-- **Simulator Selection**: Added a "Select Simulator" modal as the first step in the review process.
-- **Simulator Context**: Reviews are now tagged with `simulatorId`, `simulatorName`, and `simulatorType`.
-- **Dashboard Filtering**: Added a filter to view analytics for specific simulators (e.g., Mi-17, Super Mushshak).
-- **Data Persistence**: Updated storage logic to persist simulator data with each review.
+- **Refined Simulator Selection**: Implemented a two-step selection process (Aircraft → System Type).
+- **Dynamic Simulator Management**: Admin can now add/edit/delete simulators via `admin-questions.tsx`.
+- **Simulator Context**: Reviews are tagged with `simulatorId`, `simulatorName`, and `simulatorType`.
+- **Advanced Filtering**: Dashboard and Reviews List now include filters for Simulator and System Type.
+- **Data Persistence**: `simulatorStorage.ts` handles dynamic simulator data.
+
+### J. Reviews List UI Polish ✨ (COMPLETED)
+
+**File Modified:** `app/reviews-list.tsx`
+
+- **Unified Filter Bar**: Consolidated filters into a single horizontal scrollable bar.
+- **Dropdown Menus**: Implemented `Menu` components for cleaner UI.
+- **Toggle Logic**: Fixed "stuck" filters; users can toggle filters on/off.
+- **Visual Feedback**: Active states for filter chips.
+
+### K. PDF & Export Enhancements 📄 (COMPLETED)
+
+**Files Modified:** `app/review-detail.tsx`, `utils/pdfGenerator.ts`
+
+- **PDF Content**: Added "Simulator Details" section to generated PDFs.
+- **Excel Export**: Export functionality via `expo-sharing`.
+
+### L. Stability & Connectivity Features 🛡️ (COMPLETED)
+
+**Files Modified:** `utils/validation.ts`, `hooks/useFormDraft.ts`, `components/ConnectivityStatus.tsx`, `app/add-review.tsx`, `app/reviews-list.tsx`
+
+- **Form Validation**: Robust Zod-based validation prevents invalid data submission.
+- **Auto-Save Drafts**: Form data is saved to `AsyncStorage` on every keystroke, preventing data loss.
+- **Connectivity Status**: Visual indicator in the dashboard header shows online/offline status.
+- **Strict Typing**: Improved type safety in form handling.
 
 ## 3. Warnings & Potential Issues
 

@@ -1,17 +1,19 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import ThemeToggle from '@/components/ThemeToggle';
-import { FSDC_SIMULATORS } from '@/constants/simulators';
+import { Simulator } from '@/constants/simulators';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useFocusEffect } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { Button, Card, Menu } from 'react-native-paper';
 import StarRating from 'react-native-star-rating-widget';
 import { getAllReviews, Review } from '../utils/dataStorage';
-import { hp, isTablet, wp } from '../utils/responsive';
+import { hapticsFilterSelect } from '../utils/haptics';
+import { hp, isTablet, rf, rs, wp } from '../utils/responsive';
+import { getSimulators, getSimulatorTypes } from '../utils/simulatorStorage';
 
 interface RatingCategory {
   id?: string; // Optional for backward compatibility
@@ -57,13 +59,19 @@ export default function DashboardScreen() {
   const [ratingCategories, setRatingCategories] = useState<RatingCategory[]>(defaultRatingCategories);
   const [reviewTypeFilter, setReviewTypeFilter] = useState<'all' | 'professional' | 'joyride'>('all');
   const [simulatorFilter, setSimulatorFilter] = useState<string>('all'); // 'all' or simulator ID
+  const [simulatorTypeFilter, setSimulatorTypeFilter] = useState<string>('all'); // 'all' or simulator type
+
+  // Dynamic Simulators State
+  const [availableSimulators, setAvailableSimulators] = useState<Simulator[]>([]);
+  const [availableTypes, setAvailableTypes] = useState<string[]>([]);
   const [filterMenuVisible, setFilterMenuVisible] = useState(false);
   const [simulatorMenuVisible, setSimulatorMenuVisible] = useState(false);
+  const [typeMenuVisible, setTypeMenuVisible] = useState(false);
 
   const styles = useMemo(() => createStyles(isDark, cardBackgroundColor, borderColor), 
     [isDark, cardBackgroundColor, borderColor]);
 
-  const loadData = useCallback(async () => {
+  const loadReviews = useCallback(async () => {
     try {
       setLoading(true);
       const allReviews = await getAllReviews();
@@ -93,22 +101,27 @@ export default function DashboardScreen() {
     }
   }, []);
 
+  const loadSimulatorData = async () => {
+    const sims = await getSimulators();
+    const types = await getSimulatorTypes();
+    setAvailableSimulators(sims);
+    setAvailableTypes(types);
+  };
+
   useFocusEffect(
     useCallback(() => {
-      loadData();
-    }, [loadData])
+      loadReviews();
+      loadSimulatorData();
+    }, [])
   );
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
 
   // Calculate statistics - separate for professional and joyride
   const calculateStatsForType = (type: 'professional' | 'joyride' | 'all') => {
     const filteredReviews = reviews.filter(r => {
       const typeMatch = type === 'all' || (r.reviewType || 'professional') === type;
       const simMatch = simulatorFilter === 'all' || r.simulatorId === simulatorFilter;
-      return typeMatch && simMatch;
+      const simTypeMatch = simulatorTypeFilter === 'all' || r.simulatorType === simulatorTypeFilter;
+      return typeMatch && simMatch && simTypeMatch;
     });
 
     if (filteredReviews.length === 0) {
@@ -228,9 +241,9 @@ export default function DashboardScreen() {
   };
 
   // Calculate stats based on selected filter
-  const stats = useMemo(() => calculateStatsForType(reviewTypeFilter), [reviews, ratingCategories, reviewTypeFilter, simulatorFilter]);
-  const professionalStats = useMemo(() => calculateStatsForType('professional'), [reviews, ratingCategories, simulatorFilter]);
-  const joyrideStats = useMemo(() => calculateStatsForType('joyride'), [reviews, ratingCategories, simulatorFilter]);
+  const stats = useMemo(() => calculateStatsForType(reviewTypeFilter), [reviews, ratingCategories, reviewTypeFilter, simulatorFilter, simulatorTypeFilter]);
+  const professionalStats = useMemo(() => calculateStatsForType('professional'), [reviews, ratingCategories, simulatorFilter, simulatorTypeFilter]);
+  const joyrideStats = useMemo(() => calculateStatsForType('joyride'), [reviews, ratingCategories, simulatorFilter, simulatorTypeFilter]);
   
   // Get filter label
   const filterLabel = useMemo(() => {
@@ -243,9 +256,14 @@ export default function DashboardScreen() {
 
   const simulatorLabel = useMemo(() => {
     if (simulatorFilter === 'all') return 'All Simulators';
-    const sim = FSDC_SIMULATORS.find(s => s.id === simulatorFilter);
+    const sim = availableSimulators.find(s => s.id === simulatorFilter);
     return sim ? sim.name : 'Unknown Simulator';
-  }, [simulatorFilter]);
+  }, [simulatorFilter, availableSimulators]);
+
+  const typeLabel = useMemo(() => {
+    if (simulatorTypeFilter === 'all') return 'All Types';
+    return simulatorTypeFilter;
+  }, [simulatorTypeFilter]);
 
   if (loading) {
     return (
@@ -271,7 +289,6 @@ export default function DashboardScreen() {
           </View>
           <View style={styles.headerActions}>
             <Menu
-              key={`filter-menu-${reviewTypeFilter}-${filterMenuVisible}`}
               visible={filterMenuVisible}
               onDismiss={() => {
                 setFilterMenuVisible(false);
@@ -280,7 +297,7 @@ export default function DashboardScreen() {
                 <Button
                   mode="outlined"
                   onPress={() => {
-                    setFilterMenuVisible(true);
+                    setFilterMenuVisible(!filterMenuVisible);
                   }}
                   icon="filter-variant"
                   style={styles.filterButton}
@@ -292,77 +309,108 @@ export default function DashboardScreen() {
             >
               <Menu.Item
                 onPress={() => {
-                  const newFilter: 'all' | 'professional' | 'joyride' = 'all';
+                  setReviewTypeFilter('all');
                   setFilterMenuVisible(false);
-                  // Always update state, even if same, to ensure menu closes
-                  setTimeout(() => {
-                    setReviewTypeFilter(newFilter);
-                  }, 0);
+                  hapticsFilterSelect();
                 }}
                 title="All Reviews"
                 leadingIcon={reviewTypeFilter === 'all' ? 'check' : undefined}
               />
               <Menu.Item
                 onPress={() => {
-                  const newFilter: 'all' | 'professional' | 'joyride' = 'professional';
+                  setReviewTypeFilter('professional');
                   setFilterMenuVisible(false);
-                  // Always update state, even if same, to ensure menu closes
-                  setTimeout(() => {
-                    setReviewTypeFilter(newFilter);
-                  }, 0);
+                  hapticsFilterSelect();
                 }}
                 title="Professional"
                 leadingIcon={reviewTypeFilter === 'professional' ? 'check' : undefined}
               />
               <Menu.Item
                 onPress={() => {
-                  const newFilter: 'all' | 'professional' | 'joyride' = 'joyride';
+                  setReviewTypeFilter('joyride');
                   setFilterMenuVisible(false);
-                  // Always update state, even if same, to ensure menu closes
-                  setTimeout(() => {
-                    setReviewTypeFilter(newFilter);
-                  }, 0);
+                  hapticsFilterSelect();
                 }}
                 title="Joyride"
                 leadingIcon={reviewTypeFilter === 'joyride' ? 'check' : undefined}
               />
             </Menu>
 
-            <Menu
-              visible={simulatorMenuVisible}
-              onDismiss={() => setSimulatorMenuVisible(false)}
-              anchor={
-                <Button
-                  mode="outlined"
-                  onPress={() => setSimulatorMenuVisible(true)}
-                  icon="airplane"
-                  style={styles.filterButton}
-                  compact
-                >
-                  {simulatorLabel}
-                </Button>
-              }
-            >
-              <Menu.Item
-                onPress={() => {
-                  setSimulatorFilter('all');
-                  setSimulatorMenuVisible(false);
-                }}
-                title="All Simulators"
-                leadingIcon={simulatorFilter === 'all' ? 'check' : undefined}
-              />
-              {FSDC_SIMULATORS.map(sim => (
+              <Menu
+                visible={simulatorMenuVisible}
+                onDismiss={() => setSimulatorMenuVisible(false)}
+                anchor={
+                  <Button
+                    mode="outlined"
+                    onPress={() => setSimulatorMenuVisible(!simulatorMenuVisible)}
+                    icon="airplane"
+                    style={styles.filterButton}
+                    compact
+                  >
+                    {simulatorLabel}
+                  </Button>
+                }
+              >
                 <Menu.Item
-                  key={sim.id}
                   onPress={() => {
-                    setSimulatorFilter(sim.id);
+                    setSimulatorFilter('all');
                     setSimulatorMenuVisible(false);
+                    hapticsFilterSelect();
                   }}
-                  title={sim.name}
-                  leadingIcon={simulatorFilter === sim.id ? 'check' : undefined}
+                  title="All Simulators"
+                  leadingIcon={simulatorFilter === 'all' ? 'check' : undefined}
                 />
-              ))}
-            </Menu>
+                {availableSimulators.map(sim => (
+                  <Menu.Item
+                    key={sim.id}
+                    onPress={() => {
+                      setSimulatorFilter(sim.id);
+                      setSimulatorMenuVisible(false);
+                      hapticsFilterSelect();
+                    }}
+                    title={sim.name}
+                    leadingIcon={simulatorFilter === sim.id ? 'check' : undefined}
+                  />
+                ))}
+              </Menu>
+
+              <Menu
+                visible={typeMenuVisible}
+                onDismiss={() => setTypeMenuVisible(false)}
+                anchor={
+                  <Button
+                    mode="outlined"
+                    onPress={() => setTypeMenuVisible(!typeMenuVisible)}
+                    icon="cog"
+                    style={styles.filterButton}
+                    compact
+                  >
+                    {typeLabel}
+                  </Button>
+                }
+              >
+                <Menu.Item
+                  onPress={() => {
+                    setSimulatorTypeFilter('all');
+                    setTypeMenuVisible(false);
+                    hapticsFilterSelect();
+                  }}
+                  title="All Types"
+                  leadingIcon={simulatorTypeFilter === 'all' ? 'check' : undefined}
+                />
+                {availableTypes.map(type => (
+                  <Menu.Item
+                    key={type}
+                    onPress={() => {
+                      setSimulatorTypeFilter(type);
+                      setTypeMenuVisible(false);
+                      hapticsFilterSelect();
+                    }}
+                    title={type}
+                    leadingIcon={simulatorTypeFilter === type ? 'check' : undefined}
+                  />
+                ))}
+              </Menu>
 
             <ThemeToggle />
           </View>
@@ -767,6 +815,15 @@ export default function DashboardScreen() {
           </View>
         )}
 
+        <Button
+          mode="outlined"
+          onPress={() => router.back()}
+          style={styles.backButton}
+          icon="arrow-left"
+        >
+          Back to Home
+        </Button>
+
         {/* Quick Actions */}
         <View style={styles.actionsContainer}>
           <Button
@@ -801,7 +858,8 @@ export default function DashboardScreen() {
   );
 }
 
-const createStyles = (isDark: boolean, cardBackgroundColor: string, borderColor: string) => (StyleSheet as any).create({
+
+const createStyles = (isDark: boolean, cardBackgroundColor: string, borderColor: string) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -819,9 +877,12 @@ const createStyles = (isDark: boolean, cardBackgroundColor: string, borderColor:
     justifyContent: 'space-between',
     alignItems: 'center',
     marginVertical: hp('2%'),
+    flexWrap: 'wrap', // Allow wrapping on very small screens
+    gap: rs(10),
   },
   headerContent: {
     flex: 1,
+    minWidth: '50%', // Ensure it takes space but allows wrapping
   },
   headerActions: {
     flexDirection: 'row',
@@ -829,25 +890,27 @@ const createStyles = (isDark: boolean, cardBackgroundColor: string, borderColor:
     gap: wp('2%'),
   },
   title: {
-    fontSize: isTablet ? wp('4%') : wp('6%'),
+    fontSize: rf(24),
     fontWeight: 'bold',
   },
   subtitle: {
-    fontSize: isTablet ? wp('2.5%') : wp('3.5%'),
+    fontSize: rf(14),
     opacity: 0.7,
   },
   filterButton: {
-    marginRight: wp('2%'),
+    marginRight: rs(5),
   },
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: hp('2%'),
     gap: wp('2%'),
+    flexWrap: 'wrap', // Allow wrapping
   },
   statCard: {
     flex: 1,
     backgroundColor: cardBackgroundColor,
+    minWidth: wp('28%'), // Ensure minimum width for 3-column layout, but allows wrapping if needed
   },
   statCardPrimary: {
     borderLeftWidth: 4,
@@ -863,23 +926,23 @@ const createStyles = (isDark: boolean, cardBackgroundColor: string, borderColor:
   },
   statCardContent: {
     alignItems: 'center',
-    padding: wp('2%'),
+    padding: rs(10),
   },
   statLabel: {
-    fontSize: isTablet ? wp('1.5%') : wp('3%'),
+    fontSize: rf(12),
     opacity: 0.7,
     textAlign: 'center',
   },
   statValue: {
-    fontSize: isTablet ? wp('2.5%') : wp('4.5%'),
+    fontSize: rf(20),
     fontWeight: 'bold',
     marginVertical: hp('0.5%'),
   },
   statIcon: {
-    fontSize: isTablet ? wp('2%') : wp('4%'),
+    fontSize: rf(18),
   },
   statTrend: {
-    fontSize: isTablet ? wp('1.2%') : wp('2.5%'),
+    fontSize: rf(10),
     color: '#4CAF50',
   },
   miniStars: {
@@ -890,7 +953,7 @@ const createStyles = (isDark: boolean, cardBackgroundColor: string, borderColor:
     backgroundColor: cardBackgroundColor,
   },
   sectionTitle: {
-    fontSize: isTablet ? wp('2.5%') : wp('4.5%'),
+    fontSize: rf(18),
     fontWeight: 'bold',
     marginBottom: hp('1.5%'),
   },
@@ -904,9 +967,10 @@ const createStyles = (isDark: boolean, cardBackgroundColor: string, borderColor:
   },
   distributionLabel: {
     width: wp('12%'),
+    minWidth: 40,
   },
   distributionRating: {
-    fontSize: isTablet ? wp('1.5%') : wp('3.5%'),
+    fontSize: rf(14),
   },
   distributionBarContainer: {
     flex: 1,
@@ -921,8 +985,9 @@ const createStyles = (isDark: boolean, cardBackgroundColor: string, borderColor:
   },
   distributionCount: {
     width: wp('8%'),
+    minWidth: 30,
     textAlign: 'right',
-    fontSize: isTablet ? wp('1.5%') : wp('3.5%'),
+    fontSize: rf(14),
   },
   categoryContainer: {
     gap: hp('1.5%'),
@@ -931,7 +996,7 @@ const createStyles = (isDark: boolean, cardBackgroundColor: string, borderColor:
     gap: hp('0.5%'),
   },
   categoryLabel: {
-    fontSize: isTablet ? wp('1.8%') : wp('3.5%'),
+    fontSize: rf(14),
     marginBottom: hp('0.5%'),
   },
   categoryRatingContainer: {
@@ -952,8 +1017,10 @@ const createStyles = (isDark: boolean, cardBackgroundColor: string, borderColor:
   },
   categoryValue: {
     width: wp('8%'),
+    minWidth: 30,
     textAlign: 'right',
     fontWeight: 'bold',
+    fontSize: rf(14),
   },
   nationalityContainer: {
     gap: hp('1%'),
@@ -965,7 +1032,7 @@ const createStyles = (isDark: boolean, cardBackgroundColor: string, borderColor:
   },
   nationalityName: {
     flex: 1,
-    fontSize: isTablet ? wp('1.8%') : wp('3.5%'),
+    fontSize: rf(14),
   },
   nationalityBarContainer: {
     flex: 1,
@@ -981,17 +1048,21 @@ const createStyles = (isDark: boolean, cardBackgroundColor: string, borderColor:
   },
   nationalityCount: {
     width: wp('8%'),
+    minWidth: 30,
     textAlign: 'right',
     fontWeight: 'bold',
+    fontSize: rf(14),
   },
   experienceStatsContainer: {
     flexDirection: 'row',
     gap: wp('2%'),
     marginBottom: hp('2%'),
+    flexWrap: 'wrap',
   },
   experienceCard: {
     flex: 1,
     backgroundColor: cardBackgroundColor,
+    minWidth: wp('40%'),
   },
   experienceCardSim: {
     borderLeftWidth: 4,
@@ -1003,20 +1074,20 @@ const createStyles = (isDark: boolean, cardBackgroundColor: string, borderColor:
   },
   experienceCardContent: {
     alignItems: 'center',
-    padding: wp('3%'),
+    padding: rs(12),
   },
   experienceLabel: {
-    fontSize: isTablet ? wp('1.5%') : wp('3%'),
+    fontSize: rf(12),
     textAlign: 'center',
     marginBottom: hp('0.5%'),
     opacity: 0.8,
   },
   experienceValue: {
-    fontSize: isTablet ? wp('2.5%') : wp('4.5%'),
+    fontSize: rf(20),
     fontWeight: 'bold',
   },
   experiencePercentage: {
-    fontSize: isTablet ? wp('1.5%') : wp('3%'),
+    fontSize: rf(12),
     color: '#4CAF50',
     marginTop: hp('0.5%'),
   },
@@ -1028,24 +1099,24 @@ const createStyles = (isDark: boolean, cardBackgroundColor: string, borderColor:
   },
   contentStatCard: {
     flex: 1,
-    minWidth: '45%',
+    minWidth: '45%', // Keeps 2 columns on most screens
     backgroundColor: cardBackgroundColor,
   },
   contentStatContent: {
     alignItems: 'center',
-    padding: wp('3%'),
+    padding: rs(12),
   },
   contentStatIcon: {
-    fontSize: isTablet ? wp('3%') : wp('6%'),
+    fontSize: rf(24),
     marginBottom: hp('0.5%'),
   },
   contentStatLabel: {
-    fontSize: isTablet ? wp('1.5%') : wp('3%'),
+    fontSize: rf(12),
     textAlign: 'center',
     opacity: 0.7,
   },
   contentStatValue: {
-    fontSize: isTablet ? wp('2.5%') : wp('4.5%'),
+    fontSize: rf(20),
     fontWeight: 'bold',
     marginTop: hp('0.5%'),
   },
@@ -1055,6 +1126,10 @@ const createStyles = (isDark: boolean, cardBackgroundColor: string, borderColor:
   },
   actionButton: {
     borderColor: borderColor,
+  },
+  backButton: {
+    marginTop: hp('2%'),
+    marginBottom: hp('4%'),
   },
 });
 

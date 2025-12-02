@@ -173,6 +173,9 @@ interface Review {
   photos: string[];
   submittedAt: string;
   timestamp?: number; // Fallback for older reviews
+  simulatorId?: string;
+  simulatorName?: string;
+  simulatorType?: string;
 }
 
 function ReviewDetailScreen() {
@@ -365,6 +368,8 @@ function ReviewDetailScreen() {
         textComment: review.textComment,
         handwrittenComment: review.handwrittenComment,
         photos: review.photos,
+        simulatorName: review.simulatorName,
+        simulatorType: review.simulatorType,
       };
 
       // Build HTML and preview via print dialog first
@@ -419,6 +424,31 @@ function ReviewDetailScreen() {
             <ThemeToggle />
           </View>
         </View>
+
+
+
+        {/* Simulator Information */}
+        {(review.simulatorName || review.simulatorType) && (
+          <Card style={styles.section}>
+            <Card.Content>
+              <ThemedText type="subtitle" style={styles.sectionTitle}>
+                Simulator Details
+              </ThemedText>
+              {review.simulatorName && (
+                <View style={styles.infoRow}>
+                  <ThemedText style={styles.label}>Aircraft:</ThemedText>
+                  <Chip icon="airplane" style={styles.chip}>{review.simulatorName}</Chip>
+                </View>
+              )}
+              {review.simulatorType && (
+                <View style={styles.infoRow}>
+                  <ThemedText style={styles.label}>System Type:</ThemedText>
+                  <Chip icon="cog" style={styles.chip}>{review.simulatorType}</Chip>
+                </View>
+              )}
+            </Card.Content>
+          </Card>
+        )}
 
         {/* Personal Information */}
         <Card style={styles.section}>
@@ -694,21 +724,34 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     paddingHorizontal: wp('5%'),
   },
   header: {
-    marginBottom: hp('2%'),
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: wp('4%'),
+    paddingBottom: hp('2%'),
   },
   headerTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: wp('3%'),
   },
   headerTitles: {
     flex: 1,
+    justifyContent: 'center',
+  },
+  backButton: {
+    margin: 0,
+    marginRight: rs(8),
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp('2%'),
   },
   title: {
     fontSize: rf(24),
     fontWeight: 'bold',
-    marginBottom: hp('1%'),
-    textAlign: 'center',
+    // marginBottom: hp('1%'), // Removed as it's now part of headerTop
+    // textAlign: 'center', // Removed as it's now left-aligned
     flexShrink: 1,
     paddingHorizontal: wp('2%'),
     paddingVertical: hp('1%'),

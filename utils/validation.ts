@@ -1,208 +1,68 @@
-export interface ValidationRule {
-  required?: boolean;
-  minLength?: number;
-  maxLength?: number;
-  pattern?: RegExp;
-  custom?: (value: any) => string | null;
-  email?: boolean;
-  phone?: boolean;
-  numeric?: boolean;
-  min?: number;
-  max?: number;
-}
+import { z } from 'zod';
 
 export interface ValidationResult {
   isValid: boolean;
-  errors: string[];
+  errors: { [key: string]: string };
 }
 
-export interface FieldValidation {
-  [fieldName: string]: ValidationRule;
-}
+// Basic Zod schemas for common types
+const emailSchema = z.string().email("Invalid email address");
+const phoneSchema = z.string().min(10, "Phone number too short").regex(/^[0-9+\-\s()]*$/, "Invalid phone characters");
 
-export class FormValidator {
-  private rules: FieldValidation;
+export const validateReviewForm = (
+  formData: any, 
+  personalInfoFields: any[], 
+  ratingCategories: any[]
+): ValidationResult => {
+  const errors: { [key: string]: string } = {};
 
-  constructor(rules: FieldValidation) {
-    this.rules = rules;
+  // 1. Validate Simulator Selection
+  if (!formData.simulatorId) {
+    errors['simulator'] = "Please select a simulator.";
   }
 
-  validateField(fieldName: string, value: any): ValidationResult {
-    const rule = this.rules[fieldName];
-    if (!rule) {
-      return { isValid: true, errors: [] };
+  // 2. Validate Personal Info Fields (Dynamic)
+  personalInfoFields.forEach(field => {
+    const value = formData.personalInfo[field.key];
+    
+    // Check Required
+    if (field.required && (!value || value.trim() === '')) {
+      errors[field.key] = `${field.label} is required.`;
+      return;
     }
 
-    const errors: string[] = [];
-
-    // Required validation
-    if (rule.required && this.isEmpty(value)) {
-      errors.push(`${this.formatFieldName(fieldName)} is required`);
-      return { isValid: false, errors };
-    }
-
-    // Skip other validations if field is empty and not required
-    if (this.isEmpty(value)) {
-      return { isValid: true, errors: [] };
-    }
-
-    // String validations
-    if (typeof value === 'string') {
-      // Min length validation
-      if (rule.minLength && value.length < rule.minLength) {
-        errors.push(`${this.formatFieldName(fieldName)} must be at least ${rule.minLength} characters`);
-      }
-
-      // Max length validation
-      if (rule.maxLength && value.length > rule.maxLength) {
-        errors.push(`${this.formatFieldName(fieldName)} must not exceed ${rule.maxLength} characters`);
-      }
-
-      // Pattern validation
-      if (rule.pattern && !rule.pattern.test(value)) {
-        errors.push(`${this.formatFieldName(fieldName)} format is invalid`);
-      }
-
-      // Email validation
-      if (rule.email && !this.isValidEmail(value)) {
-        errors.push(`${this.formatFieldName(fieldName)} must be a valid email address`);
-      }
-
-      // Phone validation
-      if (rule.phone && !this.isValidPhone(value)) {
-        errors.push(`${this.formatFieldName(fieldName)} must be a valid phone number`);
-      }
-    }
-
-    // Numeric validations
-    if (rule.numeric || typeof value === 'number') {
-      const numValue = typeof value === 'string' ? parseFloat(value) : value;
-      
-      if (rule.numeric && (isNaN(numValue) || !isFinite(numValue))) {
-        errors.push(`${this.formatFieldName(fieldName)} must be a valid number`);
-      } else {
-        // Min value validation
-        if (rule.min !== undefined && numValue < rule.min) {
-          errors.push(`${this.formatFieldName(fieldName)} must be at least ${rule.min}`);
+    // Check Types (only if value exists)
+    if (value && value.trim() !== '') {
+      if (field.type === 'email') {
+        const result = emailSchema.safeParse(value);
+        if (!result.success) {
+          errors[field.key] = result.error.issues[0].message;
         }
-
-        // Max value validation
-        if (rule.max !== undefined && numValue > rule.max) {
-          errors.push(`${this.formatFieldName(fieldName)} must not exceed ${rule.max}`);
+      }
+      if (field.type === 'phone') {
+        const result = phoneSchema.safeParse(value);
+        if (!result.success) {
+          errors[field.key] = result.error.issues[0].message;
         }
       }
     }
+  });
 
-    // Custom validation
-    if (rule.custom) {
-      const customError = rule.custom(value);
-      if (customError) {
-        errors.push(customError);
-      }
+  // 3. Validate Ratings
+  // Ensure all categories have a rating > 0
+  let missingRatings = false;
+  ratingCategories.forEach(cat => {
+    if (!formData.ratings[cat.key] || formData.ratings[cat.key] === 0) {
+      missingRatings = true;
     }
+  });
 
-    return {
-      isValid: errors.length === 0,
-      errors
-    };
+  if (missingRatings) {
+    errors['ratings'] = "Please rate all categories.";
   }
 
-  validateForm(formData: { [key: string]: any }): ValidationResult {
-    const allErrors: string[] = [];
-    let isValid = true;
-
-    for (const fieldName in this.rules) {
-      const fieldResult = this.validateField(fieldName, formData[fieldName]);
-      if (!fieldResult.isValid) {
-        isValid = false;
-        allErrors.push(...fieldResult.errors);
-      }
-    }
-
-    return {
-      isValid,
-      errors: allErrors
-    };
-  }
-
-  validateFormWithFieldErrors(formData: { [key: string]: any }): {
-    isValid: boolean;
-    fieldErrors: { [key: string]: string[] };
-    allErrors: string[];
-  } {
-    const fieldErrors: { [key: string]: string[] } = {};
-    const allErrors: string[] = [];
-    let isValid = true;
-
-    for (const fieldName in this.rules) {
-      const fieldResult = this.validateField(fieldName, formData[fieldName]);
-      fieldErrors[fieldName] = fieldResult.errors;
-      
-      if (!fieldResult.isValid) {
-        isValid = false;
-        allErrors.push(...fieldResult.errors);
-      }
-    }
-
-    return {
-      isValid,
-      fieldErrors,
-      allErrors
-    };
-  }
-
-  private isEmpty(value: any): boolean {
-    if (value === null || value === undefined) return true;
-    if (typeof value === 'string') return value.trim() === '';
-    if (Array.isArray(value)) return value.length === 0;
-    if (typeof value === 'object') return Object.keys(value).length === 0;
-    return false;
-  }
-
-  private formatFieldName(fieldName: string): string {
-    // Convert camelCase to Title Case
-    return fieldName
-      .replace(/([A-Z])/g, ' $1')
-      .replace(/^./, str => str.toUpperCase())
-      .trim();
-  }
-
-  private isValidEmail(email: string): boolean {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  }
-
-  private isValidPhone(phone: string): boolean {
-    // Basic phone validation - accepts various formats
-    const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
-    const cleanPhone = phone.replace(/[\s\-\(\)\.]/g, '');
-    return phoneRegex.test(cleanPhone) && cleanPhone.length >= 7;
-  }
-}
-
-// Predefined validation rules for common use cases
-export const commonValidationRules = {
-  required: { required: true },
-  email: { required: true, email: true },
-  phone: { required: true, phone: true },
-  name: { required: true, minLength: 2, maxLength: 50 },
-  rating: { required: true, numeric: true, min: 1, max: 5 },
-  comment: { maxLength: 1000 },
-  longComment: { maxLength: 2000 },
-};
-
-// Utility functions for quick validation
-export const validateEmail = (email: string): boolean => {
-  const validator = new FormValidator({ email: commonValidationRules.email });
-  return validator.validateField('email', email).isValid;
-};
-
-export const validateRequired = (value: any): boolean => {
-  const validator = new FormValidator({ field: commonValidationRules.required });
-  return validator.validateField('field', value).isValid;
-};
-
-export const validateRating = (rating: number): boolean => {
-  const validator = new FormValidator({ rating: commonValidationRules.rating });
-  return validator.validateField('rating', rating).isValid;
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors
+  };
 };

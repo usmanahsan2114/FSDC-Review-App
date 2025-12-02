@@ -10,6 +10,8 @@ export interface ReviewData {
   textComment?: string;
   handwrittenComment?: string;
   photos?: string[];
+  simulatorName?: string;
+  simulatorType?: string;
 }
 
 export interface PersonalInfoField {
@@ -107,6 +109,24 @@ const generatePage1HTML = (
     <div style="padding: 20px; font-family: Arial, sans-serif;">
       <h1 style="color: #007AFF; text-align: center; margin-bottom: 20px;">Review Details</h1>
       <p style="text-align: center; color: #666; margin-bottom: 30px;">Submitted: ${review.submittedAt}</p>
+      
+      ${(review.simulatorName || review.simulatorType) ? `
+        <div style="margin-bottom: 30px; padding: 15px; background-color: #f0f7ff; border-radius: 8px; border: 1px solid #cce5ff;">
+          <h2 style="color: #007AFF; margin-top: 0; margin-bottom: 10px; font-size: 18px;">Simulator Details</h2>
+          <div style="display: flex; flex-wrap: wrap; gap: 20px;">
+            ${review.simulatorName ? `
+              <div>
+                <strong>Aircraft:</strong> ${review.simulatorName}
+              </div>
+            ` : ''}
+            ${review.simulatorType ? `
+              <div>
+                <strong>System Type:</strong> ${review.simulatorType}
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      ` : ''}
       
       ${personalInfoHTML ? `
         <div style="margin-bottom: 30px;">

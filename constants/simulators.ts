@@ -1,34 +1,17 @@
 export interface Simulator {
   id: string;
   name: string;
-  type: 'Aeromix' | 'AeroSim Pro';
-  image?: any; // Using any for require() images, or string for URIs
+  type: string;
+  image?: any; // Using require() for local images
 }
 
+export const SIMULATOR_TYPES = ['AeroSim Pro', 'AeroMix', 'AeroFision', 'AeroFlex'];
+
 export const FSDC_SIMULATORS: Simulator[] = [
-  { 
-    id: '1', 
-    name: 'Super Mushshak', 
-    type: 'Aeromix' 
-  },
-  { 
-    id: '2', 
-    name: 'Enstrom 280-FX', 
-    type: 'Aeromix' 
-  },
-  { 
-    id: '3', 
-    name: 'Mushshak MFI-17', 
-    type: 'AeroSim Pro' 
-  },
-  { 
-    id: '4', 
-    name: 'Mi-17', 
-    type: 'AeroSim Pro' 
-  },
-  { 
-    id: '5', 
-    name: 'AS-350 / H125', 
-    type: 'AeroSim Pro' 
-  }
+  { id: '1', name: 'Super Mushshak (Fixed Wing)', type: 'AeroSim Pro' },
+  { id: '2', name: 'Mi-17 (Rotary Wing)', type: 'AeroSim Pro' },
+  { id: '3', name: 'Bell 412 (Rotary Wing)', type: 'AeroMix' },
+  { id: '4', name: 'Cessna 172 (Fixed Wing)', type: 'AeroMix' },
+  { id: '5', name: 'Generic VR Trainer', type: 'AeroFlex' },
+  { id: '6', name: 'Hybrid Infinity System', type: 'AeroFision' },
 ];

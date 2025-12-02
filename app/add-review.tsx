@@ -35,12 +35,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import OptimizedImage from '@/components/OptimizedImage';
 import StylusCanvas from '@/components/StylusCanvas';
-import { FSDC_SIMULATORS, Simulator } from '@/constants/simulators';
+import { Simulator } from '@/constants/simulators';
+import { useFormDraft } from '@/hooks/useFormDraft';
 import { usePerformance } from '@/hooks/usePerformance';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { deleteImagePermanently, initializeImageStorage, saveImagePermanently } from '../utils/imageStorage';
 import { getDevicePadding, getPhotoGridSize, hp, isTablet, minTouchTarget, rf, rs, wp } from '../utils/responsive';
+import { getSimulators, getSimulatorTypes } from '../utils/simulatorStorage';
+import { validateReviewForm } from '../utils/validation';
 
 
 interface RatingCategory {
@@ -514,7 +517,10 @@ function AddReviewScreen() {
         },
         textComment: parsedEditData.textComment ?? '',
         handwrittenComment: parsedEditData.handwrittenComment ?? '',
-        photos: Array.isArray(parsedEditData.photos) ? parsedEditData.photos : [],
+        simulatorId: parsedEditData.simulatorId,
+        simulatorName: parsedEditData.simulatorName,
+        simulatorType: parsedEditData.simulatorType,
+        photos: parsedEditData.photos ?? [],
       };
     }
 
@@ -524,19 +530,14 @@ function AddReviewScreen() {
       textComment: '',
       handwrittenComment: '',
       photos: [],
-      simulatorId: '',
-      simulatorName: '',
-      simulatorType: '',
+      simulatorId: undefined,
+      simulatorName: undefined,
+      simulatorType: undefined,
     };
   }, [parsedEditData, reviewType]);
 
-  const [formData, setFormData] = useState<FormData>(() => initialFormData);
-
-  useEffect(() => {
-    if (parsedEditData) {
-      setFormData(initialFormData);
-    }
-  }, [parsedEditData, initialFormData]);
+  // Form State with Auto-Save Draft
+  const { data: formData, updateData: setFormData, clearDraft, isLoaded: isDraftLoaded } = useFormDraft<FormData>(initialFormData);
 
   // Load rating categories from AsyncStorage (only for professional reviews)
   useEffect(() => {
@@ -548,7 +549,7 @@ function AddReviewScreen() {
         // For joyride reviews, use joyride questions directly
         if (reviewType === 'joyride') {
           setRatingCategories(joyrideRatingCategories);
-          setFormData(prev => ({
+          setFormData((prev: FormData) => ({
             ...prev,
             ratings: {
               ...createInitialRatings(joyrideRatingCategories),
@@ -570,7 +571,7 @@ function AddReviewScreen() {
             await AsyncStorage.setItem('ratingCategories', JSON.stringify(defaultRatingCategories));
           }
           setRatingCategories(finalCategories);
-          setFormData(prev => ({
+          setFormData((prev: FormData) => ({
             ...prev,
             ratings: {
               ...createInitialRatings(finalCategories),
@@ -581,7 +582,7 @@ function AddReviewScreen() {
           await AsyncStorage.setItem('admin_rating_categories', JSON.stringify(defaultRatingCategories));
           await AsyncStorage.setItem('ratingCategories', JSON.stringify(defaultRatingCategories));
           setRatingCategories(defaultRatingCategories);
-          setFormData(prev => ({
+          setFormData((prev: FormData) => ({
             ...prev,
             ratings: {
               ...createInitialRatings(defaultRatingCategories),
@@ -604,7 +605,7 @@ function AddReviewScreen() {
         // For joyride reviews, use joyride fields directly
         if (reviewType === 'joyride') {
           setPersonalInfoFields(joyridePersonalInfoFields);
-          setFormData(prev => ({
+          setFormData((prev: FormData) => ({
             ...prev,
             personalInfo: {
               ...createInitialPersonalInfo(joyridePersonalInfoFields),
@@ -620,7 +621,7 @@ function AddReviewScreen() {
           const fields = JSON.parse(saved);
           setPersonalInfoFields(fields);
           // Update formData personal info to match loaded fields
-          setFormData(prev => ({
+          setFormData((prev: FormData) => ({
             ...prev,
             personalInfo: {
               ...createInitialPersonalInfo(fields),
@@ -639,25 +640,45 @@ function AddReviewScreen() {
   // Simulator selection state
   const [showSimulatorModal, setShowSimulatorModal] = useState(true); // Show initially
   const [selectedSimulator, setSelectedSimulator] = useState<Simulator | null>(null);
+  const [selectedSimulatorType, setSelectedSimulatorType] = useState<string | null>(null);
+  const [availableSimulators, setAvailableSimulators] = useState<Simulator[]>([]);
+  const [availableTypes, setAvailableTypes] = useState<string[]>([]);
+
+  useEffect(() => {
+    const loadSimData = async () => {
+      const sims = await getSimulators();
+      const types = await getSimulatorTypes();
+      setAvailableSimulators(sims);
+      setAvailableTypes(types);
+    };
+    loadSimData();
+  }, []);
 
   useEffect(() => {
     // If editing, populate simulator from saved data if available
-    if (parsedEditData && parsedEditData.simulatorId) {
-      const sim = FSDC_SIMULATORS.find(s => s.id === parsedEditData.simulatorId);
+    if (parsedEditData && parsedEditData.simulatorId && availableSimulators.length > 0) {
+      const sim = availableSimulators.find(s => s.id === parsedEditData.simulatorId);
       if (sim) {
         setSelectedSimulator(sim);
         setShowSimulatorModal(false);
       }
     }
-  }, [parsedEditData]);
+  }, [parsedEditData, availableSimulators]);
 
   const handleSimulatorSelect = (simulator: Simulator) => {
     setSelectedSimulator(simulator);
+    // Don't close modal yet, proceed to type selection
+  };
+
+  const handleTypeSelect = (type: string) => {
+    if (!selectedSimulator) return;
+    
+    setSelectedSimulatorType(type);
     setFormData(prev => ({
       ...prev,
-      simulatorId: simulator.id,
-      simulatorName: simulator.name,
-      simulatorType: simulator.type
+      simulatorId: selectedSimulator.id,
+      simulatorName: selectedSimulator.name,
+      simulatorType: type
     }));
     setShowSimulatorModal(false);
   };
@@ -730,7 +751,7 @@ function AddReviewScreen() {
   );
 
   const updateFormData = (field: keyof FormData, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev: FormData) => ({ ...prev, [field]: value }));
   };
 
   const updateRating = (category: string, rating: number) => {
@@ -888,16 +909,27 @@ function AddReviewScreen() {
   };
 
   const handleSubmit = () => {
-    if (validateForm()) {
-      // Navigate to preview screen with form data and review type
-      router.push({
-        pathname: '/review-preview',
-        params: { 
-          formData: JSON.stringify(formData),
-          reviewType: reviewType
-        }
-      });
+    // 1. Run Validation
+    const validation = validateReviewForm(formData, personalInfoFields, ratingCategories);
+
+    if (!validation.isValid) {
+      // Construct error message
+      const errorMessages = Object.values(validation.errors).join('\n');
+      Alert.alert("Incomplete Form", errorMessages);
+      return;
     }
+
+    // 2. Proceed if valid
+    router.push({
+      pathname: '/review-preview',
+      params: { 
+        formData: JSON.stringify(formData),
+        reviewType: reviewType
+      }
+    });
+    // Note: We don't clear draft here immediately in case user comes back to edit.
+    // Ideally clear it after final submission in review-preview, or offer a "Clear" button.
+    // For now, let's keep it until final save.
   };
 
   const requestMediaLibraryPermission = async () => {
@@ -1032,6 +1064,9 @@ function AddReviewScreen() {
           // If no simulator selected, go back to home
           if (!selectedSimulator) {
             router.back();
+          } else if (!selectedSimulatorType) {
+            // If simulator selected but type not, go back to simulator selection
+            setSelectedSimulator(null);
           } else {
             setShowSimulatorModal(false);
           }
@@ -1039,27 +1074,62 @@ function AddReviewScreen() {
       >
         <ThemedView style={[styles.container, { paddingTop: rs(20) }]}>
           <View style={styles.header}>
-            <ThemedText type="title" style={styles.title}>Select Simulator</ThemedText>
-            {selectedSimulator && (
-              <IconButton icon="close" onPress={() => setShowSimulatorModal(false)} />
-            )}
+            <View style={styles.headerTop}>
+              <IconButton
+                icon="arrow-left"
+                size={24}
+                onPress={() => {
+                  if (!selectedSimulator) {
+                    router.back(); // Go back to home if no simulator selected
+                  } else if (!selectedSimulatorType) {
+                    setSelectedSimulator(null); // Go back to simulator selection
+                  } else {
+                    setShowSimulatorModal(false); // Close modal
+                  }
+                }}
+                style={styles.backButton}
+              />
+              <ThemedText type="title" style={styles.title}>
+                {!selectedSimulator ? 'Select Simulator' : 'Select System Type'}
+              </ThemedText>
+            </View>
+            <ThemeToggle />
           </View>
+          
           <ScrollView contentContainerStyle={{ padding: rs(16), gap: rs(16) }}>
-            {FSDC_SIMULATORS.map((sim) => (
-              <Card 
-                key={sim.id} 
-                onPress={() => handleSimulatorSelect(sim)}
-                style={{ backgroundColor: cardBackgroundColor, marginBottom: rs(8) }}
-              >
-                <Card.Content style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <View>
-                    <ThemedText type="subtitle" style={{ fontWeight: 'bold' }}>{sim.name}</ThemedText>
-                    <ThemedText style={{ opacity: 0.7 }}>{sim.type}</ThemedText>
-                  </View>
-                  <IconButton icon="chevron-right" />
-                </Card.Content>
-              </Card>
-            ))}
+            {!selectedSimulator ? (
+              // Step 1: Select Simulator
+              availableSimulators.map((sim) => (
+                <Card 
+                  key={sim.id} 
+                  onPress={() => handleSimulatorSelect(sim)}
+                  style={{ backgroundColor: cardBackgroundColor, marginBottom: rs(8) }}
+                >
+                  <Card.Content style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <View>
+                      <ThemedText type="subtitle" style={{ fontWeight: 'bold' }}>{sim.name}</ThemedText>
+                    </View>
+                    <IconButton icon="chevron-right" />
+                  </Card.Content>
+                </Card>
+              ))
+            ) : (
+              // Step 2: Select Type
+              availableTypes.map((type) => (
+                <Card 
+                  key={type} 
+                  onPress={() => handleTypeSelect(type as string)}
+                  style={{ backgroundColor: cardBackgroundColor, marginBottom: rs(8) }}
+                >
+                  <Card.Content style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <View>
+                      <ThemedText type="subtitle" style={{ fontWeight: 'bold' }}>{type}</ThemedText>
+                    </View>
+                    <IconButton icon="check" />
+                  </Card.Content>
+                </Card>
+              ))
+            )}
           </ScrollView>
         </ThemedView>
       </Modal>
@@ -1080,7 +1150,7 @@ function AddReviewScreen() {
         }}>
           <View>
             <ThemedText style={{ fontSize: rf(12), opacity: 0.7 }}>Selected Simulator:</ThemedText>
-            <ThemedText style={{ fontWeight: 'bold', color: '#2196F3' }}>{selectedSimulator.name} ({selectedSimulator.type})</ThemedText>
+            <ThemedText style={{ fontWeight: 'bold', color: '#2196F3' }}>{selectedSimulator.name} ({selectedSimulatorType})</ThemedText>
           </View>
           <IconButton icon="pencil" size={20} />
         </TouchableOpacity>
@@ -1091,7 +1161,7 @@ function AddReviewScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="always"
         keyboardDismissMode="on-drag"
-        contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, rs(24)) }}
+        contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, hp('10%')) }}
       >
         <View style={styles.header}>
           <View style={styles.headerTop}>
@@ -1704,6 +1774,7 @@ function AddReviewScreen() {
 // Export with React.memo for performance optimization
 export default React.memo(AddReviewScreen);
 
+
 const createStyles = (backgroundColor: string, textColor: string, borderColor: string, cardBackgroundColor: string, inputBackgroundColor: string) => StyleSheet.create({
   container: {
     flex: 1,
@@ -1713,15 +1784,15 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
     padding: getDevicePadding().horizontal,
   },
   header: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: rs(24),
+    justifyContent: 'space-between',
+    paddingHorizontal: wp('4%'),
+    paddingBottom: hp('2%'),
   },
   headerTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    width: '100%',
-    gap: rs(12),
   },
   headerTitles: {
     flex: 1,

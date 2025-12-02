@@ -31,7 +31,9 @@
 - **expo-image**: Optimized image component.
 - **expo-image-picker**: Image selection.
 - **expo-file-system**: File system operations.
+- **expo-file-system**: File system operations.
 - **expo-document-picker**: Document selection.
+- **expo-media-library**: Save images/files to device gallery.
 
 ### User Experience
 

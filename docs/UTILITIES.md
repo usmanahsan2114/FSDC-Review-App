@@ -57,6 +57,15 @@ This document details the professional enhancements and utilities available in t
 - Step counter
 - Color changes on completion
 
+## 7. `utils/simulatorStorage.ts` - Dynamic Simulator Management
+
+**Purpose**: Manage simulator data dynamically (add/edit/delete).
+**Features**:
+
+- Persists simulator list to `AsyncStorage`
+- Fallback to default FSDC simulators
+- Helper functions: `getSimulators`, `saveSimulators`, `getSimulatorTypes`
+
 ## Integration Examples
 
 ### Adding FAB to Home Screen

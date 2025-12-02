@@ -5,24 +5,25 @@ import ThemeToggle from '@/components/ThemeToggle';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as MediaLibrary from 'expo-media-library';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-    Alert,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View
+  Alert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import {
-    Button,
-    Card,
-    Chip,
-    Dialog,
-    IconButton,
-    Paragraph,
-    Portal,
+  Button,
+  Card,
+  Chip,
+  Dialog,
+  IconButton,
+  Paragraph,
+  Portal,
 } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StarRating from 'react-native-star-rating-widget';
@@ -618,6 +619,19 @@ function ReviewPreviewScreen() {
       
       const reviewId = await saveReview(reviewData);
       
+      // Save handwritten comment to gallery if it exists
+      if (formData.handwrittenComment) {
+        try {
+          const { status } = await MediaLibrary.requestPermissionsAsync();
+          if (status === 'granted') {
+            await MediaLibrary.createAssetAsync(formData.handwrittenComment);
+            // Optional: Notify user or just fail silently as it's an enhancement
+          }
+        } catch (mediaError) {
+          console.error('Error saving to gallery:', mediaError);
+        }
+      }
+      
       if (reviewId) {
         setHasSubmittedSuccessfully(true);
         setShowSuccessDialog(true);
@@ -650,17 +664,39 @@ function ReviewPreviewScreen() {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, rs(24)) }}>
         <View style={styles.header}>
           <View style={styles.headerTop}>
-            <View style={styles.headerTitles}>
-              <ThemedText type="title" style={styles.title}>
-                Review Preview
-              </ThemedText>
-              <ThemedText style={styles.subtitle}>
-                Please review your submission before confirming
-              </ThemedText>
-            </View>
-            <ThemeToggle />
+            <IconButton
+              icon="arrow-left"
+              size={24}
+              onPress={() => router.back()}
+              style={styles.backButton}
+            />
+            <ThemedText type="title" style={styles.title}>
+              Review Preview
+            </ThemedText>
           </View>
+          <ThemeToggle />
         </View>
+
+        {/* Simulator Information */}
+        {(formData.simulatorName || formData.simulatorType) && (
+          <Card style={styles.sectionCard}>
+            <Card.Content>
+              <ThemedText style={styles.sectionTitle}>Simulator Details</ThemedText>
+              {formData.simulatorName && (
+                <View style={styles.infoRow}>
+                  <ThemedText style={styles.label}>Aircraft:</ThemedText>
+                  <Chip icon="airplane" style={styles.chip}>{formData.simulatorName}</Chip>
+                </View>
+              )}
+              {formData.simulatorType && (
+                <View style={styles.infoRow}>
+                  <ThemedText style={styles.label}>System Type:</ThemedText>
+                  <Chip icon="cog" style={styles.chip}>{formData.simulatorType}</Chip>
+                </View>
+              )}
+            </Card.Content>
+          </Card>
+        )}
 
         {/* Personal Information */}
         <Card style={styles.sectionCard}>
@@ -1007,20 +1043,22 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
     padding: wp('4%'),
   },
   header: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: hp('3%'),
+    justifyContent: 'space-between',
+    paddingHorizontal: wp('4%'),
+    paddingBottom: hp('2%'),
   },
   headerTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: wp('3%'),
   },
-  headerTitles: {
-    flex: 1,
+  backButton: {
+    margin: 0,
+    marginRight: rs(8),
   },
   title: {
     fontSize: hp('3%'),
-    textAlign: 'center',
     fontWeight: 'bold',
     paddingVertical: rs(6),
   },

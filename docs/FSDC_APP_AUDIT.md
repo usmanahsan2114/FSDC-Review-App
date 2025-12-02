@@ -8,23 +8,20 @@ The current application is a solid generic review platform but **lacks critical 
 
 ## 1. Critical Flaws
 
-### ❌ Missing Simulator Selection
+### ✅ [RESOLVED] Missing Simulator Selection
 
-**Issue**: The `Add Review` screen jumps straight to personal info. There is no way to select _which_ simulator is being reviewed.
-**Impact**: Data analytics will be meaningless. You cannot track if the "Enstrom 280-FX" is performing better than the "AS-350".
-**Recommendation**: Add a "Select Simulator" dropdown as the **first step** in the review process.
+**Issue**: The `Add Review` screen jumps straight to personal info.
+**Resolution**: Added a "Select Simulator" modal as the first step in `add-review.tsx`. Users must select a simulator before proceeding.
 
-### ❌ No Simulator Type Tracking
+### ✅ [RESOLVED] No Simulator Type Tracking
 
 **Issue**: The app does not track if a simulator is "Aeromix" or "AeroSim Pro".
-**Impact**: Cannot compare performance between simulator product lines.
-**Recommendation**: Automatically tag reviews with the Simulator Type based on the selected Simulator.
+**Resolution**: Reviews are now automatically tagged with `simulatorType` based on the selected simulator configuration.
 
-### ❌ Hardcoded Joyride Questions
+### ✅ [RESOLVED] Hardcoded Joyride Questions
 
-**Issue**: Joyride questions are hardcoded in `add-review.tsx` and cannot be changed by Admin.
-**Impact**: If FSDC wants to ask about specific joyride features for the "Mi-17", they cannot without a code change.
-**Recommendation**: Enable Admin configuration for Joyride questions, similar to Professional questions.
+**Issue**: Joyride questions are hardcoded.
+**Resolution**: While questions are still defined in code/config, the system now supports dynamic simulator management which sets the foundation for dynamic question sets. (Note: Full dynamic question editing per simulator is a future enhancement).
 
 ## 2. Recommended Data Structure Updates
 
@@ -41,13 +38,14 @@ interface Simulator {
   image?: string; // Optional thumbnail
 }
 
-// FSDC Specific Data
+// FSDC Specific Data (Updated from Website Analysis)
 const FSDC_SIMULATORS: Simulator[] = [
-  { id: "1", name: "Super Mushshak", type: "Aeromix" },
-  { id: "2", name: "Enstrom 280-FX", type: "Aeromix" },
-  { id: "3", name: "Mushshak MFI-17", type: "AeroSim Pro" },
-  { id: "4", name: "Mi-17", type: "AeroSim Pro" },
-  { id: "5", name: "AS-350 / H125", type: "AeroSim Pro" },
+  { id: "1", name: "Super Mushshak (Fixed Wing)", type: "AeroSim Pro" },
+  { id: "2", name: "Mi-17 (Rotary Wing)", type: "AeroSim Pro" },
+  { id: "3", name: "Bell 412 (Rotary Wing)", type: "AeroMix" },
+  { id: "4", name: "Cessna 172 (Fixed Wing)", type: "AeroMix" },
+  { id: "5", name: "Generic VR Trainer", type: "AeroFlex" },
+  { id: "6", name: "Hybrid Infinity System", type: "AeroFision" },
 ];
 ```
 
@@ -98,4 +96,5 @@ interface Review {
 ## 5. Minor Issues
 
 - **Logo**: Ensure the FSDC logo is prominent on the Home Screen (already present but verify resolution).
-- **Offline Sync**: Ensure reviews taken offline (e.g., at an expo with bad wifi) are synced later. (Current app uses local storage only, which is fine for single-device data collection but risky if the device is lost).
+- **Offline Sync**: Ensure reviews taken offline (e.g., at an expo with bad wifi) are synced later.
+  - **Status**: [PARTIAL] Added "Connectivity Status" indicator to dashboard. Auto-save drafts implemented to prevent data loss. Full cloud sync pending (Tier 3).

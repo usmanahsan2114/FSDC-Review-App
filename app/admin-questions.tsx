@@ -9,7 +9,9 @@ import React, { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Button, Card, IconButton, TextInput } from 'react-native-paper';
 
+import { Simulator } from '@/constants/simulators';
 import { hp, rf, rs, wp } from '../utils/responsive';
+import { getSimulators, getSimulatorTypes, saveSimulators, saveSimulatorTypes } from '../utils/simulatorStorage';
 
 interface RatingCategory {
   id: string;
@@ -108,13 +110,27 @@ export default function AdminQuestionsScreen() {
   const [personalInfoFields, setPersonalInfoFields] = useState<PersonalInfoField[]>(defaultPersonalInfoFields);
   const [editingPersonalField, setEditingPersonalField] = useState<string | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
-  const [activeTab, setActiveTab] = useState<'ratings' | 'personal'>('ratings');
+  const [activeTab, setActiveTab] = useState<'ratings' | 'personal' | 'simulators'>('ratings');
+
+  // Simulator State
+  const [simulators, setSimulators] = useState<Simulator[]>([]);
+  const [simulatorTypes, setSimulatorTypes] = useState<string[]>([]);
+  const [editingSimulator, setEditingSimulator] = useState<string | null>(null);
+  const [editingSimType, setEditingSimType] = useState<string | null>(null);
 
   // Load saved data on component mount
   useEffect(() => {
     loadRatingCategories();
     loadPersonalInfoFields();
+    loadSimulatorData();
   }, []);
+
+  const loadSimulatorData = async () => {
+    const sims = await getSimulators();
+    const types = await getSimulatorTypes();
+    setSimulators(sims);
+    setSimulatorTypes(types);
+  };
 
   const loadRatingCategories = async () => {
     try {
@@ -186,6 +202,18 @@ export default function AdminQuestionsScreen() {
     } catch (error) {
       console.error('Error saving changes:', error);
       Alert.alert('Error', 'Failed to save changes');
+    }
+  };
+
+  const saveSimulatorChanges = async () => {
+    try {
+      await saveSimulators(simulators);
+      await saveSimulatorTypes(simulatorTypes);
+      setHasChanges(false);
+      Alert.alert('Success', 'Simulator data saved successfully!');
+    } catch (error) {
+      console.error('Error saving simulator data:', error);
+      Alert.alert('Error', 'Failed to save simulator data');
     }
   };
 
@@ -272,6 +300,59 @@ export default function AdminQuestionsScreen() {
     );
   };
 
+  // Simulator Management Functions
+  const addNewSimulator = () => {
+    const newId = Date.now().toString();
+    const newSim: Simulator = {
+      id: newId,
+      name: 'New Simulator',
+      type: simulatorTypes[0] || 'Generic',
+    };
+    setSimulators(prev => [...prev, newSim]);
+    setEditingSimulator(newId);
+    setHasChanges(true);
+  };
+
+  const updateSimulator = (id: string, name: string) => {
+    setSimulators(prev => prev.map(s => s.id === id ? { ...s, name } : s));
+    setHasChanges(true);
+  };
+
+  const deleteSimulator = (id: string) => {
+    Alert.alert('Delete Simulator', 'Are you sure?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => {
+        setSimulators(prev => prev.filter(s => s.id !== id));
+        setHasChanges(true);
+      }}
+    ]);
+  };
+
+  const addNewSimType = () => {
+    setSimulatorTypes(prev => [...prev, 'New Type']);
+    setEditingSimType('New Type');
+    setHasChanges(true);
+  };
+
+  const updateSimType = (index: number, value: string) => {
+    setSimulatorTypes(prev => {
+      const newTypes = [...prev];
+      newTypes[index] = value;
+      return newTypes;
+    });
+    setHasChanges(true);
+  };
+
+  const deleteSimType = (index: number) => {
+    Alert.alert('Delete Type', 'Are you sure?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => {
+        setSimulatorTypes(prev => prev.filter((_, i) => i !== index));
+        setHasChanges(true);
+      }}
+    ]);
+  };
+
   const deletePersonalField = (id: string) => {
     Alert.alert(
       'Delete Field',
@@ -311,19 +392,18 @@ export default function AdminQuestionsScreen() {
   return (
     <ThemedView style={styles.container}>
       <View style={styles.header}>
-        <ThemedText type="title" style={styles.title}>
-          Admin: Manage Questions
-        </ThemedText>
+        <View style={styles.headerTop}>
+          <IconButton
+            icon="arrow-left"
+            size={24}
+            onPress={handleGoBack}
+            style={styles.backButton}
+          />
+          <ThemedText type="title" style={styles.title}>
+            Admin: Manage Questions
+          </ThemedText>
+        </View>
         <View style={styles.headerActions}>
-          <Button
-            mode="outlined"
-            icon="briefcase"
-            style={styles.filterButton}
-            compact
-            disabled
-          >
-            Professional Only
-          </Button>
           <ThemeToggle />
           <IconButton
             icon="refresh"
@@ -352,9 +432,17 @@ export default function AdminQuestionsScreen() {
             Personal Info Fields
           </ThemedText>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'simulators' && styles.activeTab]}
+          onPress={() => setActiveTab('simulators')}
+        >
+          <ThemedText style={[styles.tabText, activeTab === 'simulators' && styles.activeTabText]}>
+            Simulators
+          </ThemedText>
+        </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: hp('15%') }}>
         {activeTab === 'ratings' && (
           <>
             <Card style={styles.infoCard}>
@@ -387,6 +475,17 @@ export default function AdminQuestionsScreen() {
               </Card.Content>
             </Card>
           </>
+        )}
+
+        {activeTab === 'simulators' && (
+          <Card style={styles.infoCard}>
+            <Card.Content>
+              <ThemedText style={styles.infoTitle}>Simulator Management</ThemedText>
+              <ThemedText style={styles.infoText}>
+                Manage the list of Aircraft (Simulators) and System Types available in the app.
+              </ThemedText>
+            </Card.Content>
+          </Card>
         )}
 
         {activeTab === 'ratings' && (
@@ -614,11 +713,93 @@ export default function AdminQuestionsScreen() {
           </>
         )}
 
+        {activeTab === 'simulators' && (
+          <>
+            <ThemedText style={styles.sectionHeader}>Simulator Types</ThemedText>
+            {simulatorTypes.map((type, index) => (
+              <Card key={`type-${index}`} style={styles.categoryCard}>
+                <Card.Content>
+                  <View style={styles.categoryHeader}>
+                    <ThemedText style={styles.categoryNumber}>#{index + 1}</ThemedText>
+                    <View style={styles.categoryActions}>
+                      <IconButton
+                        icon={editingSimType === String(index) ? "check" : "pencil"}
+                        size={20}
+                        onPress={() => setEditingSimType(editingSimType === String(index) ? null : String(index))}
+                        style={styles.actionButton}
+                      />
+                      <IconButton
+                        icon="delete"
+                        size={20}
+                        onPress={() => deleteSimType(index)}
+                        style={[styles.actionButton, styles.deleteButton]}
+                      />
+                    </View>
+                  </View>
+                  {editingSimType === String(index) ? (
+                    <TextInput
+                      label="Simulator Type"
+                      value={type}
+                      onChangeText={(text) => updateSimType(index, text)}
+                      style={styles.textInput}
+                      mode="outlined"
+                    />
+                  ) : (
+                    <ThemedText style={styles.categoryTitle}>{type}</ThemedText>
+                  )}
+                </Card.Content>
+              </Card>
+            ))}
+            <Button mode="outlined" onPress={addNewSimType} style={styles.addButton} icon="plus">
+              Add New Type
+            </Button>
+
+            <ThemedText style={[styles.sectionHeader, { marginTop: hp('2%') }]}>Aircraft (Simulators)</ThemedText>
+            {simulators.map((sim, index) => (
+              <Card key={sim.id} style={styles.categoryCard}>
+                <Card.Content>
+                  <View style={styles.categoryHeader}>
+                    <ThemedText style={styles.categoryNumber}>#{index + 1}</ThemedText>
+                    <View style={styles.categoryActions}>
+                      <IconButton
+                        icon={editingSimulator === sim.id ? "check" : "pencil"}
+                        size={20}
+                        onPress={() => setEditingSimulator(editingSimulator === sim.id ? null : sim.id)}
+                        style={styles.actionButton}
+                      />
+                      <IconButton
+                        icon="delete"
+                        size={20}
+                        onPress={() => deleteSimulator(sim.id)}
+                        style={[styles.actionButton, styles.deleteButton]}
+                      />
+                    </View>
+                  </View>
+                  {editingSimulator === sim.id ? (
+                    <TextInput
+                      label="Aircraft Name"
+                      value={sim.name}
+                      onChangeText={(text) => updateSimulator(sim.id, text)}
+                      style={styles.textInput}
+                      mode="outlined"
+                    />
+                  ) : (
+                    <ThemedText style={styles.categoryTitle}>{sim.name}</ThemedText>
+                  )}
+                </Card.Content>
+              </Card>
+            ))}
+            <Button mode="outlined" onPress={addNewSimulator} style={styles.addButton} icon="plus">
+              Add New Aircraft
+            </Button>
+          </>
+        )}
+
         {hasChanges && (
           <View style={styles.bottomActions}>
             <Button
               mode="contained"
-              onPress={saveAllChanges}
+              onPress={activeTab === 'simulators' ? saveSimulatorChanges : saveAllChanges}
               style={styles.saveButton}
               icon="content-save"
             >
@@ -637,11 +818,14 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
     paddingTop: hp('5%'),
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: wp('4%'),
     paddingBottom: hp('2%'),
+    gap: hp('1%'),
+  },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: hp('1%'),
   },
   backButton: {
     margin: 0,
@@ -794,6 +978,12 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
     borderRadius: 8,
   },
   fieldTypeContainer: {
+    marginTop: hp('1%'),
+  },
+  sectionHeader: {
+    fontSize: rf(18),
+    fontWeight: 'bold',
+    marginBottom: hp('1%'),
     marginTop: hp('1%'),
   },
   fieldTypeLabel: {

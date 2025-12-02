@@ -1,20 +1,24 @@
+import { ConnectivityStatus } from '@/components/ConnectivityStatus';
 import { NoReviewsEmptyState, NoSearchResultsEmptyState } from '@/components/EmptyState';
 import { ReviewListSkeleton } from '@/components/SkeletonLoader';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import ThemeToggle from '@/components/ThemeToggle';
+import { Simulator } from '@/constants/simulators';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, FlatList, ListRenderItem, RefreshControl, StyleSheet, View } from 'react-native';
-import { Button, Card, Chip, Divider, Menu, TextInput } from 'react-native-paper';
+import { Alert, FlatList, ListRenderItem, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { Button, Card, Chip, Divider, IconButton, Menu, TextInput } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StarRating from 'react-native-star-rating-widget';
 import { deleteReview, getAllReviews, initializeDataStorage, Review } from '../utils/dataStorage';
+import { exportToExcel } from '../utils/exportUtils';
 import { hapticsButtonPress, hapticsDelete, hapticsFilterSelect } from '../utils/haptics';
 import { getDevicePadding, hp, isTablet, minTouchTarget, rf, rs, wp } from '../utils/responsive';
+import { getSimulators, getSimulatorTypes } from '../utils/simulatorStorage';
 
 interface RatingCategory {
   id?: string; // Optional for backward compatibility
@@ -70,6 +74,14 @@ function ReviewsListScreen() {
   const [avgMenuVisible, setAvgMenuVisible] = useState(false);
   const [reviewTypeFilter, setReviewTypeFilter] = useState<'all' | 'professional' | 'joyride'>('professional');
   const [typeFilterMenuVisible, setTypeFilterMenuVisible] = useState(false);
+  const [simulatorTypeFilter, setSimulatorTypeFilter] = useState<string>('all');
+  const [simulatorFilter, setSimulatorFilter] = useState<string>('all');
+  const [availableTypes, setAvailableTypes] = useState<string[]>([]);
+  const [availableSimulators, setAvailableSimulators] = useState<Simulator[]>([]);
+  const [simTypeMenuVisible, setSimTypeMenuVisible] = useState(false);
+  const [simulatorMenuVisible, setSimulatorMenuVisible] = useState(false);
+  const [ratingMenuVisible, setRatingMenuVisible] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
@@ -83,9 +95,17 @@ function ReviewsListScreen() {
 
   useEffect(() => {
     loadReviews();
+    loadSimulatorData();
     loadPersonalInfoFields();
     loadRatingCategories();
   }, []);
+
+  const loadSimulatorData = async () => {
+    const types = await getSimulatorTypes();
+    const sims = await getSimulators();
+    setAvailableTypes(types);
+    setAvailableSimulators(sims);
+  };
 
   const loadReviews = async () => {
     try {
@@ -231,6 +251,16 @@ function ReviewsListScreen() {
       list = list.filter(r => (r.reviewType || 'professional') === reviewTypeFilter);
     }
 
+    // Simulator Type filter
+    if (simulatorTypeFilter !== 'all') {
+      list = list.filter(r => r.simulatorType === simulatorTypeFilter);
+    }
+
+    // Simulator Name filter
+    if (simulatorFilter !== 'all') {
+      list = list.filter(r => r.simulatorName === simulatorFilter);
+    }
+
     // Search filter
     if (q) {
       list = list.filter(r => {
@@ -277,7 +307,7 @@ function ReviewsListScreen() {
     });
 
     return sorted;
-  }, [reviews, reviewTypeFilter, searchQuery, sortOption, filterMinRating, filterHasPhotos, filterHasHandwriting, calculateAverageRating]);
+  }, [reviews, reviewTypeFilter, simulatorTypeFilter, searchQuery, sortOption, filterMinRating, filterHasPhotos, filterHasHandwriting, calculateAverageRating]);
 
   // Average to display in header section based on dropdown selection
   const { displayAverage, displayCount } = useMemo(() => {
@@ -310,6 +340,8 @@ function ReviewsListScreen() {
     const profession = useMemo(() => getPersonalInfoValue(review, 'profession'), [review]);
     const simExperience = useMemo(() => getPersonalInfoValue(review, 'previousSimulatorExperience'), [review]);
     const flyingExperience = useMemo(() => getPersonalInfoValue(review, 'previousFlyingExperience'), [review]);
+    const simulatorName = review.simulatorName;
+    const simulatorType = review.simulatorType;
     
     return (
     <Card style={styles.reviewCard}>
@@ -335,6 +367,22 @@ function ReviewsListScreen() {
               </Chip>
             )}
         </View>
+
+        {/* Simulator Info */}
+        {(simulatorName || simulatorType) && (
+          <View style={styles.reviewInfo}>
+            {simulatorName && (
+              <Chip icon="airplane" style={styles.chip} textStyle={styles.chipText}>
+                {simulatorName}
+              </Chip>
+            )}
+            {simulatorType && (
+              <Chip icon="cog" style={styles.chip} textStyle={styles.chipText}>
+                {simulatorType}
+              </Chip>
+            )}
+          </View>
+        )}
 
           {/* Experience Row */}
           <View style={styles.experienceRow}>
@@ -456,10 +504,11 @@ function ReviewsListScreen() {
     setFilterHasPhotos(false);
     setFilterHasHandwriting(false);
     setSortOption('dateDesc');
+    setSimulatorTypeFilter('all');
     hapticsButtonPress();
   }, []);
 
-  const hasActiveFilters = searchQuery || filterMinRating > 0 || filterHasPhotos || filterHasHandwriting;
+  const hasActiveFilters = searchQuery || filterMinRating > 0 || filterHasPhotos || filterHasHandwriting || simulatorTypeFilter !== 'all';
 
   const ListEmptyComponent = useMemo(() => {
     if (reviews.length === 0) {
@@ -512,67 +561,30 @@ function ReviewsListScreen() {
             </ThemedText>
           </View>
           <View style={styles.headerActions}>
-            <Menu
-              key={`type-filter-menu-${reviewTypeFilter}-${typeFilterMenuVisible}`}
-              visible={typeFilterMenuVisible}
-              onDismiss={() => {
-                setTypeFilterMenuVisible(false);
-              }}
-              anchor={
-                <Button
-                  mode="outlined"
-                  onPress={() => {
-                    setTypeFilterMenuVisible(true);
-                  }}
-                  icon="filter-variant"
-                  style={styles.filterButton}
-                  compact
-                >
-                  {reviewTypeFilter === 'all' ? 'All Reviews' : reviewTypeFilter === 'professional' ? 'Professional' : 'Joyride'}
-                </Button>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <ConnectivityStatus />
+              <ThemeToggle />
+            </View>
+          <IconButton
+            icon="file-excel"
+            mode="contained"
+            containerColor={isDark ? '#2E7D32' : '#4CAF50'}
+            iconColor="white"
+            size={20}
+            onPress={async () => {
+              hapticsButtonPress();
+              setIsExporting(true);
+              try {
+                await exportToExcel(filteredReviews);
+              } catch (error) {
+                Alert.alert('Export Failed', 'Could not export reviews to Excel.');
+              } finally {
+                setIsExporting(false);
               }
-            >
-              <Menu.Item
-                onPress={() => {
-                  const newFilter: 'all' | 'professional' | 'joyride' = 'all';
-                  setTypeFilterMenuVisible(false);
-                  hapticsFilterSelect();
-                  // Always update state, even if same, to ensure menu closes
-                  setTimeout(() => {
-                    setReviewTypeFilter(newFilter);
-                  }, 0);
-                }}
-                title="All Reviews"
-                leadingIcon={reviewTypeFilter === 'all' ? 'check' : undefined}
-              />
-              <Menu.Item
-                onPress={() => {
-                  const newFilter: 'all' | 'professional' | 'joyride' = 'professional';
-                  setTypeFilterMenuVisible(false);
-                  hapticsFilterSelect();
-                  // Always update state, even if same, to ensure menu closes
-                  setTimeout(() => {
-                    setReviewTypeFilter(newFilter);
-                  }, 0);
-                }}
-                title="Professional"
-                leadingIcon={reviewTypeFilter === 'professional' ? 'check' : undefined}
-              />
-              <Menu.Item
-                onPress={() => {
-                  const newFilter: 'all' | 'professional' | 'joyride' = 'joyride';
-                  setTypeFilterMenuVisible(false);
-                  hapticsFilterSelect();
-                  // Always update state, even if same, to ensure menu closes
-                  setTimeout(() => {
-                    setReviewTypeFilter(newFilter);
-                  }, 0);
-                }}
-                title="Joyride"
-                leadingIcon={reviewTypeFilter === 'joyride' ? 'check' : undefined}
-              />
-            </Menu>
-          <ThemeToggle />
+            }}
+            loading={isExporting}
+            style={{ margin: 0 }}
+          />
           </View>
         </View>
 
@@ -586,75 +598,180 @@ function ReviewsListScreen() {
             style={[styles.searchInput, { flex: 0, width: wp('40%') }]}
             dense
           />
-          <Menu
-            key={`sort-menu-${menuVisible}`}
-            visible={menuVisible}
-            onDismiss={() => setMenuVisible(false)}
-            anchor={
-              <Button 
-                mode="outlined" 
-                onPress={() => setMenuVisible(!menuVisible)} 
-                style={styles.menuAnchorButton} 
-                compact
-                contentStyle={{ minHeight: minTouchTarget, paddingHorizontal: rs(6) }}
-              >
-                Sort by: {sortLabel}
-              </Button>
-            }
-          >
-            <Menu.Item onPress={() => { setSortOption('dateDesc'); setMenuVisible(false); }} title="Date (Newest)" />
-            <Menu.Item onPress={() => { setSortOption('dateAsc'); setMenuVisible(false); }} title="Date (Oldest)" />
-            <Divider />
-            <Menu.Item onPress={() => { setSortOption('ratingDesc'); setMenuVisible(false); }} title="Rating (High → Low)" />
-            <Menu.Item onPress={() => { setSortOption('ratingAsc'); setMenuVisible(false); }} title="Rating (Low → High)" />
-            <Divider />
-            <Menu.Item onPress={() => { setSortOption('nameAsc'); setMenuVisible(false); }} title="Name (A → Z)" />
-            <Menu.Item onPress={() => { setSortOption('nameDesc'); setMenuVisible(false); }} title="Name (Z → A)" />
-          </Menu>
         </View>
 
-        <View style={styles.filtersRow}>
-          <TextInput
-            mode="outlined"
-            label="Min rating (0-5)"
-            placeholder="e.g. 3"
-            keyboardType="numeric"
-            value={filterMinRating > 0 ? String(filterMinRating) : ''}
-            onChangeText={(text) => {
-              const num = parseFloat(text);
-              if (isNaN(num)) { setFilterMinRating(0); return; }
-              const clamped = Math.max(0, Math.min(5, num));
-              setFilterMinRating(clamped);
-            }}
-            style={{ width: wp('22%') }}
-            dense
-          />
-          <Chip
-            selected={filterHasPhotos}
-            onPress={() => {
-              hapticsFilterSelect();
-              setFilterHasPhotos(prev => !prev);
-            }}
-            icon="image-outline"
-            compact
-            style={[styles.filterChip, filterHasPhotos && styles.filterChipSelected]}
-            textStyle={[styles.chipText, filterHasPhotos && styles.filterChipTextSelected]}
+        {/* Unified Filter Bar */}
+        <View style={styles.filterBar}>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            contentContainerStyle={styles.filterContentContainer}
           >
-            Photos
-          </Chip>
-          <Chip
-            selected={filterHasHandwriting}
-            onPress={() => {
-              hapticsFilterSelect();
-              setFilterHasHandwriting(prev => !prev);
-            }}
-            icon="pen"
-            compact
-            style={[styles.filterChip, filterHasHandwriting && styles.filterChipSelected]}
-            textStyle={[styles.chipText, filterHasHandwriting && styles.filterChipTextSelected]}
-          >
-            Handwritten
-          </Chip>
+            {/* Reset Filter */}
+            {hasActiveFilters && (
+              <Chip
+                icon="close"
+                onPress={clearAllFilters}
+                style={[styles.filterChip, styles.resetChip]}
+                textStyle={styles.resetChipText}
+              >
+                Reset
+              </Chip>
+            )}
+
+            {/* Sort Menu */}
+            <Menu
+              visible={menuVisible}
+              onDismiss={() => setMenuVisible(false)}
+              anchor={
+                <Chip
+                  icon="sort"
+                  onPress={() => setMenuVisible(true)}
+                  style={styles.filterChip}
+                  showSelectedOverlay
+                >
+                  {sortLabel}
+                </Chip>
+              }
+            >
+              <Menu.Item onPress={() => { setSortOption('dateDesc'); setMenuVisible(false); hapticsFilterSelect(); }} title="Date (Newest)" />
+              <Menu.Item onPress={() => { setSortOption('dateAsc'); setMenuVisible(false); hapticsFilterSelect(); }} title="Date (Oldest)" />
+              <Divider />
+              <Menu.Item onPress={() => { setSortOption('ratingDesc'); setMenuVisible(false); hapticsFilterSelect(); }} title="Rating (High → Low)" />
+              <Menu.Item onPress={() => { setSortOption('ratingAsc'); setMenuVisible(false); hapticsFilterSelect(); }} title="Rating (Low → High)" />
+              <Divider />
+              <Menu.Item onPress={() => { setSortOption('nameAsc'); setMenuVisible(false); hapticsFilterSelect(); }} title="Name (A → Z)" />
+              <Menu.Item onPress={() => { setSortOption('nameDesc'); setMenuVisible(false); hapticsFilterSelect(); }} title="Name (Z → A)" />
+            </Menu>
+
+            {/* Review Type Menu */}
+            <Menu
+              visible={typeFilterMenuVisible}
+              onDismiss={() => setTypeFilterMenuVisible(false)}
+              anchor={
+                <Chip
+                  icon="filter-variant"
+                  onPress={() => setTypeFilterMenuVisible(true)}
+                  style={[styles.filterChip, reviewTypeFilter !== 'all' && styles.filterChipActive]}
+                  textStyle={reviewTypeFilter !== 'all' ? styles.filterChipTextActive : undefined}
+                  showSelectedOverlay
+                >
+                  {reviewTypeFilter === 'all' ? 'Type: All' : reviewTypeFilter === 'professional' ? 'Professional' : 'Joyride'}
+                </Chip>
+              }
+            >
+              <Menu.Item onPress={() => { setReviewTypeFilter('all'); setTypeFilterMenuVisible(false); hapticsFilterSelect(); }} title="All Reviews" />
+              <Menu.Item onPress={() => { setReviewTypeFilter(prev => prev === 'professional' ? 'all' : 'professional'); setTypeFilterMenuVisible(false); hapticsFilterSelect(); }} title="Professional" />
+              <Menu.Item onPress={() => { setReviewTypeFilter(prev => prev === 'joyride' ? 'all' : 'joyride'); setTypeFilterMenuVisible(false); hapticsFilterSelect(); }} title="Joyride" />
+            </Menu>
+
+            {/* Simulator Menu */}
+            <Menu
+              visible={simulatorMenuVisible}
+              onDismiss={() => setSimulatorMenuVisible(false)}
+              anchor={
+                <Chip
+                  icon="airplane"
+                  onPress={() => setSimulatorMenuVisible(true)}
+                  style={[styles.filterChip, simulatorFilter !== 'all' && styles.filterChipActive]}
+                  textStyle={simulatorFilter !== 'all' ? styles.filterChipTextActive : undefined}
+                  showSelectedOverlay
+                >
+                  {simulatorFilter === 'all' ? 'Sim: All' : availableSimulators.find(s => s.name === simulatorFilter)?.name || simulatorFilter}
+                </Chip>
+              }
+            >
+              <Menu.Item onPress={() => { setSimulatorFilter('all'); setSimulatorMenuVisible(false); hapticsFilterSelect(); }} title="All Simulators" />
+              <Divider />
+              {availableSimulators.map(sim => (
+                <Menu.Item 
+                  key={sim.id} 
+                  onPress={() => { 
+                    setSimulatorFilter(prev => prev === sim.name ? 'all' : sim.name); 
+                    setSimulatorMenuVisible(false); 
+                    hapticsFilterSelect(); 
+                  }} 
+                  title={sim.name} 
+                />
+              ))}
+            </Menu>
+
+            {/* Simulator Type Menu */}
+            <Menu
+              visible={simTypeMenuVisible}
+              onDismiss={() => setSimTypeMenuVisible(false)}
+              anchor={
+                <Chip
+                  icon="cog"
+                  onPress={() => setSimTypeMenuVisible(true)}
+                  style={[styles.filterChip, simulatorTypeFilter !== 'all' && styles.filterChipActive]}
+                  textStyle={simulatorTypeFilter !== 'all' ? styles.filterChipTextActive : undefined}
+                  showSelectedOverlay
+                >
+                  {simulatorTypeFilter === 'all' ? 'Sys: All' : simulatorTypeFilter}
+                </Chip>
+              }
+            >
+              <Menu.Item onPress={() => { setSimulatorTypeFilter('all'); setSimTypeMenuVisible(false); hapticsFilterSelect(); }} title="All Types" />
+              <Divider />
+              {availableTypes.map(type => (
+                <Menu.Item 
+                  key={type} 
+                  onPress={() => { 
+                    setSimulatorTypeFilter(prev => prev === type ? 'all' : type); 
+                    setSimTypeMenuVisible(false); 
+                    hapticsFilterSelect(); 
+                  }} 
+                  title={type} 
+                />
+              ))}
+            </Menu>
+
+            {/* Min Rating Menu (Replaces Input) */}
+            <Menu
+              visible={ratingMenuVisible}
+              onDismiss={() => setRatingMenuVisible(false)}
+              anchor={
+                <Chip
+                  icon="star"
+                  onPress={() => setRatingMenuVisible(true)}
+                  style={[styles.filterChip, filterMinRating > 0 && styles.filterChipActive]}
+                  textStyle={filterMinRating > 0 ? styles.filterChipTextActive : undefined}
+                  showSelectedOverlay
+                >
+                  {filterMinRating === 0 ? 'Rating: Any' : `${filterMinRating}+ Stars`}
+                </Chip>
+              }
+            >
+              <Menu.Item onPress={() => { setFilterMinRating(0); setRatingMenuVisible(false); hapticsFilterSelect(); }} title="Any Rating" />
+              <Menu.Item onPress={() => { setFilterMinRating(prev => prev === 3 ? 0 : 3); setRatingMenuVisible(false); hapticsFilterSelect(); }} title="3+ Stars" />
+              <Menu.Item onPress={() => { setFilterMinRating(prev => prev === 4 ? 0 : 4); setRatingMenuVisible(false); hapticsFilterSelect(); }} title="4+ Stars" />
+              <Menu.Item onPress={() => { setFilterMinRating(prev => prev === 5 ? 0 : 5); setRatingMenuVisible(false); hapticsFilterSelect(); }} title="5 Stars Only" />
+            </Menu>
+
+            {/* Toggles */}
+            <Chip
+              selected={filterHasPhotos}
+              onPress={() => { hapticsFilterSelect(); setFilterHasPhotos(!filterHasPhotos); }}
+              icon="image-outline"
+              style={[styles.filterChip, filterHasPhotos && styles.filterChipActive]}
+              textStyle={filterHasPhotos ? styles.filterChipTextActive : undefined}
+              showSelectedOverlay
+            >
+              Photos
+            </Chip>
+
+            <Chip
+              selected={filterHasHandwriting}
+              onPress={() => { hapticsFilterSelect(); setFilterHasHandwriting(!filterHasHandwriting); }}
+              icon="pen"
+              style={[styles.filterChip, filterHasHandwriting && styles.filterChipActive]}
+              textStyle={filterHasHandwriting ? styles.filterChipTextActive : undefined}
+              showSelectedOverlay
+            >
+              Handwritten
+            </Chip>
+          </ScrollView>
         </View>
 
         {filteredReviews.length > 0 && (
@@ -662,7 +779,6 @@ function ReviewsListScreen() {
             <View style={styles.overallHeaderRow}>
               <ThemedText style={styles.overallAverageLabel}>Average Rating</ThemedText>
               <Menu
-                key={`avg-menu-${avgMenuVisible}`}
                 visible={avgMenuVisible}
                 onDismiss={() => setAvgMenuVisible(false)}
                 anchor={
@@ -713,7 +829,7 @@ function ReviewsListScreen() {
         ListEmptyComponent={ListEmptyComponent}
         showsVerticalScrollIndicator={false}
         style={styles.scrollView}
-        contentContainerStyle={filteredReviews.length === 0 ? styles.emptyContainer : { paddingBottom: Math.max(insets.bottom, rs(20)) }}
+        contentContainerStyle={filteredReviews.length === 0 ? styles.emptyContainer : { paddingBottom: Math.max(insets.bottom, hp('10%')) }}
         removeClippedSubviews={true}
         maxToRenderPerBatch={10}
         updateCellsBatchingPeriod={50}
@@ -746,8 +862,7 @@ function ReviewsListScreen() {
   );
 }
 
-// Export with React.memo for performance optimization
-export default React.memo(ReviewsListScreen);
+
 
 const createStyles = (isDark: boolean, cardBackgroundColor: string, borderColor: string) => StyleSheet.create({
   container: {
@@ -1067,10 +1182,41 @@ const createStyles = (isDark: boolean, cardBackgroundColor: string, borderColor:
   filterChipTextSelected: {
     color: '#FFFFFF',
   },
+  filterBar: {
+    marginBottom: rs(12),
+  },
+  filterContentContainer: {
+    paddingHorizontal: wp('4%'),
+    gap: rs(8),
+    paddingRight: rs(20),
+  },
+  filterChipActive: {
+    backgroundColor: isDark ? '#1976d2' : '#2196F3',
+    borderColor: isDark ? '#1976d2' : '#2196F3',
+  },
+  filterChipTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  resetChip: {
+    backgroundColor: isDark ? '#d32f2f' : '#f44336',
+    borderColor: isDark ? '#d32f2f' : '#f44336',
+  },
+  resetChipText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  verticalDivider: {
+    width: 1,
+    height: '60%',
+    backgroundColor: borderColor,
+    marginHorizontal: rs(8),
+  },
   content: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: wp('5%'),
   },
 });
+
+export default React.memo(ReviewsListScreen);
