@@ -85,6 +85,15 @@ Added new Dashboard button:
 - **Layout Adjustments**: 3-column dashboard, optimized spacing, larger fonts.
 - **Performance**: FlatList virtualization, skeleton loaders, React.memo.
 
+### I. FSDC Features & Simulator Context ✈️
+
+**Files Modified:** `app/add-review.tsx`, `app/dashboard.tsx`, `utils/dataStorage.ts`
+
+- **Simulator Selection**: Added a "Select Simulator" modal as the first step in the review process.
+- **Simulator Context**: Reviews are now tagged with `simulatorId`, `simulatorName`, and `simulatorType`.
+- **Dashboard Filtering**: Added a filter to view analytics for specific simulators (e.g., Mi-17, Super Mushshak).
+- **Data Persistence**: Updated storage logic to persist simulator data with each review.
+
 ## 3. Warnings & Potential Issues
 
 ### A. Codebase Cleanliness

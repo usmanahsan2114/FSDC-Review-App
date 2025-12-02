@@ -22,3 +22,4 @@ Welcome to the ReviewsApp documentation. Here you will find detailed information
 - **[Recommendations](RECOMMENDATIONS.md)**: prioritized recommendations for improvements and future roadmap.
 - **[Testing Checklist](TESTING_CHECKLIST.md)**: Manual testing guide.
 - **[Troubleshooting](TROUBLESHOOTING.md)**: Common issues and solutions.
+- **[Backup Plan](BACKUP_PLAN.md)**: Online backup strategy and options.

@@ -1,16 +1,17 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import ThemeToggle from '@/components/ThemeToggle';
+import { FSDC_SIMULATORS } from '@/constants/simulators';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { Button, Card, Menu } from 'react-native-paper';
 import StarRating from 'react-native-star-rating-widget';
 import { getAllReviews, Review } from '../utils/dataStorage';
-import { getDevicePadding, hp, isTablet, rf, rs, wp } from '../utils/responsive';
+import { hp, isTablet, wp } from '../utils/responsive';
 
 interface RatingCategory {
   id?: string; // Optional for backward compatibility
@@ -55,7 +56,9 @@ export default function DashboardScreen() {
   const [loading, setLoading] = useState(true);
   const [ratingCategories, setRatingCategories] = useState<RatingCategory[]>(defaultRatingCategories);
   const [reviewTypeFilter, setReviewTypeFilter] = useState<'all' | 'professional' | 'joyride'>('all');
+  const [simulatorFilter, setSimulatorFilter] = useState<string>('all'); // 'all' or simulator ID
   const [filterMenuVisible, setFilterMenuVisible] = useState(false);
+  const [simulatorMenuVisible, setSimulatorMenuVisible] = useState(false);
 
   const styles = useMemo(() => createStyles(isDark, cardBackgroundColor, borderColor), 
     [isDark, cardBackgroundColor, borderColor]);
@@ -102,9 +105,11 @@ export default function DashboardScreen() {
 
   // Calculate statistics - separate for professional and joyride
   const calculateStatsForType = (type: 'professional' | 'joyride' | 'all') => {
-    const filteredReviews = type === 'all' 
-      ? reviews 
-      : reviews.filter(r => (r.reviewType || 'professional') === type);
+    const filteredReviews = reviews.filter(r => {
+      const typeMatch = type === 'all' || (r.reviewType || 'professional') === type;
+      const simMatch = simulatorFilter === 'all' || r.simulatorId === simulatorFilter;
+      return typeMatch && simMatch;
+    });
 
     if (filteredReviews.length === 0) {
       return {
@@ -223,9 +228,9 @@ export default function DashboardScreen() {
   };
 
   // Calculate stats based on selected filter
-  const stats = useMemo(() => calculateStatsForType(reviewTypeFilter), [reviews, ratingCategories, reviewTypeFilter]);
-  const professionalStats = useMemo(() => calculateStatsForType('professional'), [reviews, ratingCategories]);
-  const joyrideStats = useMemo(() => calculateStatsForType('joyride'), [reviews, ratingCategories]);
+  const stats = useMemo(() => calculateStatsForType(reviewTypeFilter), [reviews, ratingCategories, reviewTypeFilter, simulatorFilter]);
+  const professionalStats = useMemo(() => calculateStatsForType('professional'), [reviews, ratingCategories, simulatorFilter]);
+  const joyrideStats = useMemo(() => calculateStatsForType('joyride'), [reviews, ratingCategories, simulatorFilter]);
   
   // Get filter label
   const filterLabel = useMemo(() => {
@@ -235,6 +240,12 @@ export default function DashboardScreen() {
       default: return 'All Reviews';
     }
   }, [reviewTypeFilter]);
+
+  const simulatorLabel = useMemo(() => {
+    if (simulatorFilter === 'all') return 'All Simulators';
+    const sim = FSDC_SIMULATORS.find(s => s.id === simulatorFilter);
+    return sim ? sim.name : 'Unknown Simulator';
+  }, [simulatorFilter]);
 
   if (loading) {
     return (
@@ -316,6 +327,43 @@ export default function DashboardScreen() {
                 leadingIcon={reviewTypeFilter === 'joyride' ? 'check' : undefined}
               />
             </Menu>
+
+            <Menu
+              visible={simulatorMenuVisible}
+              onDismiss={() => setSimulatorMenuVisible(false)}
+              anchor={
+                <Button
+                  mode="outlined"
+                  onPress={() => setSimulatorMenuVisible(true)}
+                  icon="airplane"
+                  style={styles.filterButton}
+                  compact
+                >
+                  {simulatorLabel}
+                </Button>
+              }
+            >
+              <Menu.Item
+                onPress={() => {
+                  setSimulatorFilter('all');
+                  setSimulatorMenuVisible(false);
+                }}
+                title="All Simulators"
+                leadingIcon={simulatorFilter === 'all' ? 'check' : undefined}
+              />
+              {FSDC_SIMULATORS.map(sim => (
+                <Menu.Item
+                  key={sim.id}
+                  onPress={() => {
+                    setSimulatorFilter(sim.id);
+                    setSimulatorMenuVisible(false);
+                  }}
+                  title={sim.name}
+                  leadingIcon={simulatorFilter === sim.id ? 'check' : undefined}
+                />
+              ))}
+            </Menu>
+
             <ThemeToggle />
           </View>
         </View>
@@ -753,23 +801,24 @@ export default function DashboardScreen() {
   );
 }
 
-const createStyles = (isDark: boolean, cardBackgroundColor: string, borderColor: string) => StyleSheet.create({
+const createStyles = (isDark: boolean, cardBackgroundColor: string, borderColor: string) => (StyleSheet as any).create({
   container: {
     flex: 1,
-    paddingTop: hp(isTablet ? 3 : 5),
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   scrollView: {
     flex: 1,
-    paddingHorizontal: getDevicePadding().horizontal,
+    paddingHorizontal: wp('4%'),
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: rs(24),
-    paddingBottom: rs(16),
-    borderBottomWidth: 1,
-    borderBottomColor: borderColor,
+    alignItems: 'center',
+    marginVertical: hp('2%'),
   },
   headerContent: {
     flex: 1,
@@ -777,273 +826,236 @@ const createStyles = (isDark: boolean, cardBackgroundColor: string, borderColor:
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: rs(8),
-  },
-  filterButton: {
-    marginRight: rs(4),
+    gap: wp('2%'),
   },
   title: {
-    fontSize: rf(isTablet ? 32 : 28),
+    fontSize: isTablet ? wp('4%') : wp('6%'),
     fontWeight: 'bold',
-    marginBottom: rs(4),
-    paddingVertical: rs(8),
   },
   subtitle: {
-    fontSize: rf(16),
+    fontSize: isTablet ? wp('2.5%') : wp('3.5%'),
     opacity: 0.7,
-    paddingVertical: rs(5),
-    lineHeight: rf(40),
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  filterButton: {
+    marginRight: wp('2%'),
   },
   statsContainer: {
     flexDirection: 'row',
-    gap: rs(12),
-    marginBottom: rs(16),
-    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: hp('2%'),
+    gap: wp('2%'),
   },
   statCard: {
     flex: 1,
-    minWidth: isTablet ? wp('28%') : wp('100%'),
-    elevation: 4,
-    borderRadius: rs(16),
+    backgroundColor: cardBackgroundColor,
   },
   statCardPrimary: {
-    backgroundColor: isDark ? '#1E3A8A' : '#EFF6FF',
+    borderLeftWidth: 4,
+    borderLeftColor: '#2196F3',
   },
   statCardSuccess: {
-    backgroundColor: isDark ? '#14532D' : '#F0FDF4',
+    borderLeftWidth: 4,
+    borderLeftColor: '#4CAF50',
   },
   statCardInfo: {
-    backgroundColor: isDark ? '#7C2D12' : '#FEF3C7',
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF9800',
   },
   statCardContent: {
     alignItems: 'center',
-    paddingVertical: rs(20),
+    padding: wp('2%'),
   },
   statLabel: {
-    fontSize: rf(14),
-    opacity: 0.8,
-    marginBottom: rs(8),
+    fontSize: isTablet ? wp('1.5%') : wp('3%'),
+    opacity: 0.7,
     textAlign: 'center',
-    paddingBottom: rs(3),
-    lineHeight: rf(33),
   },
   statValue: {
-    fontSize: rf(isTablet ? 36 : 32),
+    fontSize: isTablet ? wp('2.5%') : wp('4.5%'),
     fontWeight: 'bold',
-    marginBottom: rs(4),
-    paddingBottom: rs(6),
+    marginVertical: hp('0.5%'),
   },
   statIcon: {
-    fontSize: rf(24),
-    marginTop: rs(4),
-    paddingBottom: rs(3),
+    fontSize: isTablet ? wp('2%') : wp('4%'),
   },
   statTrend: {
-    fontSize: rf(12),
-    opacity: 0.7,
-    marginTop: rs(4),
-    paddingBottom: rs(2),
+    fontSize: isTablet ? wp('1.2%') : wp('2.5%'),
+    color: '#4CAF50',
   },
   miniStars: {
-    marginTop: rs(4),
+    marginTop: hp('0.5%'),
   },
   sectionCard: {
-    marginBottom: rs(16),
-    borderRadius: rs(16),
-    elevation: 2,
+    marginBottom: hp('2%'),
+    backgroundColor: cardBackgroundColor,
   },
   sectionTitle: {
-    fontSize: rf(20),
+    fontSize: isTablet ? wp('2.5%') : wp('4.5%'),
     fontWeight: 'bold',
-    marginBottom: rs(16),
-    paddingVertical: rs(6),
+    marginBottom: hp('1.5%'),
   },
   distributionContainer: {
-    gap: rs(12),
+    gap: hp('1%'),
   },
   distributionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: rs(12),
+    gap: wp('2%'),
   },
   distributionLabel: {
-    width: wp(isTablet ? '10%' : '15%'),
+    width: wp('12%'),
   },
   distributionRating: {
-    fontSize: rf(14),
-    fontWeight: '600',
-    paddingBottom: rs(3),
+    fontSize: isTablet ? wp('1.5%') : wp('3.5%'),
   },
   distributionBarContainer: {
     flex: 1,
-    height: rs(24),
-    backgroundColor: isDark ? '#2A2A2A' : '#F5F5F5',
-    borderRadius: rs(12),
+    height: hp('1%'),
+    backgroundColor: isDark ? '#333' : '#E0E0E0',
+    borderRadius: 4,
     overflow: 'hidden',
   },
   distributionBar: {
     height: '100%',
-    borderRadius: rs(12),
+    borderRadius: 4,
   },
   distributionCount: {
-    width: wp(isTablet ? '8%' : '12%'),
+    width: wp('8%'),
     textAlign: 'right',
-    fontSize: rf(14),
-    fontWeight: '600',
-    paddingBottom: rs(3),
+    fontSize: isTablet ? wp('1.5%') : wp('3.5%'),
   },
   categoryContainer: {
-    gap: rs(16),
+    gap: hp('1.5%'),
   },
   categoryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: rs(12),
+    gap: hp('0.5%'),
   },
   categoryLabel: {
-    width: wp(isTablet ? '35%' : '40%'),
-    fontSize: rf(14),
-    paddingBottom: rs(3),
-    lineHeight: rf(33),
+    fontSize: isTablet ? wp('1.8%') : wp('3.5%'),
+    marginBottom: hp('0.5%'),
   },
   categoryRatingContainer: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: rs(12),
+    gap: wp('2%'),
   },
   categoryBarBackground: {
     flex: 1,
-    height: rs(20),
-    backgroundColor: isDark ? '#2A2A2A' : '#F5F5F5',
-    borderRadius: rs(10),
+    height: hp('1%'),
+    backgroundColor: isDark ? '#333' : '#E0E0E0',
+    borderRadius: 4,
     overflow: 'hidden',
   },
   categoryBar: {
     height: '100%',
-    borderRadius: rs(10),
+    borderRadius: 4,
   },
   categoryValue: {
-    width: wp(isTablet ? '8%' : '12%'),
+    width: wp('8%'),
     textAlign: 'right',
-    fontSize: rf(14),
-    fontWeight: '600',
-    paddingBottom: rs(3),
+    fontWeight: 'bold',
   },
   nationalityContainer: {
-    gap: rs(12),
+    gap: hp('1%'),
   },
   nationalityRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: rs(12),
+    gap: wp('2%'),
   },
   nationalityName: {
-    width: wp(isTablet ? '20%' : '30%'),
-    fontSize: rf(14),
-    paddingBottom: rs(3),
-    lineHeight: rf(33),
+    flex: 1,
+    fontSize: isTablet ? wp('1.8%') : wp('3.5%'),
   },
   nationalityBarContainer: {
     flex: 1,
-    height: rs(20),
-    backgroundColor: isDark ? '#2A2A2A' : '#F5F5F5',
-    borderRadius: rs(10),
+    height: hp('1%'),
+    backgroundColor: isDark ? '#333' : '#E0E0E0',
+    borderRadius: 4,
     overflow: 'hidden',
   },
   nationalityBar: {
     height: '100%',
     backgroundColor: '#2196F3',
-    borderRadius: rs(10),
+    borderRadius: 4,
   },
   nationalityCount: {
-    width: wp(isTablet ? '8%' : '12%'),
+    width: wp('8%'),
     textAlign: 'right',
-    fontSize: rf(14),
-    fontWeight: '600',
-    paddingBottom: rs(3),
+    fontWeight: 'bold',
   },
   experienceStatsContainer: {
     flexDirection: 'row',
-    gap: rs(12),
-    marginBottom: rs(16),
-    flexWrap: 'wrap',
+    gap: wp('2%'),
+    marginBottom: hp('2%'),
   },
   experienceCard: {
     flex: 1,
-    minWidth: isTablet ? wp('45%') : wp('100%'),
-    borderRadius: rs(16),
-    elevation: 2,
+    backgroundColor: cardBackgroundColor,
   },
   experienceCardSim: {
-    backgroundColor: isDark ? '#1E3A8A' : '#DBEAFE',
+    borderLeftWidth: 4,
+    borderLeftColor: '#9C27B0',
   },
   experienceCardFly: {
-    backgroundColor: isDark ? '#14532D' : '#D1FAE5',
+    borderLeftWidth: 4,
+    borderLeftColor: '#00BCD4',
   },
   experienceCardContent: {
     alignItems: 'center',
-    paddingVertical: rs(16),
+    padding: wp('3%'),
   },
   experienceLabel: {
-    fontSize: rf(14),
-    marginBottom: rs(8),
+    fontSize: isTablet ? wp('1.5%') : wp('3%'),
     textAlign: 'center',
-    paddingBottom: rs(3),
+    marginBottom: hp('0.5%'),
+    opacity: 0.8,
   },
   experienceValue: {
-    fontSize: rf(24),
+    fontSize: isTablet ? wp('2.5%') : wp('4.5%'),
     fontWeight: 'bold',
-    marginBottom: rs(4),
-    paddingBottom: rs(5),
   },
   experiencePercentage: {
-    fontSize: rf(16),
-    opacity: 0.8,
-    paddingBottom: rs(4),
+    fontSize: isTablet ? wp('1.5%') : wp('3%'),
+    color: '#4CAF50',
+    marginTop: hp('0.5%'),
   },
   contentStatsContainer: {
     flexDirection: 'row',
-    gap: rs(12),
-    marginBottom: rs(16),
     flexWrap: 'wrap',
+    gap: wp('2%'),
+    marginBottom: hp('2%'),
   },
   contentStatCard: {
     flex: 1,
-    minWidth: isTablet ? wp('45%') : wp('100%'),
-    borderRadius: rs(16),
-    elevation: 2,
+    minWidth: '45%',
+    backgroundColor: cardBackgroundColor,
   },
   contentStatContent: {
     alignItems: 'center',
-    paddingVertical: rs(16),
+    padding: wp('3%'),
   },
   contentStatIcon: {
-    fontSize: rf(32),
-    marginBottom: rs(8),
-    paddingBottom: rs(3),
+    fontSize: isTablet ? wp('3%') : wp('6%'),
+    marginBottom: hp('0.5%'),
   },
   contentStatLabel: {
-    fontSize: rf(14),
-    marginBottom: rs(4),
-    paddingBottom: rs(3),
+    fontSize: isTablet ? wp('1.5%') : wp('3%'),
+    textAlign: 'center',
+    opacity: 0.7,
   },
   contentStatValue: {
-    fontSize: rf(24),
+    fontSize: isTablet ? wp('2.5%') : wp('4.5%'),
     fontWeight: 'bold',
-    paddingBottom: rs(5),
+    marginTop: hp('0.5%'),
   },
   actionsContainer: {
-    gap: rs(12),
-    marginTop: rs(8),
+    gap: hp('1.5%'),
+    marginBottom: hp('2%'),
   },
   actionButton: {
-    borderRadius: rs(12),
+    borderColor: borderColor,
   },
 });
+
 

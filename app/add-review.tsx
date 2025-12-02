@@ -9,25 +9,25 @@ import * as MediaLibrary from 'expo-media-library';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert,
-  BackHandler,
-  Image,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View
+    Alert,
+    BackHandler,
+    Image,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import {
-  Button,
-  Card,
-  Dialog,
-  IconButton,
-  Paragraph,
-  Portal,
-  SegmentedButtons,
-  TextInput
+    Button,
+    Card,
+    Dialog,
+    IconButton,
+    Paragraph,
+    Portal,
+    SegmentedButtons,
+    TextInput
 } from 'react-native-paper';
 import StarRating from 'react-native-star-rating-widget';
 
@@ -35,6 +35,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import OptimizedImage from '@/components/OptimizedImage';
 import StylusCanvas from '@/components/StylusCanvas';
+import { FSDC_SIMULATORS, Simulator } from '@/constants/simulators';
 import { usePerformance } from '@/hooks/usePerformance';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -66,6 +67,9 @@ interface FormData {
   textComment: string;
   handwrittenComment: string; // New field for handwritten comments
   photos: string[];
+  simulatorId?: string;
+  simulatorName?: string;
+  simulatorType?: string;
 }
 
 interface Country {
@@ -517,9 +521,12 @@ function AddReviewScreen() {
     return {
       personalInfo: createInitialPersonalInfo(basePersonalFields),
       ratings: createInitialRatings(baseRatingCategories),
-    textComment: '',
-    handwrittenComment: '',
-    photos: [],
+      textComment: '',
+      handwrittenComment: '',
+      photos: [],
+      simulatorId: '',
+      simulatorName: '',
+      simulatorType: '',
     };
   }, [parsedEditData, reviewType]);
 
@@ -628,6 +635,32 @@ function AddReviewScreen() {
     
     loadPersonalInfoFields();
   }, [reviewType]);
+
+  // Simulator selection state
+  const [showSimulatorModal, setShowSimulatorModal] = useState(true); // Show initially
+  const [selectedSimulator, setSelectedSimulator] = useState<Simulator | null>(null);
+
+  useEffect(() => {
+    // If editing, populate simulator from saved data if available
+    if (parsedEditData && parsedEditData.simulatorId) {
+      const sim = FSDC_SIMULATORS.find(s => s.id === parsedEditData.simulatorId);
+      if (sim) {
+        setSelectedSimulator(sim);
+        setShowSimulatorModal(false);
+      }
+    }
+  }, [parsedEditData]);
+
+  const handleSimulatorSelect = (simulator: Simulator) => {
+    setSelectedSimulator(simulator);
+    setFormData(prev => ({
+      ...prev,
+      simulatorId: simulator.id,
+      simulatorName: simulator.name,
+      simulatorType: simulator.type
+    }));
+    setShowSimulatorModal(false);
+  };
 
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showImageModal, setShowImageModal] = useState(false);
@@ -990,6 +1023,69 @@ function AddReviewScreen() {
 
   return (
     <ThemedView style={styles.container}>
+      {/* Simulator Selection Modal */}
+      <Modal
+        visible={showSimulatorModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => {
+          // If no simulator selected, go back to home
+          if (!selectedSimulator) {
+            router.back();
+          } else {
+            setShowSimulatorModal(false);
+          }
+        }}
+      >
+        <ThemedView style={[styles.container, { paddingTop: rs(20) }]}>
+          <View style={styles.header}>
+            <ThemedText type="title" style={styles.title}>Select Simulator</ThemedText>
+            {selectedSimulator && (
+              <IconButton icon="close" onPress={() => setShowSimulatorModal(false)} />
+            )}
+          </View>
+          <ScrollView contentContainerStyle={{ padding: rs(16), gap: rs(16) }}>
+            {FSDC_SIMULATORS.map((sim) => (
+              <Card 
+                key={sim.id} 
+                onPress={() => handleSimulatorSelect(sim)}
+                style={{ backgroundColor: cardBackgroundColor, marginBottom: rs(8) }}
+              >
+                <Card.Content style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <View>
+                    <ThemedText type="subtitle" style={{ fontWeight: 'bold' }}>{sim.name}</ThemedText>
+                    <ThemedText style={{ opacity: 0.7 }}>{sim.type}</ThemedText>
+                  </View>
+                  <IconButton icon="chevron-right" />
+                </Card.Content>
+              </Card>
+            ))}
+          </ScrollView>
+        </ThemedView>
+      </Modal>
+
+      {/* Simulator Info Banner (if selected) */}
+      {!showSimulatorModal && selectedSimulator && (
+        <TouchableOpacity onPress={() => setShowSimulatorModal(true)} style={{ 
+          backgroundColor: cardBackgroundColor, 
+          padding: rs(12), 
+          marginHorizontal: wp('4%'), 
+          marginTop: rs(8), 
+          borderRadius: 8,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          borderWidth: 1,
+          borderColor: borderColor
+        }}>
+          <View>
+            <ThemedText style={{ fontSize: rf(12), opacity: 0.7 }}>Selected Simulator:</ThemedText>
+            <ThemedText style={{ fontWeight: 'bold', color: '#2196F3' }}>{selectedSimulator.name} ({selectedSimulator.type})</ThemedText>
+          </View>
+          <IconButton icon="pencil" size={20} />
+        </TouchableOpacity>
+      )}
+
       <ScrollView 
         style={styles.scrollView} 
         showsVerticalScrollIndicator={false}

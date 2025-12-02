@@ -30,47 +30,6 @@ export const getAllReviews = async () => {
 };
 
 /**
- * Save a new review to local storage
- * @param {Object} reviewObject - The review data to save
- * @returns {Promise<Object>} The saved review with generated ID and timestamps
- */
-export const saveReview = async (reviewObject) => {
-  try {
-    // Validate required fields - check in personalInfo object
-    if (!reviewObject.personalInfo?.fullName || !reviewObject.personalInfo?.nationality) {
-      throw new Error('Review must have at least fullName and nationality');
-    }
-
-    // Get existing reviews
-    const existingReviews = await getAllReviews();
-    
-    // Create new review with metadata
-    const newReview = {
-      ...reviewObject,
-      id: generateUniqueId(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      version: 1
-    };
-
-    // Add to reviews array
-    const updatedReviews = [newReview, ...existingReviews];
-    
-    // Save back to storage
-    await AsyncStorage.setItem(REVIEWS_STORAGE_KEY, JSON.stringify(updatedReviews));
-    
-    console.log('Review saved successfully:', newReview.id);
-    return newReview;
-  } catch (error) {
-    console.error('Error saving review:', error);
-    throw new Error('Failed to save review');
-  }
-};
-
-/**
- * Update an existing review
- * @param {string} id - The ID of the review to update
- * @param {Object} reviewObject - The updated review data
  * @returns {Promise<Object>} The updated review object
  */
 export const updateReview = async (id, reviewObject) => {
@@ -79,15 +38,6 @@ export const updateReview = async (id, reviewObject) => {
       throw new Error('Review ID is required for update');
     }
 
-    // Get existing reviews
-    const existingReviews = await getAllReviews();
-    
-    // Find the review to update
-    const reviewIndex = existingReviews.findIndex(review => review.id === id);
-    
-    if (reviewIndex === -1) {
-      throw new Error(`Review with ID ${id} not found`);
-    }
 
     // Update the review while preserving metadata
     const existingReview = existingReviews[reviewIndex];

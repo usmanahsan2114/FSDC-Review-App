@@ -1,11 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import { decryptObject, encryptObject, isEncrypted } from './encryption';
-import { 
+import {
     batchMigrateImages,
     cleanupOrphanedImages,
-  deleteImagePermanently, 
-  getAllStoredImages,
+    deleteImagePermanently,
+    getAllStoredImages,
     saveImagePermanently
 } from './imageStorage';
 
@@ -34,6 +34,9 @@ export interface Review {
   handwrittenComment?: string; // Now stores file path instead of Base64
   photos: string[]; // Now stores file paths instead of Base64
   textComment?: string;
+  simulatorId?: string;
+  simulatorName?: string;
+  simulatorType?: string;
 }
 
 export interface StorageStats {
@@ -98,6 +101,9 @@ export const saveReview = async (reviewData: Omit<Review, 'id' | 'timestamp'>): 
       handwrittenComment: handwrittenCommentPath,
       photos: permanentPhotoPaths,
       textComment: reviewData.textComment,
+      simulatorId: reviewData.simulatorId,
+      simulatorName: reviewData.simulatorName,
+      simulatorType: reviewData.simulatorType,
     };
     
     // Get existing reviews
