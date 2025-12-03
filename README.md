@@ -16,8 +16,21 @@ The documentation has been reorganized into the `docs/` directory.
 
 ## Quick Start
 
-1.  Clone the repository.
-2.  Run `npm install`.
-3.  Run `npx expo start`.
+1.  **Clone & Install**:
+    ```bash
+    git clone <repo-url>
+    npm install
+    ```
+2.  **Supabase Setup**:
+    - Create a Supabase project.
+    - Run the SQL script from `docs/SUPABASE_MIGRATION_PLAN.md`.
+    - Add `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` to `.env`.
+3.  **Run App**:
+    ```bash
+    npx expo start --clear
+    ```
+4.  **Import Data (Optional)**:
+    - Go to **Admin Panel** -> **Data Management**.
+    - Use **"Reset & Import"** to load seed data.
 
-For detailed setup and native module rebuild instructions, see [docs/SETUP.md](docs/SETUP.md).
+For detailed setup, see [docs/SETUP.md](docs/SETUP.md).

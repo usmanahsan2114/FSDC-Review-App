@@ -6,6 +6,7 @@ import { MD3DarkTheme, MD3LightTheme, Provider as PaperProvider } from 'react-na
 import 'react-native-reanimated';
 
 import ErrorBoundary from '@/components/ErrorBoundary';
+import { SyncProvider } from '@/contexts/SyncProvider';
 import { ThemeProvider as CustomThemeProvider, useTheme } from '@/contexts/ThemeContext';
 import { isMigrationNeeded, migrateExistingData } from '@/utils/dataMigration';
 
@@ -86,7 +87,9 @@ function AppContent() {
 export default function RootLayout() {
   return (
     <CustomThemeProvider>
-      <AppContent />
+      <SyncProvider>
+        <AppContent />
+      </SyncProvider>
     </CustomThemeProvider>
   );
 }

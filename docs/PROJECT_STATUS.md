@@ -81,33 +81,6 @@ Added new Dashboard button:
 **Files Modified:** `app/review-detail.tsx`, `utils/pdfGenerator.ts`
 
 - **PDF Content**: Added "Simulator Details" section to generated PDFs.
-- **Excel Export**: Export functionality via `expo-sharing`.
-
-### L. Stability & Connectivity Features 🛡️ (COMPLETED)
-
-**Files Modified:** `utils/validation.ts`, `hooks/useFormDraft.ts`, `components/ConnectivityStatus.tsx`, `app/add-review.tsx`, `app/reviews-list.tsx`
-
-- **Form Validation**: Robust Zod-based validation prevents invalid data submission.
-- **Auto-Save Drafts**: Form data is saved to `AsyncStorage` on every keystroke, preventing data loss.
-- **Connectivity Status**: Visual indicator in the dashboard header shows online/offline status.
-- **Strict Typing**: Improved type safety in form handling.
-
-## 3. Warnings & Potential Issues
-
-### A. Codebase Cleanliness
-
-- **Unused File**: `screens/ReviewPreviewScreen.js` (0 bytes) exists but appears unused as the active logic is in `app/review-preview.tsx`.
-- **Legacy Imports**: `expo-file-system/legacy` is being imported. While currently working, this should be updated to the modern API to ensure future compatibility with newer Expo SDKs.
-
-### B. Logic Fragility
-
-- **Joyride Detection**: In `app/review-preview.tsx` and `app/review-detail.tsx`, logic detects "Joyride" reviews by checking for specific keys (`joyrideSignals` like 'priceSuggestion').
-  - _Risk_: If these field keys are renamed in `add-review.tsx` without updating the detection logic, the app might misidentify review types or fail to display these fields.
-- **String Parsing**: Dashboard pricing averages rely on regex replacement (`.replace(/[^0-9.]/g, '')`).
-  - _Risk_: If a user enters "2.5 million", it parses as "2.5". If they enter "2,500,000", it parses as "2500000". This scale discrepancy could skew averages.
-
-### C. User Experience
-
 - **Input Sanitization**: Numeric fields (Cost Estimate) are text inputs. While `keyboardType` is set, users can still paste invalid text, potentially affecting analytics.
 
 ## 4. Errors

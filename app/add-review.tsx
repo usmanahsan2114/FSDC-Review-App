@@ -374,7 +374,7 @@ const joyridePersonalInfoFields: PersonalInfoField[] = [
     label: 'Contact Information',
     placeholder: 'Enter your email or phone',
     required: false,
-    type: 'email'
+    type: 'text'
   }
 ];
 
@@ -425,7 +425,7 @@ const defaultPersonalInfoFields: PersonalInfoField[] = [
     label: 'Contact Information',
     placeholder: 'Enter your email or phone (Optional)',
     required: false,
-    type: 'email'
+    type: 'text'
   }
 ];
 

@@ -88,10 +88,21 @@ This is the central data entry point.
 
 ## 4. Data Management Flow
 
-- **Storage Strategy**:
-  - **Metadata**: JSON stored in `AsyncStorage` (Key: `reviews`).
-  - **Encryption**: Data object is encrypted string in storage.
-  - **Images**: Stored as files in `FileSystem.documentDirectory`.
     - `images/`: Photos.
     - `signatures/`: Handwritten comments.
+
 - **Migration**: `initializeDataStorage` checks version and migrates image data from Base64 strings to file paths if necessary to improve performance.
+
+## 5. Synchronization Workflow (Supabase)
+
+- **Offline-First Strategy**:
+  - App always reads/writes to local `AsyncStorage`.
+  - `useSupabaseSync` hook runs in the background.
+- **Sync Process**:
+  1.  **Detection**: Hook checks for reviews where `isSynced === false`.
+  2.  **Push**: Attempts to `upsert` these reviews to Supabase `reviews` table.
+  3.  **Completion**: On success, updates local review to `isSynced: true`.
+  4.  **Status**: `SyncProvider` exposes status to `ConnectivityStatus` component (Syncing, Online, Error).
+- **Admin Reset**:
+  - "Reset & Import" button clears local storage and imports seed data.
+  - Automatically triggers a sync to push fresh data to Supabase.

@@ -37,6 +37,7 @@ export interface Review {
   simulatorId?: string;
   simulatorName?: string;
   simulatorType?: string;
+  isSynced?: boolean;
 }
 
 export interface StorageStats {
@@ -104,6 +105,7 @@ export const saveReview = async (reviewData: Omit<Review, 'id' | 'timestamp'>): 
       simulatorId: reviewData.simulatorId,
       simulatorName: reviewData.simulatorName,
       simulatorType: reviewData.simulatorType,
+      isSynced: false, // Default to false for new reviews
     };
     
     // Get existing reviews
@@ -376,6 +378,34 @@ export const exportReviewsData = async (): Promise<string> => {
   } catch (error) {
     console.error('Error exporting reviews data:', error);
     throw new Error('Failed to export reviews data');
+  }
+};
+
+/**
+ * Import reviews data (bulk insert)
+ */
+export const importReviews = async (newReviews: Review[]): Promise<number> => {
+  try {
+    const existingReviews = await getAllReviews();
+    
+    // Filter out duplicates based on ID
+    const uniqueNewReviews = newReviews.filter(
+      newReview => !existingReviews.some(existing => existing.id === newReview.id)
+    );
+    
+    if (uniqueNewReviews.length === 0) {
+      return 0;
+    }
+    
+    const updatedReviews = [...existingReviews, ...uniqueNewReviews];
+    const encryptedReviews = encryptObject(updatedReviews);
+    await AsyncStorage.setItem(REVIEWS_KEY, encryptedReviews);
+    
+    console.log(`Imported ${uniqueNewReviews.length} reviews`);
+    return uniqueNewReviews.length;
+  } catch (error) {
+    console.error('Error importing reviews:', error);
+    throw new Error('Failed to import reviews');
   }
 };
 

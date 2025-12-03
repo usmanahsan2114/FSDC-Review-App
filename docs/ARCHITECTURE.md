@@ -68,9 +68,32 @@ Stored review (`utils/dataStorage.ts`):
 
 The application primarily uses **React Local State** (`useState`, `useReducer`) for UI state and **AsyncStorage** for persistent data. It does not use a global state management library (like Redux or Zustand), relying instead on data fetching hooks and context where necessary.
 
-### Global Contexts
+### 4. Data Synchronization (Supabase)
 
-- **ThemeContext**: Manages Light/Dark mode preference and provides theme colors to components.
+- **Strategy**: Offline-First.
+- **Source of Truth**: Local `AsyncStorage` (device).
+- **Backup/Central**: Supabase PostgreSQL Database.
+- **Sync Flow**:
+  1.  **Save**: Review saved locally with `isSynced: false`.
+  2.  **Trigger**: `useSupabaseSync` hook detects changes or network availability.
+  3.  **Push**: Unsynced reviews are pushed to Supabase using `upsert`.
+  4.  **Ack**: On success, local review is marked `isSynced: true`.
+- **Schema**:
+  - `id` (text): Matches local ID.
+  - `review_type` (text): 'professional' | 'joyride'.
+  - `personal_info` (jsonb): Dynamic form data.
+  - `ratings` (jsonb): Dynamic rating keys/values.
+
+## State Management
+
+- **React Context**:
+  - `ThemeContext`: Manages Light/Dark mode.
+  - `SyncProvider`: Exposes sync status and manual trigger.
+- **Hooks**:
+  - `useFormDraft`: Auto-save form data.
+  - `useSupabaseSync`: Background synchronization.
+- **Local Storage**:
+  - `AsyncStorage`: Persists Reviews, Settings, and Drafts.
 
 ### Screen-Level State
 

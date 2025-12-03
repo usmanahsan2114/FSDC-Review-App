@@ -1,6 +1,7 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import ThemeToggle from '@/components/ThemeToggle';
+import { useSync } from '@/contexts/SyncProvider';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -10,9 +11,11 @@ import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-nat
 import { Button, Card, IconButton, TextInput } from 'react-native-paper';
 
 import { Simulator } from '@/constants/simulators';
+import { clearCorruptedStorage, importReviews } from '../utils/dataStorage';
 import { hp, rf, rs, wp } from '../utils/responsive';
 import { getSimulators, getSimulatorTypes, saveSimulators, saveSimulatorTypes } from '../utils/simulatorStorage';
 
+const seedReviews = require('../assets/data/seed_reviews.json');
 interface RatingCategory {
   id: string;
   key: string;
@@ -99,7 +102,8 @@ const defaultPersonalInfoFields: PersonalInfoField[] = [
 ];
 
 export default function AdminQuestionsScreen() {
-  const { isDark } = useTheme();
+  const { isDark, colors } = useTheme();
+  const { syncReviews } = useSync();
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
   const borderColor = useThemeColor({ light: '#E0E0E0', dark: '#404040' }, 'text');
@@ -807,6 +811,41 @@ export default function AdminQuestionsScreen() {
             </Button>
           </View>
         )}
+        <Card style={{ marginTop: 20, marginBottom: 40, backgroundColor: colors.card }}>
+          <Card.Content>
+            <ThemedText type="subtitle" style={{ color: colors.text }}>Data Management</ThemedText>
+            <Button 
+              mode="contained" 
+              onPress={async () => {
+                Alert.alert(
+                  'Reset & Import',
+                  'This will DELETE all existing reviews and import the 32 reviews from the Excel file. Are you sure?',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    { 
+                      text: 'Delete & Import', 
+                      style: 'destructive',
+                      onPress: async () => {
+                        try {
+                          await clearCorruptedStorage();
+                          const count = await importReviews(seedReviews);
+                          await syncReviews(); // Trigger sync immediately
+                          Alert.alert('Success', `Database reset. Imported ${count} reviews and started sync.`);
+                        } catch (error) {
+                          Alert.alert('Error', 'Failed to reset and import.');
+                          console.error(error);
+                        }
+                      }
+                    }
+                  ]
+                );
+              }}
+              style={{ marginTop: 10, backgroundColor: colors.notification }}
+            >
+              Reset & Import Excel Data ({seedReviews.length})
+            </Button>
+          </Card.Content>
+        </Card>
       </ScrollView>
     </ThemedView>
   );
