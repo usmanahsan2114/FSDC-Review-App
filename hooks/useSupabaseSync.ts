@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { getAllReviews, updateReview } from '@/utils/dataStorage';
+import { getAllReviews, mergeRemoteReviews, updateReview } from '@/utils/dataStorage';
 import NetInfo from '@react-native-community/netinfo';
 import { useCallback, useEffect, useState } from 'react';
 

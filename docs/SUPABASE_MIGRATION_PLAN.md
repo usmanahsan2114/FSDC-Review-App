@@ -15,12 +15,14 @@ Before we start coding, you need to set up the backend:
 
 ## 2. Database Schema
 
-We need to create a table to store the reviews. Run this in the Supabase **SQL Editor**:
+## 2. Database Schema
+
+### Option A: New Setup (Run this if table DOES NOT exist)
 
 ```sql
 -- Create the reviews table
 create table public.reviews (
-  id text not null, -- Changed from uuid to text to match local ID format
+  id text not null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   simulator_id text,
   simulator_name text,
@@ -42,10 +44,17 @@ alter table public.reviews enable row level security;
 create policy "Enable insert for all users" on public.reviews for insert with check (true);
 create policy "Enable select for all users" on public.reviews for select using (true);
 create policy "Enable update for all users" on public.reviews for update using (true);
+```
 
--- If table already exists, run these to add columns:
--- alter table public.reviews add column text_comment text;
--- alter table public.reviews add column overall_rating numeric;
+### Option B: Update Existing Table (Run this if table ALREADY exists)
+
+If you see an error like `relation "reviews" already exists`, run these commands instead:
+
+```sql
+alter table public.reviews add column if not exists text_comment text;
+alter table public.reviews add column if not exists overall_rating numeric;
+```
+
 We will perform the following steps in the codebase:
 
 ### Phase 1: Setup & Dependencies
@@ -76,4 +85,7 @@ We will perform the following steps in the codebase:
 
 **Note on Offline Sync**:
 Since this is an Expo app used at events, **Offline First** is critical. We will keep the current `AsyncStorage` logic as the "Source of Truth" for the device, and treat Supabase as the "Backup/Central Database".
+
+```
+
 ```

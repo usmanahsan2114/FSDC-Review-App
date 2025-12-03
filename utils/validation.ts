@@ -5,15 +5,35 @@ export interface ValidationResult {
   errors: { [key: string]: string };
 }
 
+interface PersonalInfoField {
+  id: string;
+  key: string;
+  label: string;
+  required: boolean;
+  type: 'text' | 'email' | 'phone' | 'multiline' | 'yesno' | 'scroll';
+}
+
+interface RatingCategory {
+  id: string;
+  key: string;
+  title: string;
+}
+
+interface FormData {
+  simulatorId?: string; // Assuming simulatorId might be present
+  personalInfo: { [key: string]: string };
+  ratings: { [key: string]: number };
+}
+
 // Basic Zod schemas for common types
 const emailSchema = z.string().email("Invalid email address");
 const phoneSchema = z.string().min(10, "Phone number too short").regex(/^[0-9+\-\s()]*$/, "Invalid phone characters");
 
-export const validateReviewForm = (
-  formData: any, 
-  personalInfoFields: any[], 
-  ratingCategories: any[]
-): ValidationResult => {
+export function validateReviewForm(
+  formData: FormData,
+  personalInfoFields: PersonalInfoField[],
+  ratingCategories: RatingCategory[]
+): ValidationResult {
   const errors: { [key: string]: string } = {};
 
   // 1. Validate Simulator Selection

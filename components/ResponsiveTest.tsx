@@ -1,9 +1,9 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
-import { Card, Button, Chip } from 'react-native-paper';
-import { ThemedText } from './themed-text';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { Button, Card, Chip } from 'react-native-paper';
 import { useResponsive } from '../hooks/useResponsive';
-import { deviceInfo, wp, hp, rf, rs, getDevicePadding, minTouchTarget } from '../utils/responsive';
+import { deviceInfo, getDevicePadding, minTouchTarget, rf, rs } from '../utils/responsive';
+import { ThemedText } from './themed-text';
 
 export const ResponsiveTest: React.FC = () => {
   const responsive = useResponsive();

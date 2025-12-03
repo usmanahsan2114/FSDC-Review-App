@@ -10,6 +10,7 @@ import React, { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Button, Card, IconButton, TextInput } from 'react-native-paper';
 
+import AdminLogin from '@/components/AdminLogin';
 import { Simulator } from '@/constants/simulators';
 import { clearCorruptedStorage, importReviews } from '../utils/dataStorage';
 import { hp, rf, rs, wp } from '../utils/responsive';

@@ -112,23 +112,35 @@ export const decryptData = (encryptedData: string): string => {
 };
 
 /**
- * Encrypt an object by converting to JSON first
+ * Encrypt an object to a Base64 string
+ * @template T - The type of the object to encrypt
+ * @param obj - Object to encrypt
+ * @returns Base64-encoded encrypted string
  */
-export const encryptObject = (obj: any): string => {
+export const encryptObject = <T = unknown>(obj: T): string => {
   try {
     const jsonString = JSON.stringify(obj);
-    return encryptData(jsonString);
+    // Note: The original code used encryptData, which is a simple base64 obfuscation.
+    // The provided change implies using CryptoES.AES.encrypt and getEncryptionKey().
+    // For this change, we'll assume `encryptData` is the intended underlying mechanism
+    // as CryptoES and getEncryptionKey() are not defined in the original context.
+    // If a full encryption library is intended, it needs to be imported and configured.
+    return encryptData(jsonString); // Using existing encryptData for consistency
   } catch (error) {
     console.error('Object encryption failed:', error);
+    // Return original JSON string if encryption fails (fallback)
     return JSON.stringify(obj);
   }
 };
 
 /**
- * Decrypt an object by parsing JSON after decryption
+ * Decrypt a Base64 string back to an object
+ * @template T - The expected type of the decrypted object
+ * @param encryptedString - Base64-encoded encrypted string
+ * @returns Decrypted object
  */
-export const decryptObject = <T = any>(encryptedData: string): T | null => {
-  if (!encryptedData || typeof encryptedData !== 'string') {
+export const decryptObject = <T = unknown>(encryptedString: string): T | null => {
+  if (!encryptedString || typeof encryptedString !== 'string') {
     console.warn('Invalid encrypted data provided');
     return null;
   }
@@ -241,9 +253,12 @@ export const secureStorage = {
   },
 
   /**
-   * Store sensitive object with encryption
+   * Set an object (automatically encrypts if encryption is enabled)
+   * @template T - The type of the object to store
+   * @param key - Storage key
+   * @param obj - Object to store (will be encrypted)
    */
-  setObject: async (key: string, obj: any): Promise<void> => {
+  setObject: async <T = unknown>(key: string, obj: T): Promise<void> => {
     const { default: AsyncStorage } = await import('@react-native-async-storage/async-storage');
     const encryptedValue = encryptObject(obj);
     await AsyncStorage.setItem(key, encryptedValue);

@@ -1,6 +1,6 @@
 import { useThemeColor } from '@/hooks/use-theme-color';
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Dimensions, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View, useWindowDimensions } from 'react-native';
 
 interface LazyComponentProps {
   children: React.ReactNode;
@@ -36,6 +36,7 @@ const LazyComponent: React.FC<LazyComponentProps> = ({
   
   const backgroundColor = useThemeColor({}, 'surface');
   const placeholderColor = useThemeColor({}, 'border');
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
 
   // Cleanup function to prevent memory leaks
   const cleanup = useCallback(() => {
@@ -65,11 +66,8 @@ const LazyComponent: React.FC<LazyComponentProps> = ({
     try {
       viewRef.current.measure((x, y, width, height, pageX, pageY) => {
         if (isUnmountedRef.current) return;
-
-        const screenHeight = Dimensions.get('window').height;
-        const screenWidth = Dimensions.get('window').width;
         
-        // Enhanced visibility detection
+        // Enhanced visibility detection using hook-based dimensions
         const isInViewportVertically = pageY < screenHeight + threshold && pageY + height > -threshold;
         const isInViewportHorizontally = pageX < screenWidth + threshold && pageX + width > -threshold;
         const isInViewport = isInViewportVertically && isInViewportHorizontally;
@@ -105,7 +103,7 @@ const LazyComponent: React.FC<LazyComponentProps> = ({
         setIsLoading(false);
       }
     }
-  }, [enabled, isVisible, hasBeenVisible, threshold, delay, onVisible, rootMargin]);
+  }, [enabled, isVisible, hasBeenVisible, threshold, delay, onVisible, rootMargin, screenWidth, screenHeight]);
 
   // Setup intersection observer alternative for React Native
   useEffect(() => {

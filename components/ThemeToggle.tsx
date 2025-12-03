@@ -1,7 +1,7 @@
+import { useTheme } from '@/contexts/ThemeContext';
 import React from 'react';
 import { StyleSheet } from 'react-native';
 import { IconButton } from 'react-native-paper';
-import { useTheme } from '@/contexts/ThemeContext';
 import { minTouchTarget } from '../utils/responsive';
 
 interface ThemeToggleProps {

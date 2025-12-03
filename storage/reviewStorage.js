@@ -30,6 +30,9 @@ export const getAllReviews = async () => {
 };
 
 /**
+ * Update an existing review
+ * @param {string} id - The ID of the review to update
+ * @param {Object} reviewObject - The updated review object
  * @returns {Promise<Object>} The updated review object
  */
 export const updateReview = async (id, reviewObject) => {
@@ -38,6 +41,15 @@ export const updateReview = async (id, reviewObject) => {
       throw new Error('Review ID is required for update');
     }
 
+    // Get existing reviews
+    const existingReviews = await getAllReviews();
+    
+    // Find the review to update
+    const reviewIndex = existingReviews.findIndex(review => review.id === id);
+    
+    if (reviewIndex === -1) {
+      throw new Error(`Review with ID ${id} not found`);
+    }
 
     // Update the review while preserving metadata
     const existingReview = existingReviews[reviewIndex];
