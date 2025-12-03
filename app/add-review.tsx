@@ -38,7 +38,7 @@ import StylusCanvas from '@/components/StylusCanvas';
 import { Simulator } from '@/constants/simulators';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import { usePerformance } from '@/hooks/usePerformance';
-import * as FileSystem from 'expo-file-system/legacy';
+import * as FileSystem from 'expo-file-system';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { deleteImagePermanently, initializeImageStorage, saveImagePermanently } from '../utils/imageStorage';
 import { getDevicePadding, getPhotoGridSize, hp, isTablet, minTouchTarget, rf, rs, wp } from '../utils/responsive';

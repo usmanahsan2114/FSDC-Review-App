@@ -46,6 +46,8 @@ export const useSupabaseSync = () => {
             review_type: review.reviewType || 'professional', // Default to professional
             personal_info: review.personalInfo || {},
             ratings: review.ratings || {},
+            text_comment: review.textComment || '',
+            overall_rating: review.overallRating || 0,
             handwritten_comment_url: review.handwrittenComment,
             is_synced: true,
             app_version: '1.0.0'
@@ -58,6 +60,43 @@ export const useSupabaseSync = () => {
           // 4. Mark as synced locally
           await updateReview(review.id, { isSynced: true });
         }
+      }
+
+      // 5. Pull from Supabase (Two-Way Sync)
+      console.log('Pulling updates from Supabase...');
+      const { data: remoteData, error: pullError } = await supabase
+        .from('reviews')
+        .select('*');
+
+      if (pullError) {
+        console.error('Error pulling reviews:', pullError);
+        setSyncError('Pull failed');
+      } else if (remoteData) {
+        // Map Supabase rows to Review objects
+        const mappedReviews = remoteData.map((row: any) => ({
+          id: row.id,
+          timestamp: new Date(row.created_at).getTime(),
+          reviewType: row.review_type || 'professional',
+          personalInfo: row.personal_info || {},
+          ratings: row.ratings || {},
+          overallRating: row.overall_rating || 0,
+          handwrittenComment: row.handwritten_comment_url,
+          photos: [], // Photos are not currently synced back from Supabase (URLs vs Local Paths). This is a limitation.
+          textComment: row.text_comment || '',
+          simulatorId: row.simulator_id,
+          simulatorName: row.simulator_name,
+          simulatorType: row.simulator_type,
+          isSynced: true
+        }));
+
+        // Note: textComment and overallRating might be missing from Supabase schema based on previous steps.
+        // If so, we might lose them on pull if we overwrite.
+        // Let's check schema in SUPABASE_MIGRATION_PLAN.md.
+        
+        // Correction: We need to ensure we map all fields correctly.
+        // If schema is missing fields, we should be careful.
+        
+        await mergeRemoteReviews(mappedReviews);
       }
 
       setLastSyncTime(new Date());

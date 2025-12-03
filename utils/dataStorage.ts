@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as FileSystem from 'expo-file-system/legacy';
+import * as FileSystem from 'expo-file-system';
 import { decryptObject, encryptObject, isEncrypted } from './encryption';
 import {
     batchMigrateImages,
@@ -406,6 +406,60 @@ export const importReviews = async (newReviews: Review[]): Promise<number> => {
   } catch (error) {
     console.error('Error importing reviews:', error);
     throw new Error('Failed to import reviews');
+  }
+};
+
+/**
+ * Merge remote reviews into local storage (Two-Way Sync)
+ */
+export const mergeRemoteReviews = async (remoteReviews: Review[]): Promise<number> => {
+  try {
+    const existingReviews = await getAllReviews();
+    let updatesCount = 0;
+    
+    // Create a map for faster lookup
+    const existingMap = new Map(existingReviews.map(r => [r.id, r]));
+    const mergedReviews: Review[] = [...existingReviews];
+    
+    for (const remote of remoteReviews) {
+      const local = existingMap.get(remote.id);
+      
+      if (local) {
+        // Conflict Resolution:
+        // If local has unsynced changes (isSynced === false), KEEP LOCAL.
+        // Otherwise, overwrite with remote (Server Wins).
+        if (local.isSynced !== false) {
+          // Update local with remote data
+          const index = mergedReviews.findIndex(r => r.id === remote.id);
+          if (index !== -1) {
+            // Preserve local-only fields if needed, but generally remote is truth
+            mergedReviews[index] = {
+              ...remote,
+              isSynced: true // Ensure it's marked as synced
+            };
+            updatesCount++;
+          }
+        }
+      } else {
+        // New review from server
+        mergedReviews.push({
+          ...remote,
+          isSynced: true
+        });
+        updatesCount++;
+      }
+    }
+    
+    if (updatesCount > 0) {
+      const encryptedReviews = encryptObject(mergedReviews);
+      await AsyncStorage.setItem(REVIEWS_KEY, encryptedReviews);
+      console.log(`Merged ${updatesCount} remote reviews.`);
+    }
+    
+    return updatesCount;
+  } catch (error) {
+    console.error('Error merging remote reviews:', error);
+    throw new Error('Failed to merge remote reviews');
   }
 };
 

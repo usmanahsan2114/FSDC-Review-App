@@ -1,7 +1,4 @@
-import Constants from 'expo-constants';
-import * as FileSystem from 'expo-file-system/legacy';
-import * as MediaLibrary from 'expo-media-library';
-import { Platform } from 'react-native';
+import * as FileSystem from 'expo-file-system';
 
 /**
  * Permanent Image Storage Utility
@@ -104,28 +101,6 @@ export const saveImagePermanently = async (
     console.log(`Image saved permanently (no edits): ${permanentPath}`);
 
     // Optionally save to device gallery (photos and signatures)
-    // Note: Using saveToLibraryAsync to avoid modification permission prompts on Android
-    if (saveToGallery) {
-      try {
-        const isExpoGo = Constants.appOwnership === 'expo';
-        if (isExpoGo && Platform.OS === 'android') {
-          console.warn('Expo Go cannot write to Media Library on Android 13+. Use a development build to enable gallery saves.');
-        } else {
-          // Request permissions (read/write) - saveToLibraryAsync doesn't require modification permissions
-          const perm = await MediaLibrary.requestPermissionsAsync();
-          if (perm.status === 'granted') {
-            // Use saveToLibraryAsync which saves directly to gallery without requiring modification permissions
-            // This avoids the "Allow FSDC Reviews to modify this photo" notification that appears with createAssetAsync + album operations
-            await MediaLibrary.saveToLibraryAsync(permanentPath);
-            console.log('Photo saved to gallery without modification permission');
-          } else {
-            console.warn('Gallery permission not granted; skipping save to gallery');
-          }
-        }
-      } catch (galleryError) {
-        console.warn('Failed to save image to gallery:', galleryError);
-      }
-    }
     return permanentPath;
     
   } catch (error) {

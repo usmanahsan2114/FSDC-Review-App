@@ -1,7 +1,7 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import * as FileSystem from 'expo-file-system';
+import React, { useEffect, useRef, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { WebView } from 'react-native-webview';
-import * as FileSystem from 'expo-file-system/legacy';
 
 interface StylusCanvasProps {
   onSave: (imageUri: string) => void;

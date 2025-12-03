@@ -21,7 +21,31 @@ We need to create a table to store the reviews. Run this in the Supabase **SQL E
 -- Create the reviews table
 create table public.reviews (
   id text not null, -- Changed from uuid to text to match local ID format
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  simulator_id text,
+  simulator_name text,
+  simulator_type text,
+  review_type text,
+  personal_info jsonb,
+  ratings jsonb,
+  text_comment text,
+  overall_rating numeric,
+  handwritten_comment_url text,
+  is_synced boolean default true,
+  app_version text,
+  primary key (id)
+);
 
+-- Add RLS Policies
+alter table public.reviews enable row level security;
+
+create policy "Enable insert for all users" on public.reviews for insert with check (true);
+create policy "Enable select for all users" on public.reviews for select using (true);
+create policy "Enable update for all users" on public.reviews for update using (true);
+
+-- If table already exists, run these to add columns:
+-- alter table public.reviews add column text_comment text;
+-- alter table public.reviews add column overall_rating numeric;
 We will perform the following steps in the codebase:
 
 ### Phase 1: Setup & Dependencies

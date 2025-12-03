@@ -109,6 +109,7 @@ export default function AdminQuestionsScreen() {
   const borderColor = useThemeColor({ light: '#E0E0E0', dark: '#404040' }, 'text');
   const cardBackgroundColor = useThemeColor({ light: '#FFFFFF', dark: '#1E1E1E' }, 'background');
 
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [ratingCategories, setRatingCategories] = useState<RatingCategory[]>(defaultRatingCategories);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [personalInfoFields, setPersonalInfoFields] = useState<PersonalInfoField[]>(defaultPersonalInfoFields);
@@ -392,6 +393,10 @@ export default function AdminQuestionsScreen() {
   };
 
   const styles = createStyles(backgroundColor, textColor, borderColor, cardBackgroundColor);
+
+  if (!isAuthenticated) {
+    return <AdminLogin onLogin={() => setIsAuthenticated(true)} />;
+  }
 
   return (
     <ThemedView style={styles.container}>
