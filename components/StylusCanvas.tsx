@@ -743,7 +743,7 @@ const StylusCanvas: React.FC<StylusCanvasProps> = ({
         if (initialImage.startsWith('file://') || (!initialImage.startsWith('http') && !initialImage.startsWith('https'))) {
           // Read file and convert to base64
           const base64 = await FileSystem.readAsStringAsync(initialImage, {
-            encoding: FileSystem.EncodingType.Base64,
+            encoding: (FileSystem as any).EncodingType.Base64,
           });
           // Convert to data URL
           const dataUrl = `data:image/png;base64,${base64}`;
@@ -833,7 +833,6 @@ const StylusCanvas: React.FC<StylusCanvasProps> = ({
         bounces={false}
         overScrollMode="never"
         androidLayerType="hardware"
-        androidHardwareAccelerationDisabled={false}
         // Block non-stylus touches at WebView level
         onShouldStartLoadWithRequest={() => true}
         allowFileAccess={true}

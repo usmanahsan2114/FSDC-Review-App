@@ -27,7 +27,7 @@ import { Simulator } from '@/constants/simulators';
 import { deleteReview, getAllReviews, initializeDataStorage, Review } from '../utils/dataStorage';
 import { exportToExcel } from '../utils/exportUtils';
 import { hapticsButtonPress, hapticsDelete, hapticsFilterSelect } from '../utils/haptics';
-import { getDevicePadding, hp, isTablet, minTouchTarget, rf, rs, wp } from '../utils/responsive';
+import { getDevicePadding, getGridColumns, hp, isTablet, minTouchTarget, rf, rs, wp } from '../utils/responsive';
 import { getSimulators, getSimulatorTypes } from '../utils/simulatorStorage';
 
 interface RatingCategory {

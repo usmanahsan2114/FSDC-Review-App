@@ -1,7 +1,7 @@
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Button, Card, Chip } from 'react-native-paper';
-import { deviceInfo, getDevicePadding, getGridColumns, isLargeTablet, isPhone, isSmallPhone, isTablet, isTargetDevice, minTouchTarget, rf, rs, useResponsiveDimensions } from '../utils/responsive';
+import { deviceInfo, getDevicePadding, getGridColumns, getPhotoGridSize, isLargeTablet, isPhone, isSmallPhone, isTablet, isTargetDevice, minTouchTarget, rf, rs, useResponsiveDimensions, wp } from '../utils/responsive';
 import { ThemedText } from './themed-text';
 
 export const ResponsiveTest: React.FC = () => {
@@ -9,11 +9,11 @@ export const ResponsiveTest: React.FC = () => {
   const isPortrait = height > width;
 
   function getDeviceType(): string {
-    if (isTargetDevice(width, height)) return 'Target Device (10.4" Tablet)';
-    if (isLargeTablet(width)) return 'Large Tablet';
-    if (isTablet(width)) return 'Tablet';
-    if (isSmallPhone(width)) return 'Small Phone';
-    if (isPhone(width)) return 'Phone';
+    if (isTargetDevice) return 'Target Device (10.4" Tablet)';
+    if (isLargeTablet) return 'Large Tablet';
+    if (isTablet) return 'Tablet';
+    if (isSmallPhone) return 'Small Phone';
+    if (isPhone) return 'Phone';
     return 'Unknown';
   }
 
@@ -119,7 +119,7 @@ export const ResponsiveTest: React.FC = () => {
         <Card.Content>
           <ThemedText style={styles.sectionTitle}>Grid Layout Test</ThemedText>
           <ThemedText style={styles.description}>
-            Optimal columns for this device: {responsive.getOptimalColumns()}
+            Optimal columns for this device: {getGridColumns(width)}
           </ThemedText>
           <View style={styles.gridContainer}>
             {Array.from({ length: 8 }, (_, index) => (
@@ -127,7 +127,7 @@ export const ResponsiveTest: React.FC = () => {
                 key={index} 
                 style={[
                   styles.gridItem, 
-                  { width: responsive.getOptimalImageSize() }
+                  { width: getPhotoGridSize(width, height) }
                 ]}
               >
                 <Chip mode="outlined">Item {index + 1}</Chip>
@@ -142,16 +142,16 @@ export const ResponsiveTest: React.FC = () => {
         <Card.Content>
           <ThemedText style={styles.sectionTitle}>Responsive Percentages</ThemedText>
           <View style={styles.percentageTest}>
-            <View style={[styles.percentageBar, { width: responsive.wp(25) }]}>
+            <View style={[styles.percentageBar, { width: wp(25, width) }]}>
               <ThemedText style={styles.percentageText}>25%</ThemedText>
             </View>
-            <View style={[styles.percentageBar, { width: responsive.wp(50) }]}>
+            <View style={[styles.percentageBar, { width: wp(50, width) }]}>
               <ThemedText style={styles.percentageText}>50%</ThemedText>
             </View>
-            <View style={[styles.percentageBar, { width: responsive.wp(75) }]}>
+            <View style={[styles.percentageBar, { width: wp(75, width) }]}>
               <ThemedText style={styles.percentageText}>75%</ThemedText>
             </View>
-            <View style={[styles.percentageBar, { width: responsive.wp(100) }]}>
+            <View style={[styles.percentageBar, { width: wp(100, width) }]}>
               <ThemedText style={styles.percentageText}>100%</ThemedText>
             </View>
           </View>

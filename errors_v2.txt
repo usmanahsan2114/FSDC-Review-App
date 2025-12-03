@@ -1,0 +1,30 @@
+﻿app/reviews-list.tsx(98,22): error TS2304: Cannot find name 'getGridColumns'.
+components/ResponsiveTest.tsx(12,9): error TS2349: This expression is not callable.
+  Type 'Boolean' has no call signatures.
+components/ResponsiveTest.tsx(13,9): error TS2349: This expression is not callable.
+  Type 'Boolean' has no call signatures.
+components/ResponsiveTest.tsx(14,9): error TS2349: This expression is not callable.
+  Type 'Boolean' has no call signatures.
+components/ResponsiveTest.tsx(15,9): error TS2349: This expression is not callable.
+  Type 'Boolean' has no call signatures.
+components/ResponsiveTest.tsx(16,9): error TS2349: This expression is not callable.
+  Type 'Boolean' has no call signatures.
+components/ResponsiveTest.tsx(122,47): error TS2552: Cannot find name 'responsive'. Did you mean 'Response'?
+components/ResponsiveTest.tsx(130,28): error TS2552: Cannot find name 'responsive'. Did you mean 'Response'?
+components/ResponsiveTest.tsx(145,58): error TS2552: Cannot find name 'responsive'. Did you mean 'Response'?
+components/ResponsiveTest.tsx(148,58): error TS2552: Cannot find name 'responsive'. Did you mean 'Response'?
+components/ResponsiveTest.tsx(151,58): error TS2552: Cannot find name 'responsive'. Did you mean 'Response'?
+components/ResponsiveTest.tsx(154,58): error TS2552: Cannot find name 'responsive'. Did you mean 'Response'?
+components/StylusCanvas.tsx(746,34): error TS2339: Property 'EncodingType' does not exist on type 'typeof import("C:/Usman/App/ReviewsApp/ReviewsApp/node_modules/expo-file-system/build/index")'.
+components/StylusCanvas.tsx(836,9): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: IOSWebViewProps & AndroidWebViewProps & WindowsWebViewProps): WebView<{}>', gave the following error.
+    Type '{ ref: RefObject<WebView<{}> | null>; source: { html: string; }; style: { flex: number; backgroundColor: string; }; onMessage: (event: any) => void; injectedJavaScript: string; ... 14 more ...; mixedContentMode: "always"; }' is not assignable to type 'IntrinsicAttributes & IntrinsicClassAttributes<WebView<{}>> & Readonly<IOSWebViewProps & AndroidWebViewProps & WindowsWebViewProps>'.
+      Property 'androidHardwareAccelerationDisabled' does not exist on type 'IntrinsicAttributes & IntrinsicClassAttributes<WebView<{}>> & Readonly<IOSWebViewProps & AndroidWebViewProps & WindowsWebViewProps>'.
+  Overload 2 of 2, '(props: IOSWebViewProps & AndroidWebViewProps & WindowsWebViewProps, context: any): WebView<{}>', gave the following error.
+    Type '{ ref: RefObject<WebView<{}> | null>; source: { html: string; }; style: { flex: number; backgroundColor: string; }; onMessage: (event: any) => void; injectedJavaScript: string; ... 14 more ...; mixedContentMode: "always"; }' is not assignable to type 'IntrinsicAttributes & IntrinsicClassAttributes<WebView<{}>> & Readonly<IOSWebViewProps & AndroidWebViewProps & WindowsWebViewProps>'.
+      Property 'androidHardwareAccelerationDisabled' does not exist on type 'IntrinsicAttributes & IntrinsicClassAttributes<WebView<{}>> & Readonly<IOSWebViewProps & AndroidWebViewProps & WindowsWebViewProps>'.
+utils/dataMigration.ts(98,9): error TS2741: Property 'reviewType' is missing in type '{ id: string; timestamp: number; personalInfo: { name: string; email: string; profession: string; nationality: string; }; ratings: { [key: string]: number; }; overallRating: number; photos: string[]; handwrittenComment: string | undefined; textComment: string | undefined; }' but required in type 'Review'.
+utils/responsive.ts(109,7): error TS2349: This expression is not callable.
+  Type 'Boolean' has no call signatures.
+utils/storageTest.ts(91,24): error TS2345: Argument of type '{ id: string; timestamp: number; personalInfo: { name: string; email: string; profession: string; nationality: string; }; ratings: { service: number; quality: number; }; overallRating: number; textComment: string; handwrittenComment: string; photos: never[]; }' is not assignable to parameter of type 'Omit<Review, "id" | "timestamp">'.
+  Property 'reviewType' is missing in type '{ id: string; timestamp: number; personalInfo: { name: string; email: string; profession: string; nationality: string; }; ratings: { service: number; quality: number; }; overallRating: number; textComment: string; handwrittenComment: string; photos: never[]; }' but required in type 'Omit<Review, "id" | "timestamp">'.

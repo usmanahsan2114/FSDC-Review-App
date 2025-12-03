@@ -5,13 +5,12 @@ export interface Simulator {
   image?: any; // Using require() for local images
 }
 
-export const SIMULATOR_TYPES = ['AeroSim Pro', 'AeroMix', 'AeroFision', 'AeroFlex'];
+export const SIMULATOR_TYPES = ['Fixed Wing', 'Rotary Wing'];
 
 export const FSDC_SIMULATORS: Simulator[] = [
-  { id: '1', name: 'Super Mushshak', type: 'AeroSim Pro' },
-  { id: '2', name: 'Mi-17', type: 'AeroSim Pro' },
-  { id: '3', name: 'Bell 412', type: 'AeroMix' },
-  { id: '4', name: 'Cessna 172', type: 'AeroMix' },
-  { id: '5', name: 'Generic VR Trainer', type: 'AeroFlex' },
-  { id: '6', name: 'Hybrid Infinity System', type: 'AeroFision' },
+  { id: '1', name: 'Super Mushshak', type: 'Fixed Wing' },
+  { id: '2', name: 'Mi-17', type: 'Rotary Wing' },
+  { id: '3', name: 'Bell 412', type: 'Rotary Wing' },
+  { id: '4', name: 'Cessna 172', type: 'Fixed Wing' },
+  { id: '5', name: 'Hybrid Infinity System', type: 'Fixed Wing' },
 ];

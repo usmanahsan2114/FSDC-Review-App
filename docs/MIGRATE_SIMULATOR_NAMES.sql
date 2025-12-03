@@ -21,7 +21,7 @@ UPDATE public.reviews
 SET simulator_name = 'Hybrid Infinity System'
 WHERE simulator_name LIKE 'Hybrid Infinity System%';
 
--- Ensure Generic VR Trainer is consistent
+-- Map Generic VR Trainer to Hybrid Infinity System (Standardization)
 UPDATE public.reviews
-SET simulator_name = 'Generic VR Trainer'
+SET simulator_name = 'Hybrid Infinity System'
 WHERE simulator_name LIKE 'Generic VR Trainer%';

@@ -6,11 +6,7 @@ const SIMULATOR_TYPES_KEY = 'fsdc_simulator_types_v1';
 
 export const getSimulators = async (): Promise<Simulator[]> => {
   try {
-    const jsonValue = await AsyncStorage.getItem(SIMULATORS_KEY);
-    if (jsonValue != null) {
-      return JSON.parse(jsonValue);
-    }
-    // Return defaults if not found, and save them for future consistency
+    // Force reset to new constants for this update
     await saveSimulators(FSDC_SIMULATORS);
     return FSDC_SIMULATORS;
   } catch (e) {
@@ -30,17 +26,12 @@ export const saveSimulators = async (simulators: Simulator[]): Promise<void> => 
 
 export const getSimulatorTypes = async (): Promise<string[]> => {
   try {
-    const jsonValue = await AsyncStorage.getItem(SIMULATOR_TYPES_KEY);
-    if (jsonValue != null) {
-      return JSON.parse(jsonValue);
-    }
-    // Return defaults
-    const defaultTypes = [...SIMULATOR_TYPES];
-    await saveSimulatorTypes(defaultTypes);
-    return defaultTypes;
+    // Force reset to new constants for this update
+    await saveSimulatorTypes(SIMULATOR_TYPES);
+    return SIMULATOR_TYPES;
   } catch (e) {
     console.error('Error fetching simulator types', e);
-    return [...SIMULATOR_TYPES];
+    return SIMULATOR_TYPES;
   }
 };
 

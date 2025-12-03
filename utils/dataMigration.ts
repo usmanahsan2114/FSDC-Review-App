@@ -98,6 +98,7 @@ async function migrateSingleReview(legacyReview: LegacyReview): Promise<Review> 
   const migratedReview: Review = {
     id: legacyReview.id,
     timestamp: legacyReview.timestamp,
+    reviewType: 'professional',
     personalInfo: {
       name: legacyReview.personalInfo.name || '',
       email: legacyReview.personalInfo.email || '',

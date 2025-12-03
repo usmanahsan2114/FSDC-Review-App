@@ -106,7 +106,7 @@ export const minTouchTarget = 44;
 
 // Device-specific padding
 export const getDevicePadding = (screenWidth: number = initial.width, screenHeight: number = initial.height) => {
-  if (isSmallPhone(screenWidth)) {
+  if (calcIsSmallPhone(screenWidth)) {
     return {
       horizontal: wp(3, screenWidth),
       vertical: hp(1.5, screenHeight),

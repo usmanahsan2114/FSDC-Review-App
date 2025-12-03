@@ -1,15 +1,15 @@
 import { getMigrationStats } from './dataMigration';
 import {
-  deleteReview,
-  getAllReviews,
-  getStorageStats,
-  initializeDataStorage,
-  saveReview
+    deleteReview,
+    getAllReviews,
+    getStorageStats,
+    initializeDataStorage,
+    saveReview
 } from './dataStorage';
 import {
-  getAllStoredImages,
-  getStorageInfo,
-  initializeImageStorage
+    getAllStoredImages,
+    getStorageInfo,
+    initializeImageStorage
 } from './imageStorage';
 
 export interface StorageTestResult {
@@ -74,6 +74,7 @@ export async function runStorageTests(): Promise<StorageTestResult> {
     const testReview = {
       id: `test-${Date.now()}`,
       timestamp: Date.now(),
+      reviewType: 'professional' as const,
       personalInfo: { 
         name: 'Test User', 
         email: 'test@example.com',
