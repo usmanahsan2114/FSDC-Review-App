@@ -74,6 +74,9 @@ export function validateReviewForm(
   ratingCategories.forEach(cat => {
     if (!formData.ratings[cat.key] || formData.ratings[cat.key] === 0) {
       missingRatings = true;
+    } else if (!Number.isInteger(formData.ratings[cat.key])) {
+       // Auto-fix decimal ratings to integers during validation if they somehow slip through
+       formData.ratings[cat.key] = Math.round(formData.ratings[cat.key]);
     }
   });
 

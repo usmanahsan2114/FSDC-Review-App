@@ -955,7 +955,7 @@ function AddReviewScreen() {
         try {
           // Request gallery permission (non-blocking save fallback handled in utils)
           try {
-            const { status } = await MediaLibrary.requestPermissionsAsync();
+            const { status } = await MediaLibrary.requestPermissionsAsync(true, ['photo']);
             if (status !== 'granted') {
               console.warn('MediaLibrary permission not granted; will skip gallery save');
             }
@@ -1040,7 +1040,7 @@ function AddReviewScreen() {
       <View style={styles.starContainer}>
         <StarRating
           rating={formData.ratings[category]}
-          onChange={(rating) => updateRating(category, rating)}
+          onChange={(rating) => updateRating(category, Math.round(rating))}
           starSize={wp('8%')}
           color="#FFD700"
           emptyColor="#E0E0E0"
@@ -1054,6 +1054,7 @@ function AddReviewScreen() {
   );
 
   return (
+    <AnimatedEntry style={{ flex: 1 }}>
     <ThemedView style={styles.container}>
       {/* Simulator Selection Modal */}
       <Modal
@@ -1165,6 +1166,12 @@ function AddReviewScreen() {
       >
         <View style={styles.header}>
           <View style={styles.headerTop}>
+            <IconButton
+              icon="arrow-left"
+              size={24}
+              onPress={() => router.back()}
+              style={{ margin: 0, marginRight: 4 }}
+            />
             <View style={styles.headerTitles}>
               <ThemedText type="title" style={styles.title}>
                 {reviewType === 'joyride' ? 'Joyride Review' : 'Add Flight Simulator Review'}
@@ -1768,6 +1775,7 @@ function AddReviewScreen() {
         </View>
       </Modal>
     </ThemedView>
+    </AnimatedEntry>
   );
 }
 

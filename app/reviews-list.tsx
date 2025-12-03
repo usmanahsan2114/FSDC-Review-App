@@ -10,13 +10,8 @@ import { useThemeColor } from '@/hooks/use-theme-color';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, FlatList, ListRenderItem, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, FlatList, ListRenderItem, RefreshControl, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Button, Card, Chip, Divider, IconButton, Menu, TextInput } from 'react-native-paper';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import StarRating from 'react-native-star-rating-widget';
-import { deleteReview, getAllReviews, initializeDataStorage, Review } from '../utils/dataStorage';
-import { exportToExcel } from '../utils/exportUtils';
-import { hapticsButtonPress, hapticsDelete, hapticsFilterSelect } from '../utils/haptics';
 import { getDevicePadding, hp, isTablet, minTouchTarget, rf, rs, wp } from '../utils/responsive';
 import { getSimulators, getSimulatorTypes } from '../utils/simulatorStorage';
 
@@ -84,6 +79,8 @@ function ReviewsListScreen() {
   const [isExporting, setIsExporting] = useState(false);
 
   const { isDark } = useTheme();
+  const { width } = useWindowDimensions();
+  const numColumns = isTablet(width) ? 2 : 1;
   const insets = useSafeAreaInsets();
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
@@ -554,6 +551,12 @@ function ReviewsListScreen() {
     <ThemedView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTop}>
+          <IconButton
+            icon="arrow-left"
+            size={24}
+            onPress={handleGoBack}
+            style={{ margin: 0, marginRight: 4 }}
+          />
           <View style={styles.headerTitles}>
             <ThemedText style={styles.title}>Reviews</ThemedText>
             <ThemedText style={styles.subtitle}>
@@ -835,6 +838,9 @@ function ReviewsListScreen() {
         updateCellsBatchingPeriod={50}
         initialNumToRender={5}
         windowSize={10}
+        numColumns={numColumns}
+        key={numColumns}
+        columnWrapperStyle={numColumns > 1 ? { gap: wp('2%') } : undefined}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

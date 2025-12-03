@@ -147,7 +147,7 @@ export const decryptObject = <T = unknown>(encryptedString: string): T | null =>
 
   // Strategy 1: Try to parse as unencrypted JSON for backward compatibility
   try {
-    const parsed = JSON.parse(encryptedData);
+    const parsed = JSON.parse(encryptedString);
     console.log('Data parsed as unencrypted JSON successfully');
     return parsed;
   } catch {
@@ -156,7 +156,7 @@ export const decryptObject = <T = unknown>(encryptedString: string): T | null =>
 
   // Strategy 2: Standard decryption
   try {
-    const decryptedString = decryptData(encryptedData);
+    const decryptedString = decryptData(encryptedString);
     if (decryptedString && typeof decryptedString === 'string') {
       return JSON.parse(decryptedString);
     }
@@ -166,7 +166,7 @@ export const decryptObject = <T = unknown>(encryptedString: string): T | null =>
 
   // Strategy 3: Direct base64 decode with salt removal
   try {
-    const decoded = base64Decode(encryptedData);
+    const decoded = base64Decode(encryptedString);
     const salt = 'ReviewsApp_Salt_2024';
     
     let jsonString = decoded;
@@ -199,7 +199,7 @@ export const decryptObject = <T = unknown>(encryptedString: string): T | null =>
   try {
     // Look for JSON patterns in the original data
     const jsonPattern = /(\[.*\]|\{.*\})/;
-    const match = encryptedData.match(jsonPattern);
+    const match = encryptedString.match(jsonPattern);
     
     if (match) {
       return JSON.parse(match[1]);

@@ -8,7 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { Button, Card, Menu } from 'react-native-paper';
+import { Button, Card, IconButton, Menu } from 'react-native-paper';
 import StarRating from 'react-native-star-rating-widget';
 import { getAllReviews, Review } from '../utils/dataStorage';
 import { hapticsFilterSelect } from '../utils/haptics';
@@ -283,6 +283,12 @@ export default function DashboardScreen() {
     <ThemedView style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
+          <IconButton
+            icon="arrow-left"
+            size={24}
+            onPress={() => router.back()}
+            style={{ margin: 0, marginRight: 4 }}
+          />
           <View style={styles.headerContent}>
             <ThemedText type="title" style={styles.title}>Dashboard</ThemedText>
             <ThemedText style={styles.subtitle}>Analytics & Insights</ThemedText>

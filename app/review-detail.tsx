@@ -413,6 +413,12 @@ function ReviewDetailScreen() {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View style={styles.headerTop}>
+            <IconButton
+              icon="arrow-left"
+              size={24}
+              onPress={handleGoBack}
+              style={styles.backButton}
+            />
             <View style={styles.headerTitles}>
               <ThemedText type="title" style={styles.title}>
                 Review Details

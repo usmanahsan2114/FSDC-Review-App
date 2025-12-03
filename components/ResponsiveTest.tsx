@@ -1,32 +1,32 @@
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Button, Card, Chip } from 'react-native-paper';
-import { useResponsive } from '../hooks/useResponsive';
-import { deviceInfo, getDevicePadding, minTouchTarget, rf, rs } from '../utils/responsive';
+import { deviceInfo, getDevicePadding, getGridColumns, isLargeTablet, isPhone, isSmallPhone, isTablet, isTargetDevice, minTouchTarget, rf, rs, useResponsiveDimensions } from '../utils/responsive';
 import { ThemedText } from './themed-text';
 
 export const ResponsiveTest: React.FC = () => {
-  const responsive = useResponsive();
+  const { width, height } = useResponsiveDimensions();
+  const isPortrait = height > width;
+
+  function getDeviceType(): string {
+    if (isTargetDevice(width, height)) return 'Target Device (10.4" Tablet)';
+    if (isLargeTablet(width)) return 'Large Tablet';
+    if (isTablet(width)) return 'Tablet';
+    if (isSmallPhone(width)) return 'Small Phone';
+    if (isPhone(width)) return 'Phone';
+    return 'Unknown';
+  }
 
   const deviceSpecs = [
-    { label: 'Width', value: `${responsive.width}px` },
-    { label: 'Height', value: `${responsive.height}px` },
-    { label: 'Orientation', value: responsive.isPortrait ? 'Portrait' : 'Landscape' },
+    { label: 'Width', value: `${width.toFixed(0)}px` },
+    { label: 'Height', value: `${height.toFixed(0)}px` },
+    { label: 'Orientation', value: isPortrait ? 'Portrait' : 'Landscape' },
     { label: 'Device Type', value: getDeviceType() },
     { label: 'Pixel Ratio', value: deviceInfo.pixelRatio.toFixed(2) },
     { label: 'Font Scale', value: deviceInfo.fontScale.toFixed(2) },
-    { label: 'Optimal Columns', value: responsive.getOptimalColumns().toString() },
+    { label: 'Optimal Columns', value: getGridColumns(width).toString() },
     { label: 'Min Touch Target', value: `${minTouchTarget}px` },
   ];
-
-  function getDeviceType(): string {
-    if (responsive.isTargetDevice) return 'Target Device (10.4" Tablet)';
-    if (responsive.isLargeTablet) return 'Large Tablet';
-    if (responsive.isTablet) return 'Tablet';
-    if (responsive.isSmallPhone) return 'Small Phone';
-    if (responsive.isPhone) return 'Phone';
-    return 'Unknown';
-  }
 
   const testSizes = [
     { label: 'Small Text', size: rf(12) },

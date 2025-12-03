@@ -1,3 +1,4 @@
+import { AnimatedEntry } from '@/components/AnimatedEntry';
 import OptimizedImage from '@/components/OptimizedImage';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -35,6 +36,7 @@ export default function HomeScreen() {
   };
 
   return (
+    <AnimatedEntry style={{ flex: 1 }}>
     <ThemedView style={styles.container}>
       <View style={styles.header}>
         <ThemeToggle />
@@ -124,6 +126,7 @@ export default function HomeScreen() {
         
       </ScrollView>
     </ThemedView>
+    </AnimatedEntry>
   );
 }
 

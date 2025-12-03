@@ -622,7 +622,7 @@ function ReviewPreviewScreen() {
       // Save handwritten comment to gallery if it exists
       if (formData.handwrittenComment) {
         try {
-          const { status } = await MediaLibrary.requestPermissionsAsync();
+          const { status } = await MediaLibrary.requestPermissionsAsync(true, ['photo']);
           if (status === 'granted') {
             await MediaLibrary.createAssetAsync(formData.handwrittenComment);
             // Optional: Notify user or just fail silently as it's an enhancement
