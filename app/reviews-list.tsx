@@ -1,17 +1,32 @@
-import { ConnectivityStatus } from '@/components/ConnectivityStatus';
-import { NoReviewsEmptyState, NoSearchResultsEmptyState } from '@/components/EmptyState';
-import { ReviewListSkeleton } from '@/components/SkeletonLoader';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import ThemeToggle from '@/components/ThemeToggle';
-import { Simulator } from '@/constants/simulators';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, FlatList, ListRenderItem, RefreshControl, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import {
+    Alert,
+    FlatList,
+    ListRenderItem,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    useWindowDimensions,
+    View
+} from 'react-native';
 import { Button, Card, Chip, Divider, IconButton, Menu, TextInput } from 'react-native-paper';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import StarRating from 'react-native-star-rating-widget';
+
+import { ConnectivityStatus } from '@/components/ConnectivityStatus';
+import { NoReviewsEmptyState, NoSearchResultsEmptyState } from '@/components/EmptyState';
+import { ReviewListSkeleton } from '@/components/SkeletonLoader';
+import { Simulator } from '@/constants/simulators';
+import { deleteReview, getAllReviews, initializeDataStorage, Review } from '../utils/dataStorage';
+import { exportToExcel } from '../utils/exportUtils';
+import { hapticsButtonPress, hapticsDelete, hapticsFilterSelect } from '../utils/haptics';
 import { getDevicePadding, hp, isTablet, minTouchTarget, rf, rs, wp } from '../utils/responsive';
 import { getSimulators, getSimulatorTypes } from '../utils/simulatorStorage';
 
@@ -80,7 +95,7 @@ function ReviewsListScreen() {
 
   const { isDark } = useTheme();
   const { width } = useWindowDimensions();
-  const numColumns = isTablet(width) ? 2 : 1;
+  const numColumns = getGridColumns(width);
   const insets = useSafeAreaInsets();
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');

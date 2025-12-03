@@ -1,3 +1,4 @@
+import { AnimatedEntry } from '@/components/AnimatedEntry';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import ThemeToggle from '@/components/ThemeToggle';
@@ -864,7 +865,7 @@ function AddReviewScreen() {
       // Generate filename: handwriting_{timestamp}.png
       const timestamp = Date.now();
       const filename = `handwriting_${timestamp}.png`;
-      const directory = (FileSystem.documentDirectory ?? '') + 'images/';
+      const directory = ((FileSystem as any).documentDirectory ?? '') + 'images/';
       const filePath = directory + filename;
       
       // Ensure directory exists
@@ -879,7 +880,7 @@ function AddReviewScreen() {
       
       // Write to file system
       await FileSystem.writeAsStringAsync(filePath, base64Data, {
-        encoding: FileSystem.EncodingType.Base64,
+        encoding: (FileSystem as any).EncodingType.Base64,
       });
       
       console.log(`Handwriting saved: ${filePath}`);

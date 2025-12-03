@@ -18,11 +18,17 @@ export const useResponsiveDimensions = () => {
 };
 
 // Device type detection functions
-export const isSmallPhone = (width: number) => width < 375;
-export const isPhone = (width: number) => width < 768;
-export const isTablet = (width: number) => width >= 768 && width < 1024;
-export const isLargeTablet = (width: number) => width >= 1024;
-export const isTargetDevice = (width: number, height: number) => width >= 1200 || (width >= 800 && height >= 1200);
+const calcIsSmallPhone = (width: number) => width < 375;
+const calcIsPhone = (width: number) => width < 768;
+const calcIsTablet = (width: number) => width >= 768 && width < 1024;
+const calcIsLargeTablet = (width: number) => width >= 1024;
+const calcIsTargetDevice = (width: number, height: number) => width >= 1200 || (width >= 800 && height >= 1200);
+
+export const isSmallPhone = calcIsSmallPhone(initial.width);
+export const isPhone = calcIsPhone(initial.width);
+export const isTablet = calcIsTablet(initial.width);
+export const isLargeTablet = calcIsLargeTablet(initial.width);
+export const isTargetDevice = calcIsTargetDevice(initial.width, initial.height);
 
 // Responsive width percentage
 export const wp = (percentage: string | number, screenWidth: number = initial.width): number => {
@@ -41,12 +47,13 @@ export const hp = (percentage: string | number, screenHeight: number = initial.h
 };
 
 // Responsive font size with device-specific scaling
+// Responsive font size with device-specific scaling
 export const rf = (size: number, screenWidth: number = initial.width, screenHeight: number = initial.height): number => {
   const fontScale = PixelRatio.getFontScale();
   
   const cappedFontScale = Math.min(fontScale, 1.3);
   
-  if (isTargetDevice(screenWidth, screenHeight)) {
+  if (calcIsTargetDevice(screenWidth, screenHeight)) {
     const scale = Math.min(screenWidth / 375, 2.2);
     let scaledSize = size * scale * 0.8;
     
@@ -64,13 +71,13 @@ export const rf = (size: number, screenWidth: number = initial.width, screenHeig
   
   newSize = newSize * cappedFontScale;
   
-  if (isSmallPhone(screenWidth)) {
+  if (calcIsSmallPhone(screenWidth)) {
     newSize = Math.max(newSize * 0.9, size * 0.8);
-  } else if (isTablet(screenWidth)) {
+  } else if (calcIsTablet(screenWidth)) {
     newSize = Math.min(newSize * 0.95, size * 1.15);
     if (size >= 32) newSize = Math.min(newSize, 42);
     if (size >= 24) newSize = Math.min(newSize, 32);
-  } else if (isLargeTablet(screenWidth)) {
+  } else if (calcIsLargeTablet(screenWidth)) {
     newSize = Math.min(newSize * 1.0, size * 1.25);
     if (size >= 32) newSize = Math.min(newSize, 45);
     if (size >= 24) newSize = Math.min(newSize, 34);
@@ -84,11 +91,11 @@ export const rf = (size: number, screenWidth: number = initial.width, screenHeig
 
 // Responsive spacing with device-specific adjustments
 export const rs = (size: number, screenWidth: number = initial.width): number => {
-  if (isSmallPhone(screenWidth)) {
+  if (calcIsSmallPhone(screenWidth)) {
     return size * 0.8;
-  } else if (isTablet(screenWidth)) {
+  } else if (calcIsTablet(screenWidth)) {
     return size * 1.2;
-  } else if (isLargeTablet(screenWidth)) {
+  } else if (calcIsLargeTablet(screenWidth)) {
     return size * 1.4;
   }
   return size;
@@ -104,7 +111,7 @@ export const getDevicePadding = (screenWidth: number = initial.width, screenHeig
       horizontal: wp(3, screenWidth),
       vertical: hp(1.5, screenHeight),
     };
-  } else if (isTablet(screenWidth) || isLargeTablet(screenWidth)) {
+  } else if (calcIsTablet(screenWidth) || calcIsLargeTablet(screenWidth)) {
     return {
       horizontal: wp(6, screenWidth),
       vertical: hp(3, screenHeight),
@@ -118,24 +125,24 @@ export const getDevicePadding = (screenWidth: number = initial.width, screenHeig
 
 // Grid columns based on device size
 export const getGridColumns = (screenWidth: number = initial.width) => {
-  if (isSmallPhone(screenWidth)) return 1;
-  if (isPhone(screenWidth)) return 2;
-  if (isTablet(screenWidth)) return 3;
+  if (calcIsSmallPhone(screenWidth)) return 1;
+  if (calcIsPhone(screenWidth)) return 2;
+  if (calcIsTablet(screenWidth)) return 3;
   return 4;
 };
 
 // Card width for different devices
 export const getCardWidth = (screenWidth: number = initial.width) => {
-  if (isSmallPhone(screenWidth)) return wp(90, screenWidth);
-  if (isPhone(screenWidth)) return wp(85, screenWidth);
-  if (isTablet(screenWidth)) return wp(45, screenWidth);
+  if (calcIsSmallPhone(screenWidth)) return wp(90, screenWidth);
+  if (calcIsPhone(screenWidth)) return wp(85, screenWidth);
+  if (calcIsTablet(screenWidth)) return wp(45, screenWidth);
   return wp(30, screenWidth);
 };
 
 // Modal width for different devices
 export const getModalWidth = (screenWidth: number = initial.width) => {
-  if (isPhone(screenWidth)) return wp(95, screenWidth);
-  if (isTablet(screenWidth)) return wp(80, screenWidth);
+  if (calcIsPhone(screenWidth)) return wp(95, screenWidth);
+  if (calcIsTablet(screenWidth)) return wp(80, screenWidth);
   return wp(70, screenWidth);
 };
 
@@ -152,11 +159,11 @@ export const getPhotoGridSize = (screenWidth: number = initial.width, screenHeig
 export const getDeviceInfo = (screenWidth: number = initial.width, screenHeight: number = initial.height) => ({
   width: screenWidth,
   height: screenHeight,
-  isSmallPhone: isSmallPhone(screenWidth),
-  isPhone: isPhone(screenWidth),
-  isTablet: isTablet(screenWidth),
-  isLargeTablet: isLargeTablet(screenWidth),
-  isTargetDevice: isTargetDevice(screenWidth, screenHeight),
+  isSmallPhone: calcIsSmallPhone(screenWidth),
+  isPhone: calcIsPhone(screenWidth),
+  isTablet: calcIsTablet(screenWidth),
+  isLargeTablet: calcIsLargeTablet(screenWidth),
+  isTargetDevice: calcIsTargetDevice(screenWidth, screenHeight),
   pixelRatio: PixelRatio.get(),
   fontScale: PixelRatio.getFontScale(),
 });
