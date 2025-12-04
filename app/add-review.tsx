@@ -872,19 +872,15 @@ function AddReviewScreen() {
       const filePath = directory + filename;
       
       // Ensure directory exists
-      const dirInfo = await FileSystem.getInfoAsync(directory);
-      if (!dirInfo.exists) {
-        await FileSystem.makeDirectoryAsync(directory, { intermediates: true });
-    }
-      
-      // Convert base64 data URL to file
-      // Remove data:image/png;base64, prefix
-      const base64Data = dataUrl.replace(/^data:image\/png;base64,/, '');
-      
-      // Write to file system
-      await FileSystem.writeAsStringAsync(filePath, base64Data, {
-        encoding: (FileSystem as any).EncodingType.Base64,
-      });
+    await FileSystem.makeDirectoryAsync(directory, { intermediates: true });
+
+    // Remove header from base64 data
+    const base64Data = dataUrl.replace(/^data:image\/png;base64,/, '');
+    
+    // Write to file system
+    await FileSystem.writeAsStringAsync(filePath, base64Data, {
+      encoding: 'base64',
+    });
       
       console.log(`Handwriting saved: ${filePath}`);
       
@@ -1922,11 +1918,17 @@ const createStyles = (
   },
   textInput: {
     marginBottom: hp('1.5%'),
-    backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.8)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+    borderWidth: 1,
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
+    borderRadius: 8,
   },
   textArea: {
     marginBottom: hp('1%'),
-    backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.8)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+    borderWidth: 1,
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
+    borderRadius: 8,
   },
   pickerContainer: {
     marginBottom: hp('1.5%'),

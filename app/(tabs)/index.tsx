@@ -97,12 +97,12 @@ export default function HomeScreen() {
               transition={200}
             />
             
-            <ThemedText type="hero-title" style={styles.title}>
+            <ThemedText type="hero-title" style={[styles.title, { color: primaryColor }]}>
               ORBITAL COMMAND
             </ThemedText>
             
             <ThemedText type="technical-label" style={styles.subtitle}>
-              FLIGHT SIMULATION DATA CENTER // FSDC
+              FLIGHT SIMULATION DATA CENTER FSDC
             </ThemedText>
           </View>
 

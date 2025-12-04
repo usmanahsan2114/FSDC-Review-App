@@ -1,3 +1,4 @@
+import { GlassCard } from '@/components/GlassCard';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import ThemeToggle from '@/components/ThemeToggle';
@@ -8,7 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { Button, Card, IconButton, Menu } from 'react-native-paper';
+import { Button, IconButton, Menu } from 'react-native-paper';
 import StarRating from 'react-native-star-rating-widget';
 import { getAllReviews, Review } from '../utils/dataStorage';
 import { hapticsFilterSelect } from '../utils/haptics';
@@ -53,6 +54,7 @@ export default function DashboardScreen() {
   const backgroundColor = useThemeColor({}, 'background');
   const cardBackgroundColor = useThemeColor({ light: '#FFFFFF', dark: '#1E1E1E' }, 'background');
   const borderColor = useThemeColor({ light: '#E0E0E0', dark: '#404040' }, 'text');
+  const primaryColor = useThemeColor({}, 'primary');
   
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
@@ -288,7 +290,7 @@ export default function DashboardScreen() {
             size={24}
             onPress={() => router.back()}
             style={{ margin: 0, marginRight: 4 }}
-            iconColor={useThemeColor({}, 'primary')}
+            iconColor={primaryColor}
           />
           <View style={styles.headerContent}>
             <ThemedText type="hero-title" style={styles.title}>DASHBOARD</ThemedText>
@@ -425,16 +427,16 @@ export default function DashboardScreen() {
 
         {/* Top Stats Cards */}
         <View style={styles.statsContainer}>
-          <Card style={[styles.statCard, styles.statCardPrimary]}>
-            <Card.Content style={styles.statCardContent}>
+          <GlassCard style={[styles.statCard, styles.statCardPrimary]} variant="glass-panel">
+            <View style={styles.statCardContent}>
               <ThemedText style={styles.statLabel}>Total Reviews</ThemedText>
               <ThemedText style={styles.statValue}>{stats.totalReviews}</ThemedText>
               <ThemedText style={styles.statIcon}>📊</ThemedText>
-            </Card.Content>
-          </Card>
+            </View>
+          </GlassCard>
 
-          <Card style={[styles.statCard, styles.statCardSuccess]}>
-            <Card.Content style={styles.statCardContent}>
+          <GlassCard style={[styles.statCard, styles.statCardSuccess]} variant="glass-panel">
+            <View style={styles.statCardContent}>
               <ThemedText style={styles.statLabel}>Average Rating</ThemedText>
               <ThemedText style={styles.statValue}>{stats.averageRating.toFixed(1)} ⭐</ThemedText>
               <View style={styles.miniStars}>
@@ -447,98 +449,98 @@ export default function DashboardScreen() {
                   enableHalfStar={true}
                 />
               </View>
-            </Card.Content>
-          </Card>
+            </View>
+          </GlassCard>
 
-          <Card style={[styles.statCard, styles.statCardInfo]}>
-            <Card.Content style={styles.statCardContent}>
+          <GlassCard style={[styles.statCard, styles.statCardInfo]} variant="glass-panel">
+            <View style={styles.statCardContent}>
               <ThemedText style={styles.statLabel}>This Month</ThemedText>
               <ThemedText style={styles.statValue}>{stats.thisMonth}</ThemedText>
               <ThemedText style={styles.statTrend}>
                 {stats.thisMonth > 0 ? '↑ Active' : '—'}
               </ThemedText>
-            </Card.Content>
-          </Card>
+            </View>
+          </GlassCard>
         </View>
 
         {/* Professional Reviews Stats - Only show when All is selected (otherwise shown in top stats) */}
         {reviewTypeFilter === 'all' && professionalStats.totalReviews > 0 && (
-          <Card style={styles.sectionCard}>
-            <Card.Content>
+          <GlassCard style={styles.sectionCard} variant="glass-panel">
+            <View style={{ padding: 16 }}>
               <ThemedText style={styles.sectionTitle}>Professional Reviews</ThemedText>
               <View style={styles.statsContainer}>
-                <Card style={[styles.statCard, styles.statCardPrimary]}>
-                  <Card.Content style={styles.statCardContent}>
+                <GlassCard style={[styles.statCard, styles.statCardPrimary]} variant="glass-panel">
+                  <View style={styles.statCardContent}>
                     <ThemedText style={styles.statLabel}>Total</ThemedText>
                     <ThemedText style={styles.statValue}>{professionalStats.totalReviews}</ThemedText>
-                  </Card.Content>
-                </Card>
-                <Card style={[styles.statCard, styles.statCardSuccess]}>
-                  <Card.Content style={styles.statCardContent}>
+                  </View>
+                </GlassCard>
+                <GlassCard style={[styles.statCard, styles.statCardSuccess]} variant="glass-panel">
+                  <View style={styles.statCardContent}>
                     <ThemedText style={styles.statLabel}>Avg Rating</ThemedText>
                     <ThemedText style={styles.statValue}>{professionalStats.averageRating.toFixed(1)} ⭐</ThemedText>
-                  </Card.Content>
-                </Card>
-                <Card style={[styles.statCard, styles.statCardInfo]}>
-                  <Card.Content style={styles.statCardContent}>
+                  </View>
+                </GlassCard>
+                <GlassCard style={[styles.statCard, styles.statCardInfo]} variant="glass-panel">
+                  <View style={styles.statCardContent}>
                     <ThemedText style={styles.statLabel}>This Month</ThemedText>
                     <ThemedText style={styles.statValue}>{professionalStats.thisMonth}</ThemedText>
-                  </Card.Content>
-                </Card>
+                  </View>
+                </GlassCard>
               </View>
-            </Card.Content>
-          </Card>
+            </View>
+          </GlassCard>
         )}
 
         {/* Joyride Reviews Stats - Only show when All is selected (otherwise shown in top stats) */}
         {reviewTypeFilter === 'all' && joyrideStats.totalReviews > 0 && (
-          <Card style={styles.sectionCard}>
-            <Card.Content>
+          <GlassCard style={styles.sectionCard} variant="glass-panel">
+            <View style={{ padding: 16 }}>
               <ThemedText style={styles.sectionTitle}>Joyride Reviews</ThemedText>
               <View style={styles.statsContainer}>
-                <Card style={[styles.statCard, styles.statCardPrimary]}>
-                  <Card.Content style={styles.statCardContent}>
+                <GlassCard style={[styles.statCard, styles.statCardPrimary]} variant="glass-panel">
+                  <View style={styles.statCardContent}>
                     <ThemedText style={styles.statLabel}>Total</ThemedText>
                     <ThemedText style={styles.statValue}>{joyrideStats.totalReviews}</ThemedText>
-                  </Card.Content>
-                </Card>
-                <Card style={[styles.statCard, styles.statCardSuccess]}>
-                  <Card.Content style={styles.statCardContent}>
+                  </View>
+                </GlassCard>
+                <GlassCard style={[styles.statCard, styles.statCardSuccess]} variant="glass-panel">
+                  <View style={styles.statCardContent}>
                     <ThemedText style={styles.statLabel}>Avg Rating</ThemedText>
                     <ThemedText style={styles.statValue}>{joyrideStats.averageRating.toFixed(1)} ⭐</ThemedText>
-                  </Card.Content>
-                </Card>
-                <Card style={[styles.statCard, styles.statCardInfo]}>
-                  <Card.Content style={styles.statCardContent}>
+                  </View>
+                </GlassCard>
+                <GlassCard style={[styles.statCard, styles.statCardInfo]} variant="glass-panel">
+                  <View style={styles.statCardContent}>
                     <ThemedText style={styles.statLabel}>This Month</ThemedText>
                     <ThemedText style={styles.statValue}>{joyrideStats.thisMonth}</ThemedText>
-                  </Card.Content>
-                </Card>
-                <Card style={[styles.statCard, styles.statCardInfo]}>
-                  <Card.Content style={styles.statCardContent}>
+                  </View>
+                </GlassCard>
+                <GlassCard style={[styles.statCard, styles.statCardInfo]} variant="glass-panel">
+                  <View style={styles.statCardContent}>
                     <ThemedText style={styles.statLabel}>Avg Suggested Price (USD)</ThemedText>
                     <ThemedText style={styles.statValue}>
                       {joyrideStats.averagePrice > 0 ? `$${joyrideStats.averagePrice.toFixed(0)}` : '—'}
                     </ThemedText>
-                  </Card.Content>
-                </Card>
-                <Card style={[styles.statCard, styles.statCardInfo]}>
-                  <Card.Content style={styles.statCardContent}>
+                  </View>
+                </GlassCard>
+                <GlassCard style={[styles.statCard, styles.statCardInfo]} variant="glass-panel">
+                  <View style={styles.statCardContent}>
                     <ThemedText style={styles.statLabel}>Avg Cost Estimate (USD M)</ThemedText>
                     <ThemedText style={styles.statValue}>
                       {joyrideStats.averageSimulatorEstimate > 0 ? `${joyrideStats.averageSimulatorEstimate.toFixed(1)}M` : '—'}
                     </ThemedText>
-                  </Card.Content>
-                </Card>
+                  </View>
+                </GlassCard>
               </View>
-            </Card.Content>
-          </Card>
+            </View>
+          </GlassCard>
         )}
 
         {/* Rating Distribution - Only show for Professional filter */}
         {reviewTypeFilter === 'professional' && professionalStats.totalReviews > 0 && (
-          <Card style={styles.sectionCard}>
-            <Card.Content>
+          <GlassCard style={styles.sectionCard} variant="glass-panel">
+            <View style={{ padding: 16 }}>
               <ThemedText style={styles.sectionTitle}>Rating Distribution (Professional Reviews)</ThemedText>
               <View style={styles.distributionContainer}>
                 {[5, 4, 3, 2, 1].map((rating, index) => {
@@ -567,14 +569,14 @@ export default function DashboardScreen() {
                 );
               })}
             </View>
-          </Card.Content>
-        </Card>
+            </View>
+          </GlassCard>
         )}
 
         {/* Rating Distribution - Joyride */}
         {reviewTypeFilter === 'joyride' && joyrideStats.totalReviews > 0 && (
-          <Card style={styles.sectionCard}>
-            <Card.Content>
+          <GlassCard style={styles.sectionCard} variant="glass-panel">
+            <View style={{ padding: 16 }}>
               <ThemedText style={styles.sectionTitle}>Rating Distribution (Joyride Reviews)</ThemedText>
               <View style={styles.distributionContainer}>
                 {[5, 4, 3, 2, 1].map((rating, index) => {
@@ -603,14 +605,14 @@ export default function DashboardScreen() {
                 );
               })}
             </View>
-          </Card.Content>
-        </Card>
+            </View>
+          </GlassCard>
         )}
 
         {/* Category Performance - Only show for Professional filter */}
         {reviewTypeFilter === 'professional' && professionalStats.totalReviews > 0 && (
-          <Card style={styles.sectionCard}>
-            <Card.Content>
+          <GlassCard style={styles.sectionCard} variant="glass-panel">
+            <View style={{ padding: 16 }}>
               <ThemedText style={styles.sectionTitle}>Category Performance (Professional Reviews)</ThemedText>
               <View style={styles.categoryContainer}>
                 {professionalStats.categoryAverages.map((category, index) => (
@@ -638,14 +640,14 @@ export default function DashboardScreen() {
                 </View>
               ))}
             </View>
-          </Card.Content>
-        </Card>
+            </View>
+          </GlassCard>
         )}
 
         {/* Category Performance - Joyride */}
         {reviewTypeFilter === 'joyride' && joyrideStats.totalReviews > 0 && (
-          <Card style={styles.sectionCard}>
-            <Card.Content>
+          <GlassCard style={styles.sectionCard} variant="glass-panel">
+            <View style={{ padding: 16 }}>
               <ThemedText style={styles.sectionTitle}>Category Performance (Joyride Reviews)</ThemedText>
               <View style={styles.categoryContainer}>
                 {joyrideRatingCategories.map((cat, index) => {
@@ -676,14 +678,14 @@ export default function DashboardScreen() {
                   );
                 })}
               </View>
-            </Card.Content>
-          </Card>
+            </View>
+          </GlassCard>
         )}
 
         {/* Top Nationalities - Only show for Professional filter */}
         {reviewTypeFilter === 'professional' && professionalStats.topNationalities.length > 0 && (
-          <Card style={styles.sectionCard}>
-            <Card.Content>
+          <GlassCard style={styles.sectionCard} variant="glass-panel">
+            <View style={{ padding: 16 }}>
               <ThemedText style={styles.sectionTitle}>Top Nationalities (Professional Reviews)</ThemedText>
               <View style={styles.nationalityContainer}>
                 {professionalStats.topNationalities.map((item, index) => {
@@ -701,124 +703,125 @@ export default function DashboardScreen() {
                   );
                 })}
               </View>
-            </Card.Content>
-          </Card>
+            </View>
+          </GlassCard>
         )}
 
         {/* Experience Stats - Only show for Professional filter */}
         {reviewTypeFilter === 'professional' && professionalStats.totalReviews > 0 && (
           <View style={styles.experienceStatsContainer}>
-            <Card style={[styles.experienceCard, styles.experienceCardSim]}>
-              <Card.Content style={styles.experienceCardContent}>
+            <GlassCard style={[styles.experienceCard, styles.experienceCardSim]} variant="glass-panel">
+              <View style={styles.experienceCardContent}>
                 <ThemedText style={styles.experienceLabel}>Simulator Experience (Professional)</ThemedText>
                 <ThemedText style={styles.experienceValue}>
                   {professionalStats.hasExperience.simulator} / {professionalStats.totalReviews}
                 </ThemedText>
                 <ThemedText style={styles.experiencePercentage}>
                   {professionalStats.totalReviews > 0 
-                    ? `${((professionalStats.hasExperience.simulator / professionalStats.totalReviews) * 100).toFixed(0)}%`
+                    ? `${Math.round((professionalStats.hasExperience.simulator / professionalStats.totalReviews) * 100)}%`
                     : '0%'
                   }
                 </ThemedText>
-              </Card.Content>
-            </Card>
+              </View>
+            </GlassCard>
 
-            <Card style={[styles.experienceCard, styles.experienceCardFly]}>
-              <Card.Content style={styles.experienceCardContent}>
+            <GlassCard style={[styles.experienceCard, styles.experienceCardFly]} variant="glass-panel">
+              <View style={styles.experienceCardContent}>
                 <ThemedText style={styles.experienceLabel}>Flying Experience (Professional)</ThemedText>
                 <ThemedText style={styles.experienceValue}>
                   {professionalStats.hasExperience.flying} / {professionalStats.totalReviews}
                 </ThemedText>
                 <ThemedText style={styles.experiencePercentage}>
                   {professionalStats.totalReviews > 0 
-                    ? `${((professionalStats.hasExperience.flying / professionalStats.totalReviews) * 100).toFixed(0)}%`
+                    ? `${Math.round((professionalStats.hasExperience.flying / professionalStats.totalReviews) * 100)}%`
                     : '0%'
                   }
                 </ThemedText>
-              </Card.Content>
-            </Card>
+              </View>
+            </GlassCard>
           </View>
         )}
 
         {/* Content Stats - Only show when All is selected */}
         {reviewTypeFilter === 'all' && (
           <View style={styles.contentStatsContainer}>
-            <Card style={styles.contentStatCard}>
-              <Card.Content style={styles.contentStatContent}>
+            <GlassCard style={styles.contentStatCard} variant="glass-panel">
+              <View style={styles.contentStatContent}>
                 <ThemedText style={styles.contentStatIcon}>📸</ThemedText>
                 <ThemedText style={styles.contentStatLabel}>Photos (All)</ThemedText>
                 <ThemedText style={styles.contentStatValue}>{stats.withPhotos}</ThemedText>
-              </Card.Content>
-            </Card>
+              </View>
+            </GlassCard>
 
-            <Card style={styles.contentStatCard}>
-              <Card.Content style={styles.contentStatContent}>
+            <GlassCard style={styles.contentStatCard} variant="glass-panel">
+              <View style={styles.contentStatContent}>
                 <ThemedText style={styles.contentStatIcon}>📝</ThemedText>
                 <ThemedText style={styles.contentStatLabel}>Handwritten (All)</ThemedText>
                 <ThemedText style={styles.contentStatValue}>{stats.withHandwriting}</ThemedText>
-              </Card.Content>
-            </Card>
+              </View>
+            </GlassCard>
           </View>
         )}
         
         {/* Professional Content Stats - Show when All or Professional selected */}
         {(reviewTypeFilter === 'all' || reviewTypeFilter === 'professional') && professionalStats.totalReviews > 0 && (
           <View style={styles.contentStatsContainer}>
-            <Card style={styles.contentStatCard}>
-              <Card.Content style={styles.contentStatContent}>
+            <GlassCard style={styles.contentStatCard} variant="glass-panel">
+              <View style={styles.contentStatContent}>
                 <ThemedText style={styles.contentStatIcon}>📸</ThemedText>
                 <ThemedText style={styles.contentStatLabel}>Photos (Professional)</ThemedText>
                 <ThemedText style={styles.contentStatValue}>{professionalStats.withPhotos}</ThemedText>
-              </Card.Content>
-            </Card>
+              </View>
+            </GlassCard>
 
-            <Card style={styles.contentStatCard}>
-              <Card.Content style={styles.contentStatContent}>
+            <GlassCard style={styles.contentStatCard} variant="glass-panel">
+              <View style={styles.contentStatContent}>
                 <ThemedText style={styles.contentStatIcon}>📝</ThemedText>
                 <ThemedText style={styles.contentStatLabel}>Handwritten (Professional)</ThemedText>
                 <ThemedText style={styles.contentStatValue}>{professionalStats.withHandwriting}</ThemedText>
-              </Card.Content>
-            </Card>
+              </View>
+            </GlassCard>
           </View>
         )}
         
         {/* Joyride Content Stats - Show when All or Joyride selected */}
         {(reviewTypeFilter === 'all' || reviewTypeFilter === 'joyride') && joyrideStats.totalReviews > 0 && (
           <View style={styles.contentStatsContainer}>
-            <Card style={styles.contentStatCard}>
-              <Card.Content style={styles.contentStatContent}>
+            <GlassCard style={styles.contentStatCard} variant="glass-panel">
+              <View style={styles.contentStatContent}>
                 <ThemedText style={styles.contentStatIcon}>📸</ThemedText>
                 <ThemedText style={styles.contentStatLabel}>Photos (Joyride)</ThemedText>
                 <ThemedText style={styles.contentStatValue}>{joyrideStats.withPhotos}</ThemedText>
-              </Card.Content>
-            </Card>
+              </View>
+            </GlassCard>
 
-            <Card style={styles.contentStatCard}>
-              <Card.Content style={styles.contentStatContent}>
+            <GlassCard style={styles.contentStatCard} variant="glass-panel">
+              <View style={styles.contentStatContent}>
                 <ThemedText style={styles.contentStatIcon}>📝</ThemedText>
                 <ThemedText style={styles.contentStatLabel}>Handwritten (Joyride)</ThemedText>
                 <ThemedText style={styles.contentStatValue}>{joyrideStats.withHandwriting}</ThemedText>
-              </Card.Content>
-            </Card>
+              </View>
+            </GlassCard>
 
-            <Card style={styles.contentStatCard}>
-              <Card.Content style={styles.contentStatContent}>
+            <GlassCard style={styles.contentStatCard} variant="glass-panel">
+              <View style={styles.contentStatContent}>
                 <ThemedText style={styles.contentStatIcon}>💲</ThemedText>
                 <ThemedText style={styles.contentStatLabel}>Avg Suggested Price (USD)</ThemedText>
                 <ThemedText style={styles.contentStatValue}>
                   {joyrideStats.averagePrice > 0 ? `$${joyrideStats.averagePrice.toFixed(0)}` : '—'}
                 </ThemedText>
-              </Card.Content>
-            </Card>
-            <Card style={styles.contentStatCard}>
-              <Card.Content style={styles.contentStatContent}>
+              </View>
+            </GlassCard>
+
+            <GlassCard style={styles.contentStatCard} variant="glass-panel">
+              <View style={styles.contentStatContent}>
                 <ThemedText style={styles.contentStatIcon}>🏷️</ThemedText>
                 <ThemedText style={styles.contentStatLabel}>Avg Cost Estimate (USD M)</ThemedText>
                 <ThemedText style={styles.contentStatValue}>
                   {joyrideStats.averageSimulatorEstimate > 0 ? `${joyrideStats.averageSimulatorEstimate.toFixed(1)}M` : '—'}
                 </ThemedText>
-              </Card.Content>
-            </Card>
+              </View>
+            </GlassCard>
           </View>
         )}
 

@@ -28,7 +28,7 @@ import StarRating from 'react-native-star-rating-widget';
 import { deleteReview, getAllReviews, initializeDataStorage, Review } from '../utils/dataStorage';
 import { exportToExcel } from '../utils/exportUtils';
 import { hapticsButtonPress, hapticsDelete, hapticsFilterSelect } from '../utils/haptics';
-import { getDevicePadding, getGridColumns, hp, isTablet, minTouchTarget, rf, rs, wp } from '../utils/responsive';
+import { getDevicePadding, hp, isTablet, minTouchTarget, rf, rs, wp } from '../utils/responsive';
 import { getSimulators, getSimulatorTypes } from '../utils/simulatorStorage';
 
 // ... (Keep interfaces same as before)
@@ -97,7 +97,7 @@ function ReviewsListScreen() {
 
   const { isDark } = useTheme();
   const { width } = useWindowDimensions();
-  const numColumns = getGridColumns(width);
+  const numColumns = 1;
   const insets = useSafeAreaInsets();
   const primaryColor = useThemeColor({}, 'primary');
   const secondaryColor = useThemeColor({}, 'secondary');
@@ -314,84 +314,50 @@ function ReviewsListScreen() {
     const simulatorType = review.simulatorType;
     
     return (
-    <GlassCard style={styles.reviewCard} intensity={15}>
-      <View style={styles.cardHeader}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+    <GlassCard style={styles.reviewCard} intensity={15} variant="glass-panel">
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        {/* Left: Indicator & Name */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 12 }}>
           <View style={[
             styles.syncDot, 
             { backgroundColor: review.isSynced ? '#10B981' : '#EF4444' }
           ]} />
           <View>
-            <ThemedText type="technical-label" style={{ color: secondaryColor }}>PILOT</ThemedText>
             <ThemedText type="defaultSemiBold" numberOfLines={1} style={styles.reviewerName}>
               {reviewerName}
             </ThemedText>
+            <ThemedText type="technical-label" style={{ color: secondaryColor, fontSize: 10 }}>
+              {simulatorName} • {reviewDate}
+            </ThemedText>
           </View>
         </View>
-        <View style={{ alignItems: 'flex-end' }}>
-          <ThemedText type="technical-label" style={{ color: secondaryColor }}>DATE</ThemedText>
-          <ThemedText style={styles.submittedDate}>{reviewDate}</ThemedText>
-        </View>
-      </View>
 
-      <View style={styles.divider} />
-
-      <View style={styles.reviewInfo}>
-        <View style={styles.infoCol}>
-          <ThemedText type="technical-label" style={{ color: secondaryColor }}>AIRCRAFT</ThemedText>
-          <ThemedText numberOfLines={1}>{simulatorName || 'N/A'}</ThemedText>
-        </View>
-        <View style={styles.infoCol}>
-          <ThemedText type="technical-label" style={{ color: secondaryColor }}>TYPE</ThemedText>
-          <ThemedText numberOfLines={1}>{simulatorType || 'N/A'}</ThemedText>
-        </View>
-      </View>
-
-      <View style={[styles.reviewInfo, { marginTop: 8 }]}>
-         <View style={styles.infoCol}>
-          <ThemedText type="technical-label" style={{ color: secondaryColor }}>NATIONALITY</ThemedText>
-          <ThemedText numberOfLines={1}>{nationality || 'N/A'}</ThemedText>
-        </View>
-        <View style={styles.infoCol}>
-          <ThemedText type="technical-label" style={{ color: secondaryColor }}>PROFESSION</ThemedText>
-          <ThemedText numberOfLines={1}>{profession || 'N/A'}</ThemedText>
-        </View>
-      </View>
-
-      <View style={styles.ratingContainer}>
-        <View>
-          <ThemedText type="technical-label" style={{ color: secondaryColor }}>RATING</ThemedText>
-          <StarRating
-            rating={reviewRating}
-            onChange={() => {}}
-            starSize={16}
-            color="#FFD700"
-            emptyColor={isDark ? '#404040' : '#E0E0E0'}
-            enableHalfStar={false}
-            style={{ marginLeft: -2, marginTop: 2 }}
+        {/* Right: Rating & Actions */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <View style={{ alignItems: 'flex-end' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <ThemedText type="defaultSemiBold" style={{ color: '#FFD700' }}>
+                {reviewRating.toFixed(1)}
+              </ThemedText>
+              <StarRating
+                rating={reviewRating}
+                onChange={() => {}}
+                starSize={12}
+                color="#FFD700"
+                emptyColor={isDark ? '#404040' : '#E0E0E0'}
+                enableHalfStar={false}
+              />
+            </View>
+          </View>
+          
+          <IconButton
+            icon="chevron-right"
+            size={20}
+            iconColor={secondaryColor}
+            onPress={() => handleViewDetail(review)}
+            style={{ margin: 0 }}
           />
         </View>
-        <ThemedText type="data-value" style={{ fontSize: 20 }}>
-          {reviewRating.toFixed(1)}
-        </ThemedText>
-      </View>
-
-      <View style={styles.cardActions}>
-        <Button
-          mode="outlined"
-          onPress={() => handleViewDetail(review)}
-          style={styles.actionButton}
-          labelStyle={{ fontSize: 12 }}
-          compact
-        >
-          Details
-        </Button>
-        <IconButton
-          icon="delete-outline"
-          size={20}
-          iconColor="#EF4444"
-          onPress={() => handleDeleteReview(review.id)}
-        />
       </View>
     </GlassCard>
     );

@@ -35,7 +35,7 @@ export const syncReviewsToSupabase = async (): Promise<number> => {
             overall_rating: review.overallRating,
             text_comment: review.textComment,
             handwritten_comment_path: review.handwrittenComment, // Store path, image upload handled separately if needed
-            photos_paths: review.photos, // Store paths
+            photos: review.photos, // Store paths
             simulator_id: review.simulatorId,
             simulator_name: review.simulatorName,
             simulator_type: review.simulatorType,

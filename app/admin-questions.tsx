@@ -1,3 +1,4 @@
+import { GlassCard } from '@/components/GlassCard';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import ThemeToggle from '@/components/ThemeToggle';
@@ -8,7 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { Button, Card, IconButton, TextInput } from 'react-native-paper';
+import { Button, IconButton, TextInput } from 'react-native-paper';
 
 import AdminLogin from '@/components/AdminLogin';
 import { Simulator } from '@/constants/simulators';
@@ -109,6 +110,7 @@ export default function AdminQuestionsScreen() {
   const textColor = useThemeColor({}, 'text');
   const borderColor = useThemeColor({ light: '#E0E0E0', dark: '#404040' }, 'text');
   const cardBackgroundColor = useThemeColor({ light: '#FFFFFF', dark: '#1E1E1E' }, 'background');
+  const primaryColor = useThemeColor({}, 'primary');
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [ratingCategories, setRatingCategories] = useState<RatingCategory[]>(defaultRatingCategories);
@@ -408,7 +410,7 @@ export default function AdminQuestionsScreen() {
             size={24}
             onPress={handleGoBack}
             style={styles.backButton}
-            iconColor={useThemeColor({}, 'primary')}
+            iconColor={primaryColor}
           />
           <View>
             <ThemedText type="hero-title" style={styles.title}>
@@ -461,8 +463,8 @@ export default function AdminQuestionsScreen() {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: hp('15%') }}>
         {activeTab === 'ratings' && (
           <>
-            <Card style={styles.infoCard}>
-              <Card.Content>
+            <GlassCard style={styles.infoCard} variant="glass-panel">
+              <View style={{ padding: 16 }}>
                 <ThemedText style={styles.infoTitle}>Rating Categories Management</ThemedText>
                 <ThemedText style={styles.infoText}>
                   Here you can edit the rating questions that appear in the PROFESSIONAL review form. 
@@ -471,15 +473,15 @@ export default function AdminQuestionsScreen() {
                 <ThemedText style={[styles.infoText, { marginTop: hp('1%'), fontStyle: 'italic', opacity: 0.8 }]}>
                   Note: Joyride reviews use fixed questions and cannot be modified here.
                 </ThemedText>
-              </Card.Content>
-            </Card>
+              </View>
+            </GlassCard>
           </>
         )}
 
         {activeTab === 'personal' && (
           <>
-            <Card style={styles.infoCard}>
-              <Card.Content>
+            <GlassCard style={styles.infoCard} variant="glass-panel">
+              <View style={{ padding: 16 }}>
                 <ThemedText style={styles.infoTitle}>Personal Information Fields Management</ThemedText>
                 <ThemedText style={styles.infoText}>
                   Here you can manage the personal information fields that appear in the PROFESSIONAL review form.
@@ -488,27 +490,27 @@ export default function AdminQuestionsScreen() {
                 <ThemedText style={[styles.infoText, { marginTop: hp('1%'), fontStyle: 'italic', opacity: 0.8 }]}>
                   Note: Joyride reviews use fixed fields and cannot be modified here.
                 </ThemedText>
-              </Card.Content>
-            </Card>
+              </View>
+            </GlassCard>
           </>
         )}
 
         {activeTab === 'simulators' && (
-          <Card style={styles.infoCard}>
-            <Card.Content>
+          <GlassCard style={styles.infoCard} variant="glass-panel">
+            <View style={{ padding: 16 }}>
               <ThemedText style={styles.infoTitle}>Simulator Management</ThemedText>
               <ThemedText style={styles.infoText}>
                 Manage the list of Aircraft (Simulators) and System Types available in the app.
               </ThemedText>
-            </Card.Content>
-          </Card>
+            </View>
+          </GlassCard>
         )}
 
         {activeTab === 'ratings' && (
           <>
             {ratingCategories.map((category, index) => (
-              <Card key={category.id ?? category.key ?? String(index)} style={styles.categoryCard}>
-                <Card.Content>
+              <GlassCard key={category.id ?? category.key ?? String(index)} style={styles.categoryCard} variant="glass-panel">
+                <View style={{ padding: 16 }}>
                   <View style={styles.categoryHeader}>
                     <ThemedText style={styles.categoryNumber}>#{index + 1}</ThemedText>
                     <View style={styles.categoryActions}>
@@ -555,8 +557,8 @@ export default function AdminQuestionsScreen() {
                       <ThemedText style={styles.categoryDescription}>{category.description}</ThemedText>
                     </View>
                   )}
-                </Card.Content>
-              </Card>
+                </View>
+              </GlassCard>
             ))}
 
             <View style={styles.bottomActions}>
@@ -575,8 +577,8 @@ export default function AdminQuestionsScreen() {
         {activeTab === 'personal' && (
           <>
             {personalInfoFields.map((field, index) => (
-              <Card key={field.id ?? field.key ?? String(index)} style={styles.categoryCard}>
-                <Card.Content>
+              <GlassCard key={field.id ?? field.key ?? String(index)} style={styles.categoryCard} variant="glass-panel">
+                <View style={{ padding: 16 }}>
                   <View style={styles.categoryHeader}>
                     <ThemedText style={styles.categoryNumber}>#{index + 1}</ThemedText>
                     <View style={styles.categoryActions}>
@@ -712,8 +714,8 @@ export default function AdminQuestionsScreen() {
                       </ThemedText>
                     </View>
                   )}
-                </Card.Content>
-              </Card>
+                </View>
+              </GlassCard>
             ))}
 
             <View style={styles.bottomActions}>
@@ -733,8 +735,8 @@ export default function AdminQuestionsScreen() {
           <>
             <ThemedText style={styles.sectionHeader}>Simulator Types</ThemedText>
             {simulatorTypes.map((type, index) => (
-              <Card key={`type-${index}`} style={styles.categoryCard}>
-                <Card.Content>
+              <GlassCard key={`type-${index}`} style={styles.categoryCard} variant="glass-panel">
+                <View style={{ padding: 16 }}>
                   <View style={styles.categoryHeader}>
                     <ThemedText style={styles.categoryNumber}>#{index + 1}</ThemedText>
                     <View style={styles.categoryActions}>
@@ -763,8 +765,8 @@ export default function AdminQuestionsScreen() {
                   ) : (
                     <ThemedText style={styles.categoryTitle}>{type}</ThemedText>
                   )}
-                </Card.Content>
-              </Card>
+                </View>
+              </GlassCard>
             ))}
             <Button mode="outlined" onPress={addNewSimType} style={styles.addButton} icon="plus">
               Add New Type
@@ -772,8 +774,8 @@ export default function AdminQuestionsScreen() {
 
             <ThemedText style={[styles.sectionHeader, { marginTop: hp('2%') }]}>Aircraft (Simulators)</ThemedText>
             {simulators.map((sim, index) => (
-              <Card key={sim.id} style={styles.categoryCard}>
-                <Card.Content>
+              <GlassCard key={sim.id} style={styles.categoryCard} variant="glass-panel">
+                <View style={{ padding: 16 }}>
                   <View style={styles.categoryHeader}>
                     <ThemedText style={styles.categoryNumber}>#{index + 1}</ThemedText>
                     <View style={styles.categoryActions}>
@@ -802,8 +804,8 @@ export default function AdminQuestionsScreen() {
                   ) : (
                     <ThemedText style={styles.categoryTitle}>{sim.name}</ThemedText>
                   )}
-                </Card.Content>
-              </Card>
+                </View>
+              </GlassCard>
             ))}
             <Button mode="outlined" onPress={addNewSimulator} style={styles.addButton} icon="plus">
               Add New Aircraft
@@ -823,8 +825,8 @@ export default function AdminQuestionsScreen() {
             </Button>
           </View>
         )}
-        <Card style={{ marginTop: 20, marginBottom: 40, backgroundColor: colors.card }}>
-          <Card.Content>
+        <GlassCard style={{ marginTop: 20, marginBottom: 40, backgroundColor: colors.card }} variant="glass-panel">
+          <View style={{ padding: 16 }}>
             <ThemedText type="subtitle" style={{ color: colors.text }}>Data Management</ThemedText>
             <Button 
               mode="contained" 
@@ -856,8 +858,8 @@ export default function AdminQuestionsScreen() {
             >
               Reset & Import Excel Data ({seedReviews.length})
             </Button>
-          </Card.Content>
-        </Card>
+          </View>
+        </GlassCard>
       </ScrollView>
     </ThemedView>
   );

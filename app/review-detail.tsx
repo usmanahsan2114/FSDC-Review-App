@@ -11,8 +11,7 @@ import { Button, Card, Chip, IconButton } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StarRating from 'react-native-star-rating-widget';
 
-
-import OptimizedImage from '@/components/OptimizedImage';
+import { Image as ExpoImage } from 'expo-image';
 import { hp, rf, rs, wp } from '../utils/responsive';
 
 
@@ -607,14 +606,11 @@ function ReviewDetailScreen() {
                 Handwritten Comments
               </ThemedText>
               <TouchableOpacity onPress={() => review.handwrittenComment && openImageModal(review.handwrittenComment)}>
-                <OptimizedImage
+                <ExpoImage
                   source={{ uri: review.handwrittenComment || '' }}
                   style={styles.handwrittenImage}
                   contentFit="contain"
                   transition={200}
-                  cachePolicy="memory-disk"
-                  priority="normal"
-                  alt="Handwritten comment"
                 />
               </TouchableOpacity>
             </Card.Content>
@@ -635,14 +631,11 @@ function ReviewDetailScreen() {
                     onPress={() => openImageModal(photo)}
                     style={styles.photoContainer}
                   >
-                    <OptimizedImage
+                    <ExpoImage
                       source={{ uri: photo }}
                       style={styles.photo}
-                      contentFit="contain"
+                      contentFit="cover"
                       transition={200}
-                      cachePolicy="memory-disk"
-                      priority="normal"
-                      alt={`Review photo ${index + 1}`}
                     />
                   </TouchableOpacity>
                 ))}
@@ -694,14 +687,11 @@ function ReviewDetailScreen() {
             onPress={() => setShowImageModal(false)}
           >
             <View style={styles.modalContent}>
-              <OptimizedImage
+              <ExpoImage
                 source={{ uri: selectedImage }}
                 style={styles.modalImage}
                 contentFit="contain"
                 transition={200}
-                cachePolicy="memory-disk"
-                priority="high"
-                alt="Full size review image"
               />
               <TouchableOpacity
                 style={styles.closeButton}
