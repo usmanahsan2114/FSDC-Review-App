@@ -128,7 +128,7 @@ export const useSupabaseSync = () => {
               text_comment: review.textComment || '',
               overall_rating: review.overallRating || 0,
               handwritten_comment_url: review.handwrittenComment,
-              photos: review.photos || [],
+              photos_url: review.photos || [],
               device_id: deviceId,
               device_name: deviceName,
               is_synced: true,

@@ -5,6 +5,7 @@ import { ReviewListSkeleton } from '@/components/SkeletonLoader';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import ThemeToggle from '@/components/ThemeToggle';
+import { COUNTRIES } from '@/constants/countries';
 import { Simulator } from '@/constants/simulators';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useThemeColor } from '@/hooks/use-theme-color';
@@ -260,14 +261,7 @@ function ReviewsListScreen() {
   }, [loadReviews]);
 
   const getPersonalInfoValue = useCallback((review: Review, key: string): string => {
-    const keyMapping: { [key: string]: keyof Review['personalInfo'] } = {
-      'fullName': 'name',
-      'nationality': 'nationality',
-      'profession': 'profession',
-      'contact': 'email'
-    };
-    const mappedKey = keyMapping[key] || key as keyof Review['personalInfo'];
-    return review.personalInfo?.[mappedKey] || '';
+    return review.personalInfo?.[key] || '';
   }, []);
 
   const calculateAverageRating = useCallback((ratings: { [key: string]: number }): number => {
@@ -346,6 +340,9 @@ function ReviewsListScreen() {
     const reviewerName = useMemo(() => getPersonalInfoValue(review, 'fullName'), [review]);
     const reviewDate = useMemo(() => new Date(review.timestamp).toLocaleDateString(), [review.timestamp]);
     const simulatorName = review.simulatorName;
+    const nationality = useMemo(() => getPersonalInfoValue(review, 'nationality'), [review]);
+    const profession = useMemo(() => getPersonalInfoValue(review, 'profession'), [review]);
+    const flag = useMemo(() => COUNTRIES.find(c => c.name === nationality)?.flag || '', [nationality]);
     
     const handleEditPress = (e: any) => {
       e.stopPropagation();
@@ -375,6 +372,11 @@ function ReviewsListScreen() {
               <ThemedText type="defaultSemiBold" numberOfLines={1} style={styles.reviewerName}>
                 {reviewerName}
               </ThemedText>
+              {(flag || profession) && (
+                <ThemedText type="default" style={{ fontSize: 12, opacity: 0.8, marginBottom: 2 }}>
+                  {flag} {profession}
+                </ThemedText>
+              )}
               <ThemedText type="technical-label" style={{ color: secondaryColor, fontSize: 10 }}>
                 {simulatorName} • {reviewDate}
               </ThemedText>

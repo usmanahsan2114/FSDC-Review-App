@@ -35,7 +35,7 @@ export const syncSingleReview = async (reviewId: string): Promise<boolean> => {
         overall_rating: review.overallRating,
         text_comment: review.textComment,
         handwritten_comment_url: review.handwrittenComment,
-        photos: review.photos,
+        photos_url: review.photos || [],
         simulator_id: review.simulatorId,
         simulator_name: review.simulatorName,
         simulator_type: review.simulatorType,
@@ -98,7 +98,7 @@ export const syncReviewsToSupabase = async (): Promise<number> => {
             overall_rating: review.overallRating,
             text_comment: review.textComment,
             handwritten_comment_url: review.handwrittenComment,
-            photos: review.photos,
+            photos_url: review.photos || [],
             simulator_id: review.simulatorId,
             simulator_name: review.simulatorName,
             simulator_type: review.simulatorType,
@@ -128,3 +128,70 @@ export const syncReviewsToSupabase = async (): Promise<number> => {
   }
 };
 
+/**
+ * Force sync ALL reviews to Supabase (including already synced ones).
+ * This updates missing fields like device_id, device_name, photos_url.
+ */
+export const forceSyncAllReviews = async (): Promise<number> => {
+  const state = await NetInfo.fetch();
+  if (!state.isConnected) {
+    console.log('No internet connection, skipping force sync');
+    return 0;
+  }
+
+  try {
+    const allReviews = await getAllReviews();
+
+    if (allReviews.length === 0) {
+      console.log('No reviews found to sync');
+      return 0;
+    }
+
+    console.log(`Force syncing ALL ${allReviews.length} reviews to update missing fields...`);
+    
+    const deviceId = await getDeviceId();
+    const deviceName = await getDeviceName();
+    let syncedCount = 0;
+
+    for (const review of allReviews) {
+      try {
+        const { error } = await supabase
+          .from('reviews')
+          .upsert({
+            id: review.id,
+            created_at: new Date(review.timestamp).toISOString(),
+            review_type: review.reviewType || 'professional',
+            personal_info: review.personalInfo,
+            ratings: review.ratings,
+            overall_rating: review.overallRating,
+            text_comment: review.textComment,
+            handwritten_comment_url: review.handwrittenComment,
+            photos_url: review.photos || [],
+            simulator_id: review.simulatorId,
+            simulator_name: review.simulatorName,
+            simulator_type: review.simulatorType,
+            device_id: deviceId,
+            device_name: deviceName,
+            is_synced: true,
+            app_version: '1.0.0',
+          });
+
+        if (error) {
+          console.error(`Failed to force sync review ${review.id}:`, error);
+          continue;
+        }
+
+        await updateReview(review.id, { isSynced: true });
+        syncedCount++;
+      } catch (err) {
+        console.error(`Error force syncing review ${review.id}:`, err);
+      }
+    }
+
+    console.log(`Successfully force synced ${syncedCount} of ${allReviews.length} reviews`);
+    return syncedCount;
+  } catch (error) {
+    console.error('Force sync error:', error);
+    return 0;
+  }
+};

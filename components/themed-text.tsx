@@ -43,35 +43,35 @@ const styles = StyleSheet.create({
   default: {
     fontSize: rf(16),
     lineHeight: rf(24),
-    paddingVertical: rf(4),
+
     fontFamily: Platform.select({ ios: 'System', android: 'sans-serif' }),
   },
   defaultSemiBold: {
     fontSize: rf(16),
     lineHeight: rf(24),
     fontWeight: '600',
-    paddingVertical: rf(4),
+
     fontFamily: Platform.select({ ios: 'System', android: 'sans-serif-medium' }),
   },
   title: {
     fontSize: rf(32),
     fontWeight: 'bold',
     lineHeight: rf(44),
-    paddingVertical: rf(8),
+
     fontFamily: Platform.select({ ios: 'System', android: 'sans-serif' }),
   },
   subtitle: {
     fontSize: rf(20),
     fontWeight: 'bold',
     lineHeight: rf(30),
-    paddingVertical: rf(6),
+
     fontFamily: Platform.select({ ios: 'System', android: 'sans-serif' }),
   },
   link: {
     lineHeight: rf(30),
     fontSize: rf(16),
     color: '#0a7ea4',
-    paddingVertical: rf(4),
+
     fontFamily: Platform.select({ ios: 'System', android: 'sans-serif' }),
   },
   technicalLabel: {

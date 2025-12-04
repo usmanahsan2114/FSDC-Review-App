@@ -17,6 +17,7 @@ import { clearCorruptedStorage, importReviews } from '../utils/dataStorage';
 import { getDeviceConfig, regenerateDeviceId, setAdminPin, setDeviceId, setDeviceName } from '../utils/deviceConfig';
 import { hp, rf, rs, wp } from '../utils/responsive';
 import { getSimulators, getSimulatorTypes, saveSimulators, saveSimulatorTypes } from '../utils/simulatorStorage';
+import { forceSyncAllReviews } from '../utils/sync';
 
 const seedReviews = require('../assets/data/seed_reviews.json');
 interface RatingCategory {
@@ -944,6 +945,50 @@ export default function AdminQuestionsScreen() {
             >
               Save Device Settings
             </Button>
+
+            {/* Manual Sync to Cloud Button */}
+            <GlassCard style={[styles.categoryCard, { marginTop: 20 }]} variant="glass-panel">
+              <View style={{ padding: 16 }}>
+                <ThemedText style={[styles.categoryTitle, { marginBottom: 8 }]}>Cloud Sync</ThemedText>
+                <ThemedText style={{ opacity: 0.7, marginBottom: 16, fontSize: 13 }}>
+                  Force sync ALL reviews to Supabase. This updates existing reviews with any missing fields (device info, photos, etc).
+                </ThemedText>
+                <Button 
+                  mode="contained" 
+                  onPress={async () => {
+                    Alert.alert(
+                      'Sync All Reviews',
+                      'This will upload ALL reviews to cloud, updating any missing fields like device_id, device_name, and photos_url. Continue?',
+                      [
+                        { text: 'Cancel', style: 'cancel' },
+                        {
+                          text: 'Sync All',
+                          onPress: async () => {
+                            try {
+                              Alert.alert('Syncing...', 'Uploading all reviews to cloud. This may take a moment...');
+                              const count = await forceSyncAllReviews();
+                              if (count > 0) {
+                                Alert.alert('Success', `Successfully synced ${count} review(s) to cloud with all fields updated.`);
+                              } else {
+                                Alert.alert('Info', 'No reviews found to sync.');
+                              }
+                            } catch (error) {
+                              console.error('Force sync error:', error);
+                              Alert.alert('Error', 'Failed to sync reviews. Check your internet connection.');
+                            }
+                          }
+                        }
+                      ]
+                    );
+                  }}
+                  icon="cloud-sync"
+                  buttonColor="#10B981"
+                  textColor="#FFFFFF"
+                >
+                  Sync All Reviews to Cloud
+                </Button>
+              </View>
+            </GlassCard>
           </>
         )}
 
