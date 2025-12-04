@@ -34,18 +34,17 @@ We need to introduce a configuration for Simulators.
 interface Simulator {
   id: string;
   name: string; // e.g., "Super Mushshak", "Mi-17"
-  type: "Aeromix" | "AeroSim Pro";
+  type: "Fixed Wing" | "Rotary Wing";
   image?: string; // Optional thumbnail
 }
 
 // FSDC Specific Data (Updated from Website Analysis)
 const FSDC_SIMULATORS: Simulator[] = [
-  { id: "1", name: "Super Mushshak (Fixed Wing)", type: "AeroSim Pro" },
-  { id: "2", name: "Mi-17 (Rotary Wing)", type: "AeroSim Pro" },
-  { id: "3", name: "Bell 412 (Rotary Wing)", type: "AeroMix" },
-  { id: "4", name: "Cessna 172 (Fixed Wing)", type: "AeroMix" },
-  { id: "5", name: "Generic VR Trainer", type: "AeroFlex" },
-  { id: "6", name: "Hybrid Infinity System", type: "AeroFision" },
+  { id: "1", name: "Super Mushshak", type: "Fixed Wing" },
+  { id: "2", name: "Mi-17", type: "Rotary Wing" },
+  { id: "3", name: "Bell 412", type: "Rotary Wing" },
+  { id: "4", name: "Cessna 172", type: "Fixed Wing" },
+  { id: "5", name: "Hybrid Infinity System", type: "Fixed Wing" },
 ];
 ```
 

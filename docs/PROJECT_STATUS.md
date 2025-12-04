@@ -83,6 +83,14 @@ Added new Dashboard button:
 - **PDF Content**: Added "Simulator Details" section to generated PDFs.
 - **Input Sanitization**: Numeric fields (Cost Estimate) are text inputs. While `keyboardType` is set, users can still paste invalid text, potentially affecting analytics.
 
+### L. Standardization & Data Integrity 🛡️ (COMPLETED)
+
+**Files Modified:** `constants/simulators.ts`, `utils/simulatorStorage.ts`, `app/add-review.tsx`, `utils/validation.ts`
+
+- **Simulator Standardization**: Restricted to exactly 5 simulators (Super Mushshak, Mi-17, Bell 412, Cessna 172, Hybrid Infinity System) and 2 types (Fixed Wing, Rotary Wing).
+- **Integer Ratings**: Enforced strict 1-5 integer ratings in UI and validation.
+- **Database Consistency**: SQL migration scripts created and executed to align existing data.
+
 ## 4. Errors
 
 _No critical runtime errors or linter errors were detected during the static analysis._
