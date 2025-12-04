@@ -1,8 +1,8 @@
 import { FSDC_SIMULATORS, SIMULATOR_TYPES, Simulator } from '@/constants/simulators';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const SIMULATORS_KEY = 'fsdc_simulators_v1';
-const SIMULATOR_TYPES_KEY = 'fsdc_simulator_types_v1';
+const SIMULATORS_KEY = 'fsdc_simulators_v3';
+const SIMULATOR_TYPES_KEY = 'fsdc_simulator_types_v2';
 
 export const getSimulators = async (): Promise<Simulator[]> => {
   try {

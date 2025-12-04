@@ -28,6 +28,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StarRating from 'react-native-star-rating-widget';
 import { initializeDataStorage, saveReview } from '../utils/dataStorage';
+import { syncReviewsToSupabase } from '../utils/sync';
 
 const defaultPersonalInfoFields: PersonalInfoField[] = [
   {
@@ -633,6 +634,9 @@ function ReviewPreviewScreen() {
       }
       
       if (reviewId) {
+        // Trigger background sync
+        syncReviewsToSupabase().catch((err: any) => console.error('Background sync failed:', err));
+        
         setHasSubmittedSuccessfully(true);
         setShowSuccessDialog(true);
       } else {

@@ -11,7 +11,7 @@ interface AdminLoginProps {
   onLogin: () => void;
 }
 
-const ADMIN_PIN = '1234'; // Simple PIN for now
+const ADMIN_PIN = '2114'; // Simple PIN for now
 
 export default function AdminLogin({ onLogin }: AdminLoginProps) {
   const [pin, setPin] = useState('');

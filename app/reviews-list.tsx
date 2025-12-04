@@ -171,27 +171,47 @@ function ReviewsListScreen() {
 
   const handleDeleteReview = useCallback(async (reviewId: string) => {
     hapticsButtonPress();
-    Alert.alert(
-      'Delete Review',
-      'Are you sure you want to delete this review? This action cannot be undone.',
+    
+    // Prompt for PIN
+    Alert.prompt(
+      'Admin Access',
+      'Enter Admin PIN to delete review:',
       [
         { text: 'Cancel', style: 'cancel', onPress: () => hapticsButtonPress() },
         {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              hapticsDelete();
-              await deleteReview(reviewId);
-              await loadReviews();
-              Alert.alert('Success', 'Review deleted successfully');
-            } catch (error) {
-              console.error('Error deleting review:', error);
-              Alert.alert('Error', 'Failed to delete review');
+          text: 'Verify',
+          onPress: (pin?: string) => {
+            if (pin === '2114') {
+              // Proceed with deletion
+              Alert.alert(
+                'Delete Review',
+                'Are you sure you want to delete this review? This action cannot be undone.',
+                [
+                  { text: 'Cancel', style: 'cancel', onPress: () => hapticsButtonPress() },
+                  {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                      try {
+                        hapticsDelete();
+                        await deleteReview(reviewId);
+                        await loadReviews();
+                        Alert.alert('Success', 'Review deleted successfully');
+                      } catch (error) {
+                        console.error('Error deleting review:', error);
+                        Alert.alert('Error', 'Failed to delete review');
+                      }
+                    },
+                  },
+                ]
+              );
+            } else {
+              Alert.alert('Error', 'Incorrect PIN');
             }
-          },
-        },
-      ]
+          }
+        }
+      ],
+      'secure-text'
     );
   }, []);
 
@@ -359,9 +379,15 @@ function ReviewsListScreen() {
     <Card style={styles.reviewCard}>
       <Card.Content>
         <View style={styles.cardHeader}>
-            <ThemedText style={styles.reviewerName}>
-              {reviewerName}
-          </ThemedText>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={[
+                styles.syncDot, 
+                { backgroundColor: review.isSynced ? '#4CAF50' : '#F44336' }
+              ]} />
+              <ThemedText style={styles.reviewerName}>
+                {reviewerName}
+              </ThemedText>
+            </View>
           <ThemedText style={styles.submittedDate}>
               {reviewDate}
           </ThemedText>
@@ -1237,6 +1263,12 @@ const createStyles = (isDark: boolean, cardBackgroundColor: string, borderColor:
     flex: 1,
     alignItems: 'center',
     paddingHorizontal: wp('5%'),
+  },
+  syncDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
   },
 });
 

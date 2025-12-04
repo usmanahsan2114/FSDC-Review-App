@@ -97,12 +97,15 @@ This is the central data entry point.
 
 - **Offline-First Strategy**:
   - App always reads/writes to local `AsyncStorage`.
-  - `useSupabaseSync` hook runs in the background.
+  - Background sync handles data consistency.
 - **Sync Process**:
-  1.  **Detection**: Hook checks for reviews where `isSynced === false`.
-  2.  **Push**: Attempts to `upsert` these reviews to Supabase `reviews` table.
-  3.  **Completion**: On success, updates local review to `isSynced: true`.
-  4.  **Status**: `SyncProvider` exposes status to `ConnectivityStatus` component (Syncing, Online, Error).
+  1.  **Trigger**: Sync is triggered on app launch, network recovery (via `NetInfo`), and immediately after review submission.
+  2.  **Logic (`utils/sync.ts`)**:
+      - Checks for internet connection.
+      - Finds local reviews where `isSynced === false`.
+      - Upserts them to Supabase `reviews` table.
+      - Updates local review to `isSynced: true` on success.
+  3.  **Status**: Visual indicators (Green/Red dots) in `ReviewsListScreen` show the sync status of each review.
 - **Admin Reset**:
   - "Reset & Import" button clears local storage and imports seed data.
   - Automatically triggers a sync to push fresh data to Supabase.

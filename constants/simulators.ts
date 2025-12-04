@@ -1,16 +1,15 @@
 export interface Simulator {
   id: string;
   name: string;
-  type: string;
   image?: any; // Using require() for local images
 }
 
-export const SIMULATOR_TYPES = ['Fixed Wing', 'Rotary Wing'];
+export const SIMULATOR_TYPES = ['AeroSim Pro', 'Aeromix'];
 
 export const FSDC_SIMULATORS: Simulator[] = [
-  { id: '1', name: 'Super Mushshak', type: 'Fixed Wing' },
-  { id: '2', name: 'Mi-17', type: 'Rotary Wing' },
-  { id: '3', name: 'Bell 412', type: 'Rotary Wing' },
-  { id: '4', name: 'Cessna 172', type: 'Fixed Wing' },
-  { id: '5', name: 'Hybrid Infinity System', type: 'Fixed Wing' },
+  { id: '1', name: 'Super Mushshak' },
+  { id: '2', name: 'Enstrom 280-FX' },
+  { id: '3', name: 'Mushshak MFI-17' },
+  { id: '4', name: 'Mi-17' },
+  { id: '5', name: 'AS-350/ H125' },
 ];
