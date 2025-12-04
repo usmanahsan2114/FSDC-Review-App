@@ -85,7 +85,7 @@ function ReviewsListScreen() {
   const [personalInfoFields, setPersonalInfoFields] = useState<PersonalInfoField[]>(defaultPersonalInfoFields);
   const [ratingCategories, setRatingCategories] = useState<RatingCategory[]>(defaultRatingCategories);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategoryKey, setSelectedCategoryKey] = useState<string | 'overall'>('overall');
+
   const [menuVisible, setMenuVisible] = useState(false);
   const [sortOption, setSortOption] = useState<'dateDesc' | 'dateAsc' | 'ratingDesc' | 'ratingAsc' | 'nameAsc' | 'nameDesc'>('dateDesc');
   const [filterMinRating, setFilterMinRating] = useState<number>(0);

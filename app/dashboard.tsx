@@ -271,7 +271,7 @@ export default function DashboardScreen() {
 
   if (loading) {
     return (
-      <ThemedView style={styles.container}>
+      <ThemedView style={styles.container} variant="grid-background">
         <View style={styles.header}>
           <ThemedText type="title" style={styles.title}>Dashboard</ThemedText>
           <ThemeToggle />
@@ -284,7 +284,7 @@ export default function DashboardScreen() {
   }
 
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView style={styles.container} variant="grid-background">
       <ScrollView 
         style={styles.scrollView} 
         showsVerticalScrollIndicator={false}

@@ -61,7 +61,7 @@ export default function HomeScreen() {
             {label}
           </ThemedText>
           {subLabel && (
-            <ThemedText type="technical-label" style={{ opacity: 0.7, marginTop: 4 }}>
+            <ThemedText type="technical-label" style={{ color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)', marginTop: 4 }}>
               {subLabel}
             </ThemedText>
           )}
@@ -101,7 +101,7 @@ export default function HomeScreen() {
               ORBITAL COMMAND
             </ThemedText>
             
-            <ThemedText type="technical-label" style={[styles.subtitle, { opacity: isDark ? 0.9 : 0.6 }]}>
+            <ThemedText type="technical-label" style={[styles.subtitle, { color: isDark ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.6)' }]}>
               FLIGHT SIMULATION DATA CENTER FSDC
             </ThemedText>
           </View>
