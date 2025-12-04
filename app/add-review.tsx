@@ -11,24 +11,24 @@ import * as MediaLibrary from 'expo-media-library';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-    Alert,
-    BackHandler,
-    Image,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View
+  Alert,
+  BackHandler,
+  Image,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import {
-    Button,
-    Dialog,
-    IconButton,
-    Paragraph,
-    Portal,
-    SegmentedButtons,
-    TextInput
+  Button,
+  Dialog,
+  IconButton,
+  Paragraph,
+  Portal,
+  SegmentedButtons,
+  TextInput
 } from 'react-native-paper';
 import StarRating from 'react-native-star-rating-widget';
 
@@ -74,6 +74,7 @@ interface FormData {
   simulatorId?: string;
   simulatorName?: string;
   simulatorType?: string;
+  id?: string; // For editing existing reviews
 }
 
 interface Country {
@@ -525,6 +526,7 @@ function AddReviewScreen() {
         simulatorName: parsedEditData.simulatorName,
         simulatorType: parsedEditData.simulatorType,
         photos: parsedEditData.photos ?? [],
+        id: parsedEditData.id, // Preserve ID for editing
       };
     }
 
@@ -1173,7 +1175,7 @@ function AddReviewScreen() {
         keyboardDismissMode="on-drag"
         contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, hp('10%')) }}
       >
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: Math.max(insets.top, rs(24)) }]}>
           <View style={styles.headerTop}>
             <IconButton
               icon="arrow-left"

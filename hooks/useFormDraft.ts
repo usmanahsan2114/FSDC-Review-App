@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useRef, useState } from 'react';
 
-const DRAFT_KEY = 'review_form_draft';
+export const DRAFT_KEY = 'review_form_draft';
 
 export const useFormDraft = <T>(initialState: T) => {
   const [data, setData] = useState<T>(initialState);

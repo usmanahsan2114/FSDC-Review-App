@@ -4,31 +4,32 @@ import { ThemedView } from '@/components/themed-view';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { DRAFT_KEY } from '@/hooks/useFormDraft';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as MediaLibrary from 'expo-media-library';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-    Alert,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View
+  Alert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import {
-    Button,
-    Card,
-    Chip,
-    Dialog,
-    IconButton,
-    Paragraph,
-    Portal,
+  Button,
+  Card,
+  Chip,
+  Dialog,
+  IconButton,
+  Paragraph,
+  Portal,
 } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StarRating from 'react-native-star-rating-widget';
-import { initializeDataStorage, saveReview } from '../utils/dataStorage';
-import { syncReviewsToSupabase } from '../utils/sync';
+import { initializeDataStorage, saveReview, updateReview } from '../utils/dataStorage';
+import { syncSingleReview } from '../utils/sync';
 
 const defaultPersonalInfoFields: PersonalInfoField[] = [
   {
@@ -386,6 +387,7 @@ interface FormData {
   simulatorId?: string;
   simulatorName?: string;
   simulatorType?: string;
+  id?: string;
 }
 
 // Joyride questions (same as in add-review.tsx)
@@ -618,7 +620,17 @@ function ReviewPreviewScreen() {
         simulatorType: formData.simulatorType,
       };
       
-      const reviewId = await saveReview(reviewData);
+      let reviewId = formData.id;
+      let success = false;
+
+      if (reviewId) {
+        // Update existing review
+        success = await updateReview(reviewId, reviewData);
+      } else {
+        // Create new review
+        reviewId = await saveReview(reviewData);
+        success = !!reviewId;
+      }
       
       // Save handwritten comment to gallery if it exists
       if (formData.handwrittenComment) {
@@ -626,17 +638,25 @@ function ReviewPreviewScreen() {
           const { status } = await MediaLibrary.requestPermissionsAsync(true, ['photo']);
           if (status === 'granted') {
             await MediaLibrary.createAssetAsync(formData.handwrittenComment);
-            // Optional: Notify user or just fail silently as it's an enhancement
           }
         } catch (mediaError) {
           console.error('Error saving to gallery:', mediaError);
         }
       }
       
-      if (reviewId) {
-        // Trigger background sync
-        syncReviewsToSupabase().catch((err: any) => console.error('Background sync failed:', err));
+      if (success && reviewId) {
+        // Real-time sync: Push to Supabase immediately
+        syncSingleReview(reviewId).then(synced => {
+          if (synced) {
+            console.log('Review synced to Supabase in real-time');
+          } else {
+            console.log('Review saved locally, will sync when online');
+          }
+        }).catch((err: any) => console.error('Real-time sync failed:', err));
         
+        // Clear the form draft so the next review starts fresh
+        await AsyncStorage.removeItem(DRAFT_KEY);
+
         setHasSubmittedSuccessfully(true);
         setShowSuccessDialog(true);
       } else {

@@ -14,6 +14,7 @@ import { Button, IconButton, TextInput } from 'react-native-paper';
 import AdminLogin from '@/components/AdminLogin';
 import { Simulator } from '@/constants/simulators';
 import { clearCorruptedStorage, importReviews } from '../utils/dataStorage';
+import { getDeviceConfig, regenerateDeviceId, setAdminPin, setDeviceId, setDeviceName } from '../utils/deviceConfig';
 import { hp, rf, rs, wp } from '../utils/responsive';
 import { getSimulators, getSimulatorTypes, saveSimulators, saveSimulatorTypes } from '../utils/simulatorStorage';
 
@@ -118,7 +119,7 @@ export default function AdminQuestionsScreen() {
   const [personalInfoFields, setPersonalInfoFields] = useState<PersonalInfoField[]>(defaultPersonalInfoFields);
   const [editingPersonalField, setEditingPersonalField] = useState<string | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
-  const [activeTab, setActiveTab] = useState<'ratings' | 'personal' | 'simulators'>('ratings');
+  const [activeTab, setActiveTab] = useState<'ratings' | 'personal' | 'simulators' | 'device'>('ratings');
 
   // Simulator State
   const [simulators, setSimulators] = useState<Simulator[]>([]);
@@ -126,12 +127,66 @@ export default function AdminQuestionsScreen() {
   const [editingSimulator, setEditingSimulator] = useState<string | null>(null);
   const [editingSimType, setEditingSimType] = useState<string | null>(null);
 
+  // Device Settings State
+  const [deviceId, setDeviceIdState] = useState('');
+  const [deviceName, setDeviceNameState] = useState('');
+  const [adminPin, setAdminPinState] = useState('');
+  const [showPin, setShowPin] = useState(false);
+  const [isSavingDevice, setIsSavingDevice] = useState(false);
+
   // Load saved data on component mount
   useEffect(() => {
     loadRatingCategories();
     loadPersonalInfoFields();
     loadSimulatorData();
+    loadDeviceSettings();
   }, []);
+
+  const loadDeviceSettings = async () => {
+    try {
+      const config = await getDeviceConfig();
+      setDeviceIdState(config.deviceId);
+      setDeviceNameState(config.deviceName);
+      setAdminPinState(config.adminPin);
+    } catch (error) {
+      console.error('Error loading device settings:', error);
+    }
+  };
+
+  const saveDeviceSettings = async () => {
+    setIsSavingDevice(true);
+    try {
+      await setDeviceId(deviceId);
+      await setDeviceName(deviceName);
+      if (adminPin.length >= 4) {
+        await setAdminPin(adminPin);
+      }
+      Alert.alert('Success', 'Device settings saved successfully');
+    } catch (error) {
+      console.error('Error saving device settings:', error);
+      Alert.alert('Error', 'Failed to save device settings');
+    } finally {
+      setIsSavingDevice(false);
+    }
+  };
+
+  const handleRegenerateDeviceId = async () => {
+    Alert.alert(
+      'Regenerate Device ID',
+      'This will generate a new unique device ID. Are you sure?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Regenerate',
+          onPress: async () => {
+            const newId = await regenerateDeviceId();
+            setDeviceIdState(newId);
+            Alert.alert('Success', 'New Device ID generated');
+          }
+        }
+      ]
+    );
+  };
 
   const loadSimulatorData = async () => {
     const sims = await getSimulators();
@@ -402,7 +457,7 @@ export default function AdminQuestionsScreen() {
   }
 
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView style={styles.container} variant="grid-background">
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <IconButton
@@ -456,6 +511,14 @@ export default function AdminQuestionsScreen() {
         >
           <ThemedText style={[styles.tabText, activeTab === 'simulators' && styles.activeTabText]}>
             Simulators
+          </ThemedText>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'device' && styles.activeTab]}
+          onPress={() => setActiveTab('device')}
+        >
+          <ThemedText style={[styles.tabText, activeTab === 'device' && styles.activeTabText]}>
+            Device
           </ThemedText>
         </TouchableOpacity>
       </View>
@@ -809,6 +872,77 @@ export default function AdminQuestionsScreen() {
             ))}
             <Button mode="outlined" onPress={addNewSimulator} style={styles.addButton} icon="plus">
               Add New Aircraft
+            </Button>
+          </>
+        )}
+
+        {activeTab === 'device' && (
+          <>
+            <GlassCard style={styles.infoCard} variant="glass-panel">
+              <View style={{ padding: 16 }}>
+                <ThemedText style={styles.infoTitle}>Device Settings</ThemedText>
+                <ThemedText style={styles.infoText}>
+                  Configure device identification and admin access. These settings apply only to THIS device.
+                </ThemedText>
+                <ThemedText style={[styles.infoText, { marginTop: hp('1%'), fontStyle: 'italic', opacity: 0.8 }]}>
+                  Note: Device settings are not synced to Supabase or other devices.
+                </ThemedText>
+              </View>
+            </GlassCard>
+
+            <GlassCard style={[styles.categoryCard, { marginTop: 16 }]} variant="glass-panel">
+              <View style={{ padding: 16 }}>
+                <ThemedText style={[styles.categoryTitle, { marginBottom: 16 }]}>Device Identification</ThemedText>
+                
+                <TextInput
+                  label="Device ID"
+                  value={deviceId}
+                  onChangeText={setDeviceIdState}
+                  style={[styles.textInput, { marginBottom: 12 }]}
+                  mode="outlined"
+                  right={<TextInput.Icon icon="refresh" onPress={handleRegenerateDeviceId} />}
+                />
+                
+                <TextInput
+                  label="Device Name"
+                  value={deviceName}
+                  onChangeText={setDeviceNameState}
+                  style={[styles.textInput, { marginBottom: 12 }]}
+                  mode="outlined"
+                  placeholder="Enter a friendly name for this device"
+                />
+              </View>
+            </GlassCard>
+
+            <GlassCard style={[styles.categoryCard, { marginTop: 16 }]} variant="glass-panel">
+              <View style={{ padding: 16 }}>
+                <ThemedText style={[styles.categoryTitle, { marginBottom: 16 }]}>Admin Access</ThemedText>
+                
+                <TextInput
+                  label="Admin PIN"
+                  value={adminPin}
+                  onChangeText={setAdminPinState}
+                  style={[styles.textInput, { marginBottom: 8 }]}
+                  mode="outlined"
+                  secureTextEntry={!showPin}
+                  keyboardType="numeric"
+                  maxLength={6}
+                  right={<TextInput.Icon icon={showPin ? "eye-off" : "eye"} onPress={() => setShowPin(!showPin)} />}
+                />
+                <ThemedText style={{ opacity: 0.6, fontSize: 12, marginBottom: 16 }}>
+                  PIN is required for edit/delete operations (minimum 4 digits)
+                </ThemedText>
+              </View>
+            </GlassCard>
+
+            <Button 
+              mode="contained" 
+              onPress={saveDeviceSettings} 
+              loading={isSavingDevice}
+              style={{ marginTop: 20, marginHorizontal: 16 }}
+              icon="content-save"
+            >
+              Save Device Settings
             </Button>
           </>
         )}

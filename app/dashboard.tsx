@@ -10,6 +10,7 @@ import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Button, IconButton, Menu } from 'react-native-paper';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StarRating from 'react-native-star-rating-widget';
 import { getAllReviews, Review } from '../utils/dataStorage';
 import { hapticsFilterSelect } from '../utils/haptics';
@@ -51,6 +52,7 @@ const joyrideRatingCategories: RatingCategory[] = [
 
 export default function DashboardScreen() {
   const { isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const backgroundColor = useThemeColor({}, 'background');
   const cardBackgroundColor = useThemeColor({ light: '#FFFFFF', dark: '#1E1E1E' }, 'background');
   const borderColor = useThemeColor({ light: '#E0E0E0', dark: '#404040' }, 'text');
@@ -283,8 +285,12 @@ export default function DashboardScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
+      <ScrollView 
+        style={styles.scrollView} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: Math.max(hp('5%'), insets.bottom + 20) }}
+      >
+        <View style={[styles.header, { paddingTop: insets.top }]}>
           <IconButton
             icon="arrow-left"
             size={24}

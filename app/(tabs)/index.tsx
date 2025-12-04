@@ -57,7 +57,7 @@ export default function HomeScreen() {
           <IconButton icon={icon} iconColor={color} size={32} style={{ margin: 0 }} />
         </View>
         <View style={styles.actionTextContainer}>
-          <ThemedText type="defaultSemiBold" style={{ color: variant === 'accent' ? color : undefined }}>
+          <ThemedText type="defaultSemiBold" style={{ color: variant === 'accent' ? color : (isDark ? '#FFFFFF' : '#000000') }}>
             {label}
           </ThemedText>
           {subLabel && (

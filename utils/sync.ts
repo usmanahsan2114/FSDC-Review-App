@@ -1,7 +1,68 @@
 import { supabase } from '@/lib/supabase';
 import NetInfo from '@react-native-community/netinfo';
-import { getAllReviews, updateReview } from './dataStorage';
+import { getAllReviews, getReviewById, updateReview } from './dataStorage';
+import { getDeviceId, getDeviceName } from './deviceConfig';
 
+/**
+ * Sync a single review to Supabase immediately (real-time sync on submit).
+ * Returns true if sync succeeded, false otherwise.
+ */
+export const syncSingleReview = async (reviewId: string): Promise<boolean> => {
+  const state = await NetInfo.fetch();
+  if (!state.isConnected) {
+    console.log('No internet connection, review will sync later');
+    return false;
+  }
+
+  try {
+    const review = await getReviewById(reviewId);
+    if (!review) {
+      console.error(`Review ${reviewId} not found`);
+      return false;
+    }
+
+    const deviceId = await getDeviceId();
+    const deviceName = await getDeviceName();
+
+    const { error } = await supabase
+      .from('reviews')
+      .upsert({
+        id: review.id,
+        created_at: new Date(review.timestamp).toISOString(),
+        review_type: review.reviewType || 'professional',
+        personal_info: review.personalInfo,
+        ratings: review.ratings,
+        overall_rating: review.overallRating,
+        text_comment: review.textComment,
+        handwritten_comment_url: review.handwrittenComment,
+        photos: review.photos,
+        simulator_id: review.simulatorId,
+        simulator_name: review.simulatorName,
+        simulator_type: review.simulatorType,
+        device_id: deviceId,
+        device_name: deviceName,
+        is_synced: true,
+        app_version: '1.0.0',
+      });
+
+    if (error) {
+      console.error(`Failed to sync review ${reviewId}:`, error);
+      return false;
+    }
+
+    // Mark as synced locally
+    await updateReview(reviewId, { isSynced: true });
+    console.log(`Review ${reviewId} synced successfully in real-time`);
+    return true;
+  } catch (err) {
+    console.error(`Error syncing review ${reviewId}:`, err);
+    return false;
+  }
+};
+
+/**
+ * Sync all unsynced reviews to Supabase (background sync).
+ */
 export const syncReviewsToSupabase = async (): Promise<number> => {
   const state = await NetInfo.fetch();
   if (!state.isConnected) {
@@ -19,27 +80,32 @@ export const syncReviewsToSupabase = async (): Promise<number> => {
     }
 
     console.log(`Found ${unsyncedReviews.length} unsynced reviews, starting sync...`);
+    
+    const deviceId = await getDeviceId();
+    const deviceName = await getDeviceName();
     let syncedCount = 0;
 
     for (const review of unsyncedReviews) {
       try {
-        // Prepare data for Supabase (match table structure)
         const { error } = await supabase
           .from('reviews')
           .upsert({
             id: review.id,
-            timestamp: new Date(review.timestamp).toISOString(),
-            review_type: review.reviewType,
+            created_at: new Date(review.timestamp).toISOString(),
+            review_type: review.reviewType || 'professional',
             personal_info: review.personalInfo,
             ratings: review.ratings,
             overall_rating: review.overallRating,
             text_comment: review.textComment,
-            handwritten_comment_path: review.handwrittenComment, // Store path, image upload handled separately if needed
-            photos: review.photos, // Store paths
+            handwritten_comment_url: review.handwrittenComment,
+            photos: review.photos,
             simulator_id: review.simulatorId,
             simulator_name: review.simulatorName,
             simulator_type: review.simulatorType,
-            created_at: new Date().toISOString(),
+            device_id: deviceId,
+            device_name: deviceName,
+            is_synced: true,
+            app_version: '1.0.0',
           });
 
         if (error) {
@@ -47,7 +113,6 @@ export const syncReviewsToSupabase = async (): Promise<number> => {
           continue;
         }
 
-        // Mark as synced locally
         await updateReview(review.id, { isSynced: true });
         syncedCount++;
       } catch (err) {
@@ -62,3 +127,4 @@ export const syncReviewsToSupabase = async (): Promise<number> => {
     return 0;
   }
 };
+

@@ -1,3 +1,4 @@
+import { GlassCard } from '@/components/GlassCard';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import ThemeToggle from '@/components/ThemeToggle';
@@ -7,7 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { Button, Card, Chip, IconButton } from 'react-native-paper';
+import { Button, Chip, IconButton } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StarRating from 'react-native-star-rating-widget';
 
@@ -409,8 +410,12 @@ function ReviewDetailScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
+      <ScrollView 
+        style={styles.scrollView} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: Math.max(hp('5%'), insets.bottom + 20) }}
+      >
+        <View style={[styles.header, { paddingTop: insets.top }]}>
           <View style={styles.headerTop}>
             <IconButton
               icon="arrow-left"
@@ -430,12 +435,10 @@ function ReviewDetailScreen() {
           </View>
         </View>
 
-
-
         {/* Simulator Information */}
         {(review.simulatorName || review.simulatorType) && (
-          <Card style={styles.section}>
-            <Card.Content>
+          <GlassCard style={styles.section} variant="glass-panel">
+            <View style={styles.cardContent}>
               <ThemedText type="subtitle" style={styles.sectionTitle}>
                 Simulator Details
               </ThemedText>
@@ -451,13 +454,13 @@ function ReviewDetailScreen() {
                   <Chip icon="cog" style={styles.chip}>{review.simulatorType}</Chip>
                 </View>
               )}
-            </Card.Content>
-          </Card>
+            </View>
+          </GlassCard>
         )}
 
         {/* Personal Information */}
-        <Card style={styles.section}>
-          <Card.Content>
+        <GlassCard style={styles.section} variant="glass-panel">
+          <View style={styles.cardContent}>
             <ThemedText type="subtitle" style={styles.sectionTitle}>
               Personal Information
             </ThemedText>
@@ -529,12 +532,12 @@ function ReviewDetailScreen() {
                 </>
               );
             })()}
-          </Card.Content>
-        </Card>
+          </View>
+        </GlassCard>
 
         {/* Overall Rating */}
-        <Card style={styles.section}>
-          <Card.Content>
+        <GlassCard style={styles.section} variant="glass-panel">
+          <View style={styles.cardContent}>
             <ThemedText type="subtitle" style={styles.sectionTitle}>
               Overall Rating
             </ThemedText>
@@ -551,12 +554,12 @@ function ReviewDetailScreen() {
                 enableHalfStar={false}
               />
             </View>
-          </Card.Content>
-        </Card>
+          </View>
+        </GlassCard>
 
         {/* Detailed Ratings */}
-        <Card style={styles.section}>
-          <Card.Content>
+        <GlassCard style={styles.section} variant="glass-panel">
+          <View style={styles.cardContent}>
             <ThemedText type="subtitle" style={styles.sectionTitle}>
               Detailed Ratings
             </ThemedText>
@@ -581,27 +584,27 @@ function ReviewDetailScreen() {
                 </View>
               </View>
             ))}
-          </Card.Content>
-        </Card>
+          </View>
+        </GlassCard>
 
         {/* Text Comments */}
         {review.textComment && (
-          <Card style={styles.section}>
-            <Card.Content>
+          <GlassCard style={styles.section} variant="glass-panel">
+            <View style={styles.cardContent}>
               <ThemedText type="subtitle" style={styles.sectionTitle}>
                 Comments
               </ThemedText>
               <ThemedText style={styles.commentText}>
                 {review.textComment}
               </ThemedText>
-            </Card.Content>
-          </Card>
+            </View>
+          </GlassCard>
         )}
 
         {/* Handwritten Comments */}
         {review.handwrittenComment && (
-          <Card style={styles.section}>
-            <Card.Content>
+          <GlassCard style={styles.section} variant="glass-panel">
+            <View style={styles.cardContent}>
               <ThemedText type="subtitle" style={styles.sectionTitle}>
                 Handwritten Comments
               </ThemedText>
@@ -613,14 +616,14 @@ function ReviewDetailScreen() {
                   transition={200}
                 />
               </TouchableOpacity>
-            </Card.Content>
-          </Card>
+            </View>
+          </GlassCard>
         )}
 
         {/* Photos */}
         {review.photos && review.photos.length > 0 && (
-          <Card style={styles.section}>
-            <Card.Content>
+          <GlassCard style={styles.section} variant="glass-panel">
+            <View style={styles.cardContent}>
               <ThemedText type="subtitle" style={styles.sectionTitle}>
                 Photos ({review.photos.length})
               </ThemedText>
@@ -640,11 +643,11 @@ function ReviewDetailScreen() {
                   </TouchableOpacity>
                 ))}
               </View>
-            </Card.Content>
-          </Card>
+            </View>
+          </GlassCard>
         )}
 
-        <View style={[styles.buttonContainer, { paddingBottom: Math.max(hp('1.5%'), insets.bottom) }]}>
+        <View style={styles.buttonContainer}>
           <Button
             mode="contained"
             onPress={handleGeneratePDF}
@@ -713,7 +716,6 @@ export default React.memo(ReviewDetailScreen);
 const createStyles = (isDark: boolean) => StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: hp('5%'),
   },
   scrollView: {
     flex: 1,
@@ -762,11 +764,10 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
   section: {
     marginBottom: hp('2%'),
     borderRadius: wp('3%'),
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    overflow: 'hidden',
+  },
+  cardContent: {
+    padding: wp('4%'),
   },
   sectionTitle: {
     fontSize: wp('5%'),

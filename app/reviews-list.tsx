@@ -13,20 +13,22 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    Alert,
-    FlatList,
-    ListRenderItem,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    useWindowDimensions,
-    View
+  Alert,
+  FlatList,
+  ListRenderItem,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  useWindowDimensions,
+  View
 } from 'react-native';
 import { Button, Chip, Divider, IconButton, Menu, Modal, Portal, TextInput } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StarRating from 'react-native-star-rating-widget';
 
 import { deleteReview, getAllReviews, initializeDataStorage, Review } from '../utils/dataStorage';
+import { validateAdminPin } from '../utils/deviceConfig';
 import { exportToExcel } from '../utils/exportUtils';
 import { hapticsButtonPress, hapticsFilterSelect } from '../utils/haptics';
 import { getDevicePadding, hp, isTablet, minTouchTarget, rf, rs, wp } from '../utils/responsive';
@@ -78,6 +80,8 @@ function ReviewsListScreen() {
   const [pinModalVisible, setPinModalVisible] = useState(false);
   const [adminPin, setAdminPin] = useState('');
   const [reviewToDelete, setReviewToDelete] = useState<Review | null>(null);
+  const [reviewToEdit, setReviewToEdit] = useState<Review | null>(null);
+  const [pinAction, setPinAction] = useState<'edit' | 'delete'>('delete');
   const [personalInfoFields, setPersonalInfoFields] = useState<PersonalInfoField[]>(defaultPersonalInfoFields);
   const [ratingCategories, setRatingCategories] = useState<RatingCategory[]>(defaultRatingCategories);
   const [searchQuery, setSearchQuery] = useState('');
@@ -88,7 +92,7 @@ function ReviewsListScreen() {
   const [filterHasPhotos, setFilterHasPhotos] = useState(false);
   const [filterHasHandwriting, setFilterHasHandwriting] = useState(false);
   const [avgMenuVisible, setAvgMenuVisible] = useState(false);
-  const [reviewTypeFilter, setReviewTypeFilter] = useState<'all' | 'professional' | 'joyride'>('professional');
+  const [reviewTypeFilter, setReviewTypeFilter] = useState<'all' | 'professional' | 'joyride'>('all');
   const [typeFilterMenuVisible, setTypeFilterMenuVisible] = useState(false);
   const [simulatorTypeFilter, setSimulatorTypeFilter] = useState<string>('all');
   const [simulatorFilter, setSimulatorFilter] = useState<string>('all');
@@ -169,7 +173,7 @@ function ReviewsListScreen() {
   const handleViewDetail = useCallback((review: Review) => {
     router.push({
       pathname: '/review-detail',
-      params: { id: review.id }
+      params: { reviewData: JSON.stringify(review) }
     });
   }, []);
 
@@ -186,41 +190,62 @@ function ReviewsListScreen() {
     // User said "use needs to add admin pin".
     // I'll implement a simple PIN modal state.
     
+    setPinAction('delete');
     setReviewToDelete(review);
     setPinModalVisible(true);
   }, []);
 
-  const confirmDelete = async () => {
-    if (adminPin !== '2114') {
+  const handleEditReview = useCallback(async (review: Review) => {
+    setPinAction('edit');
+    setReviewToEdit(review);
+    setPinModalVisible(true);
+  }, []);
+
+  const confirmPinAction = async () => {
+    const isValid = await validateAdminPin(adminPin);
+    if (!isValid) {
       Alert.alert('Error', 'Incorrect PIN');
       return;
     }
-    
-    if (!reviewToDelete) return;
 
-    try {
-      // 1. Delete from Supabase
-      const { error } = await supabase.from('reviews').delete().eq('id', reviewToDelete.id);
-      if (error) {
-        console.error('Error deleting from Supabase:', error);
-        Alert.alert('Error', 'Failed to delete from server, but will delete locally.');
-      }
-
-      // 2. Delete locally
-      const success = await deleteReview(reviewToDelete.id);
-      if (success) {
-        setReviews(prev => prev.filter(r => r.id !== reviewToDelete.id));
-        Alert.alert('Success', 'Review deleted successfully');
-      } else {
-        Alert.alert('Error', 'Failed to delete locally');
-      }
-    } catch (error) {
-      console.error('Delete error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
-    } finally {
+    if (pinAction === 'edit' && reviewToEdit) {
+      // Navigate to add-review with edit data
       setPinModalVisible(false);
       setAdminPin('');
-      setReviewToDelete(null);
+      router.push({
+        pathname: '/add-review',
+        params: { editData: JSON.stringify(reviewToEdit) }
+      });
+      setReviewToEdit(null);
+      return;
+    }
+
+    // Handle delete action
+    if (pinAction === 'delete' && reviewToDelete) {
+      try {
+        // 1. Delete from Supabase
+        const { error } = await supabase.from('reviews').delete().eq('id', reviewToDelete.id);
+        if (error) {
+          console.error('Error deleting from Supabase:', error);
+          Alert.alert('Error', 'Failed to delete from server, but will delete locally.');
+        }
+
+        // 2. Delete locally
+        const success = await deleteReview(reviewToDelete.id);
+        if (success) {
+          setReviews(prev => prev.filter(r => r.id !== reviewToDelete.id));
+          Alert.alert('Success', 'Review deleted successfully');
+        } else {
+          Alert.alert('Error', 'Failed to delete locally');
+        }
+      } catch (error) {
+        console.error('Delete error:', error);
+        Alert.alert('Error', 'An unexpected error occurred');
+      } finally {
+        setPinModalVisible(false);
+        setAdminPin('');
+        setReviewToDelete(null);
+      }
     }
   };
 
@@ -320,66 +345,79 @@ function ReviewsListScreen() {
     const reviewRating = useMemo(() => calculateAverageRating(review.ratings), [review.ratings]);
     const reviewerName = useMemo(() => getPersonalInfoValue(review, 'fullName'), [review]);
     const reviewDate = useMemo(() => new Date(review.timestamp).toLocaleDateString(), [review.timestamp]);
-    const nationality = useMemo(() => getPersonalInfoValue(review, 'nationality'), [review]);
-    const profession = useMemo(() => getPersonalInfoValue(review, 'profession'), [review]);
     const simulatorName = review.simulatorName;
-    const simulatorType = review.simulatorType;
+    
+    const handleEditPress = (e: any) => {
+      e.stopPropagation();
+      handleEditReview(review);
+    };
+
+    const handleDeletePress = (e: any) => {
+      e.stopPropagation();
+      handleDeleteReview(review);
+    };
     
     return (
-    <GlassCard style={styles.reviewCard} intensity={15} variant="glass-panel">
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        {/* Left: Indicator & Name */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 12 }}>
-          <View style={[
-            styles.syncDot, 
-            { backgroundColor: review.isSynced ? '#10B981' : '#EF4444' }
-          ]} />
-          <View>
-            <ThemedText type="defaultSemiBold" numberOfLines={1} style={styles.reviewerName}>
-              {reviewerName}
-            </ThemedText>
-            <ThemedText type="technical-label" style={{ color: secondaryColor, fontSize: 10 }}>
-              {simulatorName} • {reviewDate}
-            </ThemedText>
-          </View>
-        </View>
-
-        {/* Right: Rating & Actions */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <View style={{ alignItems: 'flex-end' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <ThemedText type="defaultSemiBold" style={{ color: '#FFD700' }}>
-                {reviewRating.toFixed(1)}
+    <TouchableOpacity 
+      activeOpacity={0.7} 
+      onPress={() => handleViewDetail(review)}
+      style={{ marginBottom: 8 }}
+    >
+      <GlassCard style={styles.reviewCard} intensity={15} variant="glass-panel">
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          {/* Left: Indicator & Name */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 12 }}>
+            <View style={[
+              styles.syncDot, 
+              { backgroundColor: review.isSynced ? '#10B981' : '#EF4444' }
+            ]} />
+            <View>
+              <ThemedText type="defaultSemiBold" numberOfLines={1} style={styles.reviewerName}>
+                {reviewerName}
               </ThemedText>
-              <StarRating
-                rating={reviewRating}
-                onChange={() => {}}
-                starSize={12}
-                color="#FFD700"
-                emptyColor={isDark ? '#404040' : '#E0E0E0'}
-                enableHalfStar={false}
-              />
+              <ThemedText type="technical-label" style={{ color: secondaryColor, fontSize: 10 }}>
+                {simulatorName} • {reviewDate}
+              </ThemedText>
             </View>
           </View>
-          
-          <IconButton
-            icon="delete"
-            size={20}
-            iconColor="#EF4444"
-            onPress={() => handleDeleteReview(review)}
-            style={{ margin: 0 }}
-          />
 
-          <IconButton
-            icon="chevron-right"
-            size={20}
-            iconColor={secondaryColor}
-            onPress={() => handleViewDetail(review)}
-            style={{ margin: 0 }}
-          />
+          {/* Right: Rating & Actions */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <View style={{ alignItems: 'flex-end' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <ThemedText type="defaultSemiBold" style={{ color: '#FFD700' }}>
+                  {reviewRating.toFixed(1)}
+                </ThemedText>
+                <StarRating
+                  rating={reviewRating}
+                  onChange={() => {}}
+                  starSize={12}
+                  color="#FFD700"
+                  emptyColor={isDark ? '#404040' : '#E0E0E0'}
+                  enableHalfStar={false}
+                />
+              </View>
+            </View>
+            
+            <IconButton
+              icon="pencil"
+              size={20}
+              iconColor="#3B82F6"
+              onPress={handleEditPress}
+              style={{ margin: 0 }}
+            />
+
+            <IconButton
+              icon="delete"
+              size={20}
+              iconColor="#EF4444"
+              onPress={handleDeletePress}
+              style={{ margin: 0 }}
+            />
+          </View>
         </View>
-      </View>
-    </GlassCard>
+      </GlassCard>
+    </TouchableOpacity>
     );
   }, (prevProps, nextProps) => {
     return prevProps.review.id === nextProps.review.id && 
@@ -590,27 +628,6 @@ function ReviewsListScreen() {
           <View style={styles.overallAverageContainer}>
             <View style={styles.overallHeaderRow}>
               <ThemedText style={styles.overallAverageLabel}>Average Rating</ThemedText>
-              <Menu
-                visible={avgMenuVisible}
-                onDismiss={() => setAvgMenuVisible(false)}
-                anchor={
-                  <Button 
-                    mode="outlined" 
-                    onPress={() => setAvgMenuVisible(!avgMenuVisible)} 
-                    style={styles.menuAnchorButton} 
-                    compact
-                    contentStyle={{ minHeight: minTouchTarget, paddingHorizontal: rs(6) }}
-                  >
-                    Showing: {selectedCategoryKey === 'overall' ? 'Overall' : (ratingCategories.find(rc => rc.key === selectedCategoryKey)?.title || 'Category')}
-                  </Button>
-                }
-              >
-                <Menu.Item onPress={() => { setSelectedCategoryKey('overall'); setAvgMenuVisible(false); }} title="Overall" />
-                <Divider />
-                {ratingCategories.map(rc => (
-                  <Menu.Item key={rc.key} onPress={() => { setSelectedCategoryKey(rc.key); setAvgMenuVisible(false); }} title={rc.title} />
-                ))}
-              </Menu>
             </View>
             <View style={styles.overallAverageDisplay}>
               <StarRating
@@ -662,7 +679,9 @@ function ReviewsListScreen() {
         <Modal visible={pinModalVisible} onDismiss={() => setPinModalVisible(false)} contentContainerStyle={{ padding: 20, margin: 20 }}>
           <GlassCard style={{ padding: 20 }} variant="glass-panel">
             <ThemedText type="subtitle" style={{ marginBottom: 10, textAlign: 'center' }}>Admin Verification</ThemedText>
-            <ThemedText style={{ marginBottom: 20, textAlign: 'center' }}>Enter PIN to delete review</ThemedText>
+            <ThemedText style={{ marginBottom: 20, textAlign: 'center' }}>
+              Enter PIN to {pinAction === 'edit' ? 'edit' : 'delete'} review
+            </ThemedText>
             <TextInput
               mode="outlined"
               value={adminPin}
@@ -674,8 +693,14 @@ function ReviewsListScreen() {
               autoFocus
             />
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 10 }}>
-              <Button mode="outlined" onPress={() => setPinModalVisible(false)} style={{ flex: 1 }}>Cancel</Button>
-              <Button mode="contained" onPress={confirmDelete} style={{ flex: 1, backgroundColor: '#EF4444' }}>Delete</Button>
+              <Button mode="outlined" onPress={() => { setPinModalVisible(false); setAdminPin(''); }} style={{ flex: 1 }}>Cancel</Button>
+              <Button 
+                mode="contained" 
+                onPress={confirmPinAction} 
+                style={{ flex: 1, backgroundColor: pinAction === 'edit' ? '#3B82F6' : '#EF4444' }}
+              >
+                {pinAction === 'edit' ? 'Edit' : 'Delete'}
+              </Button>
             </View>
           </GlassCard>
         </Modal>
