@@ -641,6 +641,14 @@ function AddReviewScreen() {
     loadPersonalInfoFields();
   }, [reviewType]);
 
+  // Clear draft when coming from successful submission
+  useEffect(() => {
+    const fromSubmission = getFirstParamValue(params.fromSubmission as string | string[] | undefined);
+    if (fromSubmission === 'true' && isDraftLoaded) {
+      clearDraft();
+    }
+  }, [params.fromSubmission, isDraftLoaded]);
+
   // Simulator selection state
   const [showSimulatorModal, setShowSimulatorModal] = useState(true); // Show initially
   const [selectedSimulator, setSelectedSimulator] = useState<Simulator | null>(null);

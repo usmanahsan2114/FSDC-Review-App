@@ -101,7 +101,7 @@ export default function HomeScreen() {
               ORBITAL COMMAND
             </ThemedText>
             
-            <ThemedText type="technical-label" style={styles.subtitle}>
+            <ThemedText type="technical-label" style={[styles.subtitle, { opacity: isDark ? 0.9 : 0.6 }]}>
               FLIGHT SIMULATION DATA CENTER FSDC
             </ThemedText>
           </View>

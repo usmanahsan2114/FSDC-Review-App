@@ -8,6 +8,7 @@ import ThemeToggle from '@/components/ThemeToggle';
 import { Simulator } from '@/constants/simulators';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { supabase } from '@/lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -27,7 +28,7 @@ import StarRating from 'react-native-star-rating-widget';
 
 import { deleteReview, getAllReviews, initializeDataStorage, Review } from '../utils/dataStorage';
 import { exportToExcel } from '../utils/exportUtils';
-import { hapticsButtonPress, hapticsDelete, hapticsFilterSelect } from '../utils/haptics';
+import { hapticsButtonPress, hapticsFilterSelect } from '../utils/haptics';
 import { getDevicePadding, hp, isTablet, minTouchTarget, rf, rs, wp } from '../utils/responsive';
 import { getSimulators, getSimulatorTypes } from '../utils/simulatorStorage';
 
@@ -74,6 +75,9 @@ function ReviewsListScreen() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [pinModalVisible, setPinModalVisible] = useState(false);
+  const [adminPin, setAdminPin] = useState('');
+  const [reviewToDelete, setReviewToDelete] = useState<Review | null>(null);
   const [personalInfoFields, setPersonalInfoFields] = useState<PersonalInfoField[]>(defaultPersonalInfoFields);
   const [ratingCategories, setRatingCategories] = useState<RatingCategory[]>(defaultRatingCategories);
   const [searchQuery, setSearchQuery] = useState('');
@@ -162,55 +166,63 @@ function ReviewsListScreen() {
     }
   };
 
-  const handleDeleteReview = useCallback(async (reviewId: string) => {
-    hapticsButtonPress();
-    Alert.prompt(
-      'Admin Access',
-      'Enter Admin PIN to delete review:',
-      [
-        { text: 'Cancel', style: 'cancel', onPress: () => hapticsButtonPress() },
-        {
-          text: 'Verify',
-          onPress: (pin?: string) => {
-            if (pin === '2114') {
-              Alert.alert(
-                'Delete Review',
-                'Are you sure you want to delete this review? This action cannot be undone.',
-                [
-                  { text: 'Cancel', style: 'cancel', onPress: () => hapticsButtonPress() },
-                  {
-                    text: 'Delete',
-                    style: 'destructive',
-                    onPress: async () => {
-                      try {
-                        hapticsDelete();
-                        await deleteReview(reviewId);
-                        await loadReviews();
-                        Alert.alert('Success', 'Review deleted successfully');
-                      } catch (error) {
-                        console.error('Error deleting review:', error);
-                        Alert.alert('Error', 'Failed to delete review');
-                      }
-                    },
-                  },
-                ]
-              );
-            } else {
-              Alert.alert('Error', 'Incorrect PIN');
-            }
-          }
-        }
-      ],
-      'secure-text'
-    );
-  }, []);
-
   const handleViewDetail = useCallback((review: Review) => {
     router.push({
       pathname: '/review-detail',
-      params: { reviewData: JSON.stringify(review) }
+      params: { id: review.id }
     });
   }, []);
+
+  const handleDeleteReview = useCallback(async (review: Review) => {
+    // 1. Prompt for PIN
+    // We can't use a prompt with secure text entry easily in React Native Alert.prompt on Android (it's iOS only for secure text).
+    // So we might need a custom modal or just a simple Alert if we don't care about hiding the PIN on Android (but user said "admin pin").
+    // Or we can use a simple prompt and check the text.
+    // Since Alert.prompt is not cross-platform for secure text, I'll use a simple approach or assume iOS/Android differences.
+    // Actually, for "Admin PIN", a custom modal is better, but for speed, I'll try Alert.prompt (works on iOS, Android support varies or requires library).
+    // Wait, Expo/React Native `Alert.prompt` works on Android now? No, it's still iOS only.
+    // I should use a custom modal for PIN entry.
+    // But to save time and complexity, I'll use a simple `Alert` confirmation first, then maybe a custom modal if I have time.
+    // User said "use needs to add admin pin".
+    // I'll implement a simple PIN modal state.
+    
+    setReviewToDelete(review);
+    setPinModalVisible(true);
+  }, []);
+
+  const confirmDelete = async () => {
+    if (adminPin !== '2114') {
+      Alert.alert('Error', 'Incorrect PIN');
+      return;
+    }
+    
+    if (!reviewToDelete) return;
+
+    try {
+      // 1. Delete from Supabase
+      const { error } = await supabase.from('reviews').delete().eq('id', reviewToDelete.id);
+      if (error) {
+        console.error('Error deleting from Supabase:', error);
+        Alert.alert('Error', 'Failed to delete from server, but will delete locally.');
+      }
+
+      // 2. Delete locally
+      const success = await deleteReview(reviewToDelete.id);
+      if (success) {
+        setReviews(prev => prev.filter(r => r.id !== reviewToDelete.id));
+        Alert.alert('Success', 'Review deleted successfully');
+      } else {
+        Alert.alert('Error', 'Failed to delete locally');
+      }
+    } catch (error) {
+      console.error('Delete error:', error);
+      Alert.alert('Error', 'An unexpected error occurred');
+    } finally {
+      setPinModalVisible(false);
+      setAdminPin('');
+      setReviewToDelete(null);
+    }
+  };
 
   const handleGoBack = useCallback(() => {
     router.back();
@@ -333,7 +345,7 @@ function ReviewsListScreen() {
         </View>
 
         {/* Right: Rating & Actions */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
           <View style={{ alignItems: 'flex-end' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
               <ThemedText type="defaultSemiBold" style={{ color: '#FFD700' }}>
@@ -350,6 +362,14 @@ function ReviewsListScreen() {
             </View>
           </View>
           
+          <IconButton
+            icon="delete"
+            size={20}
+            iconColor="#EF4444"
+            onPress={() => handleDeleteReview(review)}
+            style={{ margin: 0 }}
+          />
+
           <IconButton
             icon="chevron-right"
             size={20}
@@ -637,6 +657,29 @@ function ReviewsListScreen() {
           Back to Home
         </Button>
       </View>
+
+      <Portal>
+        <Modal visible={pinModalVisible} onDismiss={() => setPinModalVisible(false)} contentContainerStyle={{ padding: 20, margin: 20 }}>
+          <GlassCard style={{ padding: 20 }} variant="glass-panel">
+            <ThemedText type="subtitle" style={{ marginBottom: 10, textAlign: 'center' }}>Admin Verification</ThemedText>
+            <ThemedText style={{ marginBottom: 20, textAlign: 'center' }}>Enter PIN to delete review</ThemedText>
+            <TextInput
+              mode="outlined"
+              value={adminPin}
+              onChangeText={setAdminPin}
+              secureTextEntry
+              keyboardType="numeric"
+              maxLength={4}
+              style={{ marginBottom: 20, backgroundColor: cardBackgroundColor }}
+              autoFocus
+            />
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 10 }}>
+              <Button mode="outlined" onPress={() => setPinModalVisible(false)} style={{ flex: 1 }}>Cancel</Button>
+              <Button mode="contained" onPress={confirmDelete} style={{ flex: 1, backgroundColor: '#EF4444' }}>Delete</Button>
+            </View>
+          </GlassCard>
+        </Modal>
+      </Portal>
     </ThemedView>
   );
 }
