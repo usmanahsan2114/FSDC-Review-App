@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "FSDC Flight Reviews",
-    "slug": "ReviewsApp",
+    "slug": "fsdc-review",
     "version": "1.0.0",
     "orientation": "default",
     "icon": "./assets/images/AppIcons/playstore.png",
@@ -25,7 +25,16 @@
       "package": "com.anonymous.ReviewsApp",
       "proguardEnabled": true,
       "enableProguardInReleaseBuilds": true,
-      "enableDangerousExperimentalLeanBuilds": false
+      "enableDangerousExperimentalLeanBuilds": false,
+      "permissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+        "android.permission.ACCESS_MEDIA_LOCATION",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_MEDIA_AUDIO"
+      ]
     },
     "web": {
       "output": "static",
@@ -64,9 +73,9 @@
     },
     "extra": {
       "eas": {
-        "projectId": "5c5f44c3-1c1b-4ce5-b06f-e930fcf4e90d"
+        "projectId": "c8dc5454-3f41-4534-9960-2e7a16285a2e"
       }
     },
-    "owner": "usmanahsan2114"
+    "owner": "usmanahsan2115"
   }
 }

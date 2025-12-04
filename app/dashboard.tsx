@@ -288,10 +288,11 @@ export default function DashboardScreen() {
             size={24}
             onPress={() => router.back()}
             style={{ margin: 0, marginRight: 4 }}
+            iconColor={useThemeColor({}, 'primary')}
           />
           <View style={styles.headerContent}>
-            <ThemedText type="title" style={styles.title}>Dashboard</ThemedText>
-            <ThemedText style={styles.subtitle}>Analytics & Insights</ThemedText>
+            <ThemedText type="hero-title" style={styles.title}>DASHBOARD</ThemedText>
+            <ThemedText style={styles.subtitle}>ANALYTICS & INSIGHTS</ThemedText>
           </View>
           <View style={styles.headerActions}>
             <Menu

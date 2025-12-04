@@ -408,10 +408,16 @@ export default function AdminQuestionsScreen() {
             size={24}
             onPress={handleGoBack}
             style={styles.backButton}
+            iconColor={useThemeColor({}, 'primary')}
           />
-          <ThemedText type="title" style={styles.title}>
-            Admin: Manage Questions
-          </ThemedText>
+          <View>
+            <ThemedText type="hero-title" style={styles.title}>
+              SYSTEM CONFIG
+            </ThemedText>
+            <ThemedText type="technical-label" style={{ opacity: 0.7 }}>
+              DATA MANAGEMENT
+            </ThemedText>
+          </View>
         </View>
         <View style={styles.headerActions}>
           <ThemeToggle />

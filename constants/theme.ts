@@ -10,34 +10,41 @@ const tintColorDark = '#60A5FA'; // Lighter blue for dark mode
 
 export const Colors = {
   light: {
-    text: '#1F2937', // Dark gray instead of black
-    background: '#FFFFFF',
-    tint: tintColorLight,
-    icon: '#6B7280', // Medium gray
-    tabIconDefault: '#9CA3AF', // Light gray
-    tabIconSelected: tintColorLight,
+    // Even in light mode, we keep a technical, high-contrast look, but inverted for visibility if needed.
+    // However, the prompt implies a strong brand identity. Let's make "light" mode just a slightly brighter version of the dark mode
+    // or strictly adhere to the requested "Deep Space" vibe. 
+    // For a true "cockpit" feel, a dark interface is standard. 
+    // Let's map "light" to a high-visibility day-mode cockpit (grey/white) and "dark" to night-mode.
+    
+    text: '#111827',
+    background: '#F3F4F6', // Light grey for day mode
+    tint: '#0070F3', // Deep blue
+    icon: '#4B5563',
+    tabIconDefault: '#9CA3AF',
+    tabIconSelected: '#0070F3',
     card: '#FFFFFF',
-    border: '#E5E7EB', // Light border
-    notification: '#EF4444', // Professional red
-    surface: '#F9FAFB', // Very light gray
-    primary: tintColorLight,
-    secondary: '#6B7280', // Medium gray
-    accent: '#8B5CF6', // Professional purple
+    border: '#E5E7EB',
+    notification: '#EF4444',
+    surface: '#FFFFFF',
+    primary: '#0070F3',
+    secondary: '#64748B',
+    accent: '#F59E0B', // Amber for alerts
   },
   dark: {
-    text: '#F9FAFB', // Light gray instead of white
-    background: '#111827', // Dark gray instead of black
-    tint: tintColorDark,
-    icon: '#9CA3AF', // Medium gray
-    tabIconDefault: '#6B7280', // Darker gray
-    tabIconSelected: tintColorDark,
-    card: '#1F2937', // Dark gray card
-    border: '#374151', // Medium dark border
-    notification: '#F87171', // Softer red for dark mode
-    surface: '#1F2937', // Dark gray surface
-    primary: tintColorDark,
-    secondary: '#9CA3AF', // Light gray
-    accent: '#A78BFA', // Lighter purple for dark mode
+    // Orbital Command Palette
+    text: '#E2E8F0', // High legibility grey-white
+    background: '#0B0E14', // Deep Space Black
+    tint: '#00F0FF', // Signal Cyan
+    icon: '#94A3B8', // Slate lighter
+    tabIconDefault: '#475569',
+    tabIconSelected: '#00F0FF',
+    card: '#151922', // Dark Navy Surface
+    border: '#1E293B', // Slate dark
+    notification: '#FF4500', // Alert Orange
+    surface: '#151922',
+    primary: '#00F0FF',
+    secondary: '#64748B',
+    accent: '#FF4500',
   },
 };
 

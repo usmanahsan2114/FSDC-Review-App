@@ -1,6 +1,7 @@
 export interface Simulator {
   id: string;
   name: string;
+  type?: string;
   image?: any; // Using require() for local images
 }
 

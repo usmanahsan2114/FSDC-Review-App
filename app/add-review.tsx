@@ -1,4 +1,5 @@
 import { AnimatedEntry } from '@/components/AnimatedEntry';
+import { GlassCard } from '@/components/GlassCard';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import ThemeToggle from '@/components/ThemeToggle';
@@ -22,7 +23,6 @@ import {
 } from 'react-native';
 import {
     Button,
-    Card,
     Dialog,
     IconButton,
     Paragraph,
@@ -482,14 +482,17 @@ function AddReviewScreen() {
   const borderColor = useThemeColor({ light: '#E0E0E0', dark: '#404040' }, 'text');
   const cardBackgroundColor = useThemeColor({ light: '#FFFFFF', dark: '#1E1E1E' }, 'background');
   const inputBackgroundColor = useThemeColor({ light: '#FFFFFF', dark: '#2A2A2A' }, 'background');
+  const primaryColor = useThemeColor({}, 'primary');
+  const secondaryColor = useThemeColor({}, 'secondary');
+  const accentColor = useThemeColor({}, 'accent');
   
   // Performance optimization
   const { debounce, throttle, memoize, runAfterInteractions } = usePerformance();
   
   // Create dynamic styles - optimized with useMemo
   const styles = useMemo(() => 
-    createStyles(backgroundColor, textColor, borderColor, cardBackgroundColor, inputBackgroundColor),
-    [backgroundColor, textColor, borderColor, cardBackgroundColor, inputBackgroundColor]
+    createStyles(backgroundColor, textColor, borderColor, cardBackgroundColor, inputBackgroundColor, primaryColor, secondaryColor, accentColor, isDark),
+    [backgroundColor, textColor, borderColor, cardBackgroundColor, inputBackgroundColor, primaryColor, secondaryColor, accentColor, isDark]
   );
   
   // Rating categories state - initialize based on review type
@@ -1056,7 +1059,7 @@ function AddReviewScreen() {
 
   return (
     <AnimatedEntry style={{ flex: 1 }}>
-    <ThemedView style={styles.container}>
+    <ThemedView style={styles.container} variant="grid-background">
       {/* Simulator Selection Modal */}
       <Modal
         visible={showSimulatorModal}
@@ -1074,7 +1077,7 @@ function AddReviewScreen() {
           }
         }}
       >
-        <ThemedView style={[styles.container, { paddingTop: rs(20) }]}>
+        <ThemedView style={[styles.container, { paddingTop: rs(20) }]} variant="grid-background">
           <View style={styles.header}>
             <View style={styles.headerTop}>
               <IconButton
@@ -1090,6 +1093,7 @@ function AddReviewScreen() {
                   }
                 }}
                 style={styles.backButton}
+                iconColor={primaryColor}
               />
               <ThemedText type="title" style={styles.title}>
                 {!selectedSimulator ? 'Select Simulator' : 'Select System Type'}
@@ -1102,34 +1106,36 @@ function AddReviewScreen() {
             {!selectedSimulator ? (
               // Step 1: Select Simulator
               availableSimulators.map((sim) => (
-                <Card 
-                  key={sim.id} 
-                  onPress={() => handleSimulatorSelect(sim)}
-                  style={{ backgroundColor: cardBackgroundColor, marginBottom: rs(8) }}
-                >
-                  <Card.Content style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <View>
-                      <ThemedText type="subtitle" style={{ fontWeight: 'bold' }}>{sim.name}</ThemedText>
+                <TouchableOpacity key={sim.id} onPress={() => handleSimulatorSelect(sim)} activeOpacity={0.7}>
+                  <GlassCard 
+                    style={{ marginBottom: rs(8) }}
+                    variant="glass-panel"
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <View>
+                        <ThemedText type="subtitle" style={{ fontWeight: 'bold', color: primaryColor }}>{sim.name}</ThemedText>
+                      </View>
+                      <IconButton icon="chevron-right" iconColor={secondaryColor} />
                     </View>
-                    <IconButton icon="chevron-right" />
-                  </Card.Content>
-                </Card>
+                  </GlassCard>
+                </TouchableOpacity>
               ))
             ) : (
               // Step 2: Select Type
               availableTypes.map((type) => (
-                <Card 
-                  key={type} 
-                  onPress={() => handleTypeSelect(type as string)}
-                  style={{ backgroundColor: cardBackgroundColor, marginBottom: rs(8) }}
-                >
-                  <Card.Content style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <View>
-                      <ThemedText type="subtitle" style={{ fontWeight: 'bold' }}>{type}</ThemedText>
+                <TouchableOpacity key={type} onPress={() => handleTypeSelect(type as string)} activeOpacity={0.7}>
+                  <GlassCard 
+                    style={{ marginBottom: rs(8) }}
+                    variant="glass-panel"
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <View>
+                        <ThemedText type="subtitle" style={{ fontWeight: 'bold', color: primaryColor }}>{type}</ThemedText>
+                      </View>
+                      <IconButton icon="check" iconColor={accentColor} />
                     </View>
-                    <IconButton icon="check" />
-                  </Card.Content>
-                </Card>
+                  </GlassCard>
+                </TouchableOpacity>
               ))
             )}
           </ScrollView>
@@ -1138,23 +1144,21 @@ function AddReviewScreen() {
 
       {/* Simulator Info Banner (if selected) */}
       {!showSimulatorModal && selectedSimulator && (
-        <TouchableOpacity onPress={() => setShowSimulatorModal(true)} style={{ 
-          backgroundColor: cardBackgroundColor, 
-          padding: rs(12), 
-          marginHorizontal: wp('4%'), 
-          marginTop: rs(8), 
-          borderRadius: 8,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          borderWidth: 1,
-          borderColor: borderColor
-        }}>
-          <View>
-            <ThemedText style={{ fontSize: rf(12), opacity: 0.7 }}>Selected Simulator:</ThemedText>
-            <ThemedText style={{ fontWeight: 'bold', color: '#2196F3' }}>{selectedSimulator.name} ({selectedSimulatorType})</ThemedText>
-          </View>
-          <IconButton icon="pencil" size={20} />
+        <TouchableOpacity onPress={() => setShowSimulatorModal(true)}>
+          <GlassCard style={{ 
+            padding: rs(12), 
+            marginHorizontal: wp('4%'), 
+            marginTop: rs(8), 
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }} variant="glass-panel">
+            <View>
+              <ThemedText style={{ fontSize: rf(12), color: secondaryColor, fontFamily: Platform.select({ ios: 'Courier New', android: 'monospace' }) }}>SELECTED SYSTEM:</ThemedText>
+              <ThemedText style={{ fontWeight: 'bold', color: primaryColor, fontSize: rf(16) }}>{selectedSimulator.name} ({selectedSimulatorType})</ThemedText>
+            </View>
+            <IconButton icon="pencil" size={20} iconColor={accentColor} />
+          </GlassCard>
         </TouchableOpacity>
       )}
 
@@ -1172,14 +1176,15 @@ function AddReviewScreen() {
               size={24}
               onPress={() => router.back()}
               style={{ margin: 0, marginRight: 4 }}
+              iconColor={primaryColor}
             />
             <View style={styles.headerTitles}>
-              <ThemedText type="title" style={styles.title}>
-                {reviewType === 'joyride' ? 'Joyride Review' : 'Add Flight Simulator Review'}
+              <ThemedText type="hero-title" style={styles.title}>
+                {reviewType === 'joyride' ? 'Joyride Review' : 'Flight Log'}
               </ThemedText>
               {reviewType === 'joyride' && (
                 <ThemedText style={styles.subtitle}>
-                  Please provide your detailed feedback 
+                  MISSION FEEDBACK
                 </ThemedText>
               )}
             </View>
@@ -1188,9 +1193,9 @@ function AddReviewScreen() {
         </View>
 
         {/* Personal Information Section */}
-        <Card style={styles.sectionCard}>
-          <Card.Content>
-            <ThemedText style={styles.sectionTitle}>Personal Information</ThemedText>
+        <GlassCard style={styles.sectionCard} variant="glass-panel">
+          <View style={{ padding: 16 }}>
+            <ThemedText style={styles.sectionTitle}>PILOT DATA</ThemedText>
             
             {personalInfoFields.map((field) => {
               const fieldValue = formData.personalInfo[field.key] || '';
@@ -1208,7 +1213,11 @@ function AddReviewScreen() {
                         value={nationalityQuery}
                         onChangeText={handleNationalityChange}
                         style={styles.textInput}
-                        mode="outlined"
+                        mode="flat"
+                        underlineColor="transparent"
+                        activeUnderlineColor={primaryColor}
+                        textColor={textColor}
+                        theme={{ colors: { onSurfaceVariant: secondaryColor } }}
                         accessibilityLabel={`${field.label} input field`}
                         accessibilityHint="Type to search for your nationality"
                         accessibilityRole="search"
@@ -1263,7 +1272,11 @@ function AddReviewScreen() {
                     value={fieldValue}
                     onChangeText={(text) => updatePersonalInfo(field.key, text)}
                         style={styles.textInput}
-                        mode="outlined"
+                        mode="flat"
+                        underlineColor="transparent"
+                        activeUnderlineColor={primaryColor}
+                        textColor={textColor}
+                        theme={{ colors: { onSurfaceVariant: secondaryColor } }}
                     placeholder={field.placeholder}
                     accessibilityLabel={`${field.label} input field${field.required ? ', required' : ''}`}
                     accessibilityHint={`Enter your ${field.label.toLowerCase()}`}
@@ -1284,7 +1297,11 @@ function AddReviewScreen() {
                       value={fieldValue}
                       onChangeText={(text) => updatePersonalInfo(field.key, text)}
                       style={styles.textInput}
-                      mode="outlined"
+                      mode="flat"
+                      underlineColor="transparent"
+                      activeUnderlineColor={primaryColor}
+                      textColor={textColor}
+                      theme={{ colors: { onSurfaceVariant: secondaryColor } }}
                       placeholder={field.placeholder || (isCostEstimate ? 'e.g., 2.0' : 'e.g., 75')}
                       accessibilityLabel={
                         isCostEstimate
@@ -1318,6 +1335,8 @@ function AddReviewScreen() {
                           mode={hasSimulatorExperience === 'yes' ? 'contained' : 'outlined'}
                           onPress={() => handleSimulatorExperienceSelection('yes')}
                           style={styles.yesNoButton}
+                          buttonColor={hasSimulatorExperience === 'yes' ? primaryColor : undefined}
+                          textColor={hasSimulatorExperience === 'yes' ? '#000' : primaryColor}
                           accessibilityLabel="Yes, I have simulator experience"
                           accessibilityHint="Select if you have previous simulator experience"
                           accessibilityRole="button"
@@ -1329,6 +1348,8 @@ function AddReviewScreen() {
                           mode={hasSimulatorExperience === 'no' ? 'contained' : 'outlined'}
                           onPress={() => handleSimulatorExperienceSelection('no')}
                           style={[styles.yesNoButton, { marginLeft: wp('2%') }]}
+                          buttonColor={hasSimulatorExperience === 'no' ? primaryColor : undefined}
+                          textColor={hasSimulatorExperience === 'no' ? '#000' : primaryColor}
                           accessibilityLabel="No, I don't have simulator experience"
                           accessibilityHint="Select if you don't have previous simulator experience"
                           accessibilityRole="button"
@@ -1352,6 +1373,8 @@ function AddReviewScreen() {
                           mode={hasFlyingExperience === 'yes' ? 'contained' : 'outlined'}
                           onPress={() => handleFlyingExperienceSelection('yes')}
                           style={styles.yesNoButton}
+                          buttonColor={hasFlyingExperience === 'yes' ? primaryColor : undefined}
+                          textColor={hasFlyingExperience === 'yes' ? '#000' : primaryColor}
                         >
                           Yes
                         </Button>
@@ -1359,6 +1382,8 @@ function AddReviewScreen() {
                           mode={hasFlyingExperience === 'no' ? 'contained' : 'outlined'}
                           onPress={() => handleFlyingExperienceSelection('no')}
                           style={[styles.yesNoButton, { marginLeft: wp('2%') }]}
+                          buttonColor={hasFlyingExperience === 'no' ? primaryColor : undefined}
+                          textColor={hasFlyingExperience === 'no' ? '#000' : primaryColor}
                         >
                           No
                         </Button>
@@ -1375,7 +1400,11 @@ function AddReviewScreen() {
                     value={fieldValue}
                     onChangeText={(text) => updatePersonalInfo(field.key, text)}
                     style={styles.textArea}
-                    mode="outlined"
+                    mode="flat"
+                    underlineColor="transparent"
+                    activeUnderlineColor={primaryColor}
+                    textColor={textColor}
+                    theme={{ colors: { onSurfaceVariant: secondaryColor } }}
                     multiline
                     numberOfLines={3}
                     placeholder={field.placeholder}
@@ -1397,6 +1426,8 @@ function AddReviewScreen() {
                         mode={fieldValue === yesText ? 'contained' : 'outlined'}
                         onPress={() => updatePersonalInfo(field.key, yesText)}
                         style={styles.yesNoButton}
+                        buttonColor={fieldValue === yesText ? primaryColor : undefined}
+                        textColor={fieldValue === yesText ? '#000' : primaryColor}
                       >
                         {yesText}
                       </Button>
@@ -1404,6 +1435,8 @@ function AddReviewScreen() {
                         mode={fieldValue === noText ? 'contained' : 'outlined'}
                         onPress={() => updatePersonalInfo(field.key, noText)}
                         style={[styles.yesNoButton, { marginLeft: wp('2%') }]}
+                        buttonColor={fieldValue === noText ? primaryColor : undefined}
+                        textColor={fieldValue === noText ? '#000' : primaryColor}
                       >
                         {noText}
                       </Button>
@@ -1425,7 +1458,11 @@ function AddReviewScreen() {
                       value={fieldValue}
                       onChangeText={(text) => updatePersonalInfo(field.key, text)}
                       style={styles.textInput}
-                      mode="outlined"
+                      mode="flat"
+                      underlineColor="transparent"
+                      activeUnderlineColor={primaryColor}
+                      textColor={textColor}
+                      theme={{ colors: { onSurfaceVariant: secondaryColor } }}
                       placeholder={field.placeholder || 'Type your answer'}
                       accessibilityLabel={`${field.label} input field${field.required ? ', required' : ''}`}
                       accessibilityHint={`Type or pick an option for ${field.label.toLowerCase()}`}
@@ -1435,7 +1472,7 @@ function AddReviewScreen() {
                     {options.length > 0 && (
                       <View style={styles.scrollOptionsContainer}>
                         <ThemedText style={styles.scrollOptionsHint} accessibilityRole="text">
-                          Quick select
+                          QUICK SELECT:
                         </ThemedText>
                         <View style={styles.scrollOptionsChips}>
                           {options.map((option) => (
@@ -1475,7 +1512,11 @@ function AddReviewScreen() {
                   value={fieldValue}
                   onChangeText={(text) => updatePersonalInfo(field.key, text)}
                   style={styles.textInput}
-                  mode="outlined"
+                  mode="flat"
+                  underlineColor="transparent"
+                  activeUnderlineColor={primaryColor}
+                  textColor={textColor}
+                  theme={{ colors: { onSurfaceVariant: secondaryColor } }}
                   placeholder={field.placeholder}
                   accessibilityLabel={`${field.label} input field${field.required ? ', required' : ''}`}
                   accessibilityHint={`Enter your ${field.label.toLowerCase()}`}
@@ -1484,17 +1525,17 @@ function AddReviewScreen() {
                 />
               );
             })}
-          </Card.Content>
-        </Card>
+          </View>
+        </GlassCard>
 
         {/* Ratings Section */}
-        <Card style={styles.sectionCard}>
-          <Card.Content>
+        <GlassCard style={styles.sectionCard} variant="glass-panel">
+          <View style={{ padding: 16 }}>
             <ThemedText style={styles.sectionTitle}>
-              {reviewType === 'joyride' ? 'Joyride Experience Ratings' : 'Flight Simulator Ratings'}
+              {reviewType === 'joyride' ? 'EXPERIENCE METRICS' : 'SYSTEM EVALUATION'}
             </ThemedText>
             <ThemedText style={styles.sectionSubtitle}>
-              Rate each aspect from 1 to 5 stars
+              RATE SYSTEMS 1-5
             </ThemedText>
             
             <View style={styles.ratingsContainer}>
@@ -1506,13 +1547,13 @@ function AddReviewScreen() {
                 )
               )}
             </View>
-          </Card.Content>
-        </Card>
+          </View>
+        </GlassCard>
 
         {/* Comments Section */}
-        <Card style={styles.sectionCard}>
-          <Card.Content>
-            <ThemedText style={styles.sectionTitle}>Comments</ThemedText>
+        <GlassCard style={styles.sectionCard} variant="glass-panel">
+          <View style={{ padding: 16 }}>
+            <ThemedText style={styles.sectionTitle}>MISSION LOG</ThemedText>
             
             {/* Comment Mode Selector */}
             <SegmentedButtons
@@ -1521,34 +1562,39 @@ function AddReviewScreen() {
               buttons={[
                 {
                   value: 'text',
-                  label: 'Type',
+                  label: 'TEXT ENTRY',
                   icon: 'keyboard',
                 },
                 {
                   value: 'handwriting',
-                  label: 'Handwrite',
+                  label: 'MANUAL LOG',
                   icon: 'draw',
                 },
               ]}
               style={styles.commentModeSelector}
+              theme={{ colors: { secondaryContainer: 'rgba(0, 240, 255, 0.2)', onSecondaryContainer: primaryColor, outline: primaryColor } }}
             />
 
             {commentMode === 'text' ? (
               <TextInput
-                label="Your detailed review"
+                label="DETAILED OBSERVATIONS"
                 value={formData.textComment}
                 onChangeText={(text) => updateFormData('textComment', text)}
                 style={styles.textArea}
-                mode="outlined"
+                mode="flat"
+                underlineColor="transparent"
+                activeUnderlineColor={primaryColor}
+                textColor={textColor}
+                theme={{ colors: { onSurfaceVariant: secondaryColor } }}
                 multiline
                 numberOfLines={6}
-                placeholder="Share your detailed experience with this flight simulator..."
+                placeholder="Enter detailed flight log..."
               />
             ) : (
               <View style={styles.handwritingContainer}>
                 {formData.handwrittenComment ? (
                   <View style={styles.handwritingPreview}>
-                    <ThemedText style={styles.handwritingLabel}>Handwritten Comment:</ThemedText>
+                    <ThemedText style={styles.handwritingLabel}>LOG ENTRY:</ThemedText>
                     <TouchableOpacity 
                       style={styles.handwritingImageContainer}
                       onPress={() => openImageModal(formData.handwrittenComment)}
@@ -1565,22 +1611,24 @@ function AddReviewScreen() {
                         onPress={openHandwritingModal}
                         style={styles.editHandwritingButton}
                         icon="pencil"
+                        textColor={primaryColor}
                         accessibilityLabel="Edit handwritten comment"
                         accessibilityHint="Opens handwriting canvas to edit your comment"
                         accessibilityRole="button"
                       >
-                        Edit
+                        EDIT
                       </Button>
                       <Button
                         mode="outlined"
                         onPress={() => updateFormData('handwrittenComment', '')}
                         style={styles.clearHandwritingButton}
                         icon="delete"
+                        textColor={accentColor}
                         accessibilityLabel="Clear handwritten comment"
                         accessibilityHint="Removes the current handwritten comment"
                         accessibilityRole="button"
                       >
-                        Clear
+                        CLEAR
                       </Button>
                     </View>
                   </View>
@@ -1590,22 +1638,24 @@ function AddReviewScreen() {
                     onPress={openHandwritingModal}
                     style={styles.handwritingButton}
                     icon="draw"
+                    buttonColor={primaryColor}
+                    textColor="#000"
                     accessibilityLabel="Start handwriting comment"
                     accessibilityHint="Opens handwriting canvas to write a comment"
                     accessibilityRole="button"
                   >
-                    Start Handwriting
+                    START MANUAL LOG
                   </Button>
                 )}
               </View>
             )}
-          </Card.Content>
-        </Card>
+          </View>
+        </GlassCard>
 
         {/* Photos Section */}
-        <Card style={styles.sectionCard}>
-          <Card.Content>
-            <ThemedText style={styles.sectionTitle}>Add Photos</ThemedText>
+        <GlassCard style={styles.sectionCard} variant="glass-panel">
+          <View style={{ padding: 16 }}>
+            <ThemedText style={styles.sectionTitle}>VISUAL EVIDENCE</ThemedText>
             
             <View style={styles.photoButtonsContainer}>
               <Button
@@ -1613,11 +1663,13 @@ function AddReviewScreen() {
                 onPress={takePhoto}
                 style={styles.photoButton}
                 icon="camera"
+                buttonColor={primaryColor}
+                textColor="#000"
                 accessibilityLabel="Take photo with camera"
                 accessibilityHint="Opens camera to take a new photo"
                 accessibilityRole="button"
               >
-                Take Photo
+                CAMERA
               </Button>
               
               <Button
@@ -1625,11 +1677,12 @@ function AddReviewScreen() {
                 onPress={pickFromGallery}
                 style={styles.photoButton}
                 icon="image"
+                textColor={primaryColor}
                 accessibilityLabel="Select photo from gallery"
                 accessibilityHint="Opens photo gallery to select an existing photo"
                 accessibilityRole="button"
               >
-                From Gallery
+                GALLERY
               </Button>
             </View>
 
@@ -1654,13 +1707,14 @@ function AddReviewScreen() {
                       size={wp('4%')}
                       onPress={() => removePhoto(index)}
                       style={styles.removePhotoButton}
+                      iconColor="#FFF"
                     />
                   </View>
                 ))}
               </View>
             )}
-          </Card.Content>
-        </Card>
+          </View>
+        </GlassCard>
 
         {/* Submit Section */}
         <View style={styles.submitContainer}>
@@ -1669,8 +1723,11 @@ function AddReviewScreen() {
             onPress={handleSubmit}
             style={styles.submitButton}
             contentStyle={styles.submitButtonContent}
+            buttonColor={primaryColor}
+            textColor="#000"
+            labelStyle={{ fontWeight: 'bold', fontSize: rf(16), letterSpacing: 1 }}
           >
-            Submit Review
+            SUBMIT LOG
           </Button>
           
           <Button
@@ -1678,8 +1735,9 @@ function AddReviewScreen() {
             onPress={() => router.push('/')}
             style={styles.backButton}
             contentStyle={styles.backButtonContent}
+            textColor={secondaryColor}
           >
-            Back to Home
+            ABORT MISSION
           </Button>
         </View>
       </ScrollView>
@@ -1700,7 +1758,7 @@ function AddReviewScreen() {
                 <OptimizedImage 
                   source={{ uri: selectedImage }} 
                   style={styles.fullImage}
-                  contentFit="fill"
+                  contentFit="contain"
                   transition={300}
                   cachePolicy="memory-disk"
                   priority="high"
@@ -1740,13 +1798,13 @@ function AddReviewScreen() {
 
       {/* Validation Dialog */}
       <Portal>
-        <Dialog visible={showValidationDialog} onDismiss={() => setShowValidationDialog(false)}>
-          <Dialog.Title>Validation Error</Dialog.Title>
+        <Dialog visible={showValidationDialog} onDismiss={() => setShowValidationDialog(false)} style={{ backgroundColor: cardBackgroundColor }}>
+          <Dialog.Title style={{ color: accentColor }}>VALIDATION ERROR</Dialog.Title>
           <Dialog.Content>
-            <Paragraph>{validationMessage}</Paragraph>
+            <Paragraph style={{ color: textColor }}>{validationMessage}</Paragraph>
           </Dialog.Content>
           <Dialog.Actions>
-            <Button onPress={() => setShowValidationDialog(false)}>OK</Button>
+            <Button onPress={() => setShowValidationDialog(false)} textColor={primaryColor}>ACKNOWLEDGE</Button>
           </Dialog.Actions>
         </Dialog>
       </Portal>
@@ -1765,17 +1823,17 @@ function AddReviewScreen() {
             ratio="16:9"
           />
           <View style={{ position: 'absolute', bottom: Math.max(hp('4%'), insets.bottom + hp('2%')), width: '100%', alignItems: 'center' }}>
-            <Button mode="contained" onPress={capturePhoto}>
-              Capture
+            <Button mode="contained" onPress={capturePhoto} buttonColor={primaryColor} textColor="#000" style={{ marginBottom: 16 }}>
+              CAPTURE EVIDENCE
             </Button>
-            <View style={{ height: hp('1%') }} />
-            <Button mode="text" onPress={() => setShowCameraModal(false)}>
-              Close
+            <Button mode="text" onPress={() => setShowCameraModal(false)} textColor="#FFF">
+              CANCEL
             </Button>
           </View>
         </View>
       </Modal>
     </ThemedView>
+
     </AnimatedEntry>
   );
 }
@@ -1784,7 +1842,17 @@ function AddReviewScreen() {
 export default React.memo(AddReviewScreen);
 
 
-const createStyles = (backgroundColor: string, textColor: string, borderColor: string, cardBackgroundColor: string, inputBackgroundColor: string) => StyleSheet.create({
+const createStyles = (
+  backgroundColor: string, 
+  textColor: string, 
+  borderColor: string, 
+  cardBackgroundColor: string, 
+  inputBackgroundColor: string,
+  primaryColor: string,
+  secondaryColor: string,
+  accentColor: string,
+  isDark: boolean
+) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -1798,63 +1866,82 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
     justifyContent: 'space-between',
     paddingHorizontal: wp('4%'),
     paddingBottom: hp('2%'),
+    paddingTop: hp('1%'),
   },
   headerTop: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   headerTitles: {
     flex: 1,
+    marginLeft: rs(8),
   },
   title: {
     fontSize: rf(isTablet ? 28 : 24),
-    textAlign: 'center',
+    textAlign: 'left',
     fontWeight: 'bold',
     paddingVertical: rf(6),
+    color: primaryColor,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   subtitle: {
-    fontSize: rf(14),
-    textAlign: 'center',
+    fontSize: rf(12),
+    textAlign: 'left',
     opacity: 0.8,
-    lineHeight: rf(20),
-    marginTop: rs(4),
-    paddingVertical: rf(3),
+    lineHeight: rf(16),
+    marginTop: rs(2),
+    color: secondaryColor,
+    fontFamily: Platform.select({ ios: 'Courier New', android: 'monospace' }),
   },
   sectionCard: {
     marginBottom: hp('2%'),
-    elevation: 2,
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
   },
   sectionTitle: {
-    fontSize: rf(20),
+    fontSize: rf(18),
     fontWeight: 'bold',
-    lineHeight: rf(28),
-    marginBottom: hp('1%'),
-    paddingVertical: rf(5),
-  },
-  sectionSubtitle: {
-    fontSize: rf(16),
-    opacity: 0.7,
     lineHeight: rf(24),
     marginBottom: hp('1%'),
+    paddingVertical: rf(5),
+    color: primaryColor,
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+  },
+  sectionSubtitle: {
+    fontSize: rf(14),
+    opacity: 0.7,
+    lineHeight: rf(20),
+    marginBottom: hp('1.5%'),
     paddingVertical: rf(4),
+    fontFamily: Platform.select({ ios: 'Courier New', android: 'monospace' }),
   },
   textInput: {
     marginBottom: hp('1.5%'),
+    backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.8)',
   },
   textArea: {
     marginBottom: hp('1%'),
+    backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.8)',
   },
   pickerContainer: {
     marginBottom: hp('1.5%'),
   },
   pickerLabel: {
-    fontSize: rf(16),
-    lineHeight: rf(38),
-    marginBottom: hp('0%'),
-    fontWeight: '500',
+    fontSize: rf(14),
+    lineHeight: rf(20),
+    marginBottom: hp('0.5%'),
+    fontWeight: '600',
     flexShrink: 1,
     paddingHorizontal: wp('1%'),
     paddingVertical: rf(1),
+    color: secondaryColor,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   picker: {
     borderWidth: 1,
@@ -1885,49 +1972,58 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
     elevation: 1,
   },
   ratingTitle: {
-    fontSize: rf(18),
-    lineHeight: rf(42),
+    fontSize: rf(16),
+    lineHeight: rf(22),
     fontWeight: 'bold',
     marginBottom: hp('0%'),
     flexShrink: 1,
     paddingHorizontal: wp('2%'),
     paddingVertical: rf(0),
+    color: textColor,
   },
   ratingDescription: {
-    fontSize: rf(14),
-    lineHeight: rf(24),
+    fontSize: rf(12),
+    lineHeight: rf(18),
     opacity: 0.7,
     marginBottom: hp('0%'),
     flexShrink: 1,
     paddingHorizontal: wp('2%'),
     paddingVertical: rf(3),
+    fontFamily: Platform.select({ ios: 'Courier New', android: 'monospace' }),
   },
   starContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginTop: rs(8),
+    paddingHorizontal: rs(8),
   },
   ratingValue: {
-    fontSize: rf(16),
+    fontSize: rf(18),
     lineHeight: rf(24),
     fontWeight: 'bold',
     minWidth: wp('12%'),
     textAlign: 'center',
     flexShrink: 1,
     paddingVertical: rf(4),
+    color: accentColor,
+    fontFamily: Platform.select({ ios: 'Courier New', android: 'monospace' }),
   },
   photoButtonsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     marginBottom: hp('2%'),
+    gap: rs(12),
   },
   photoButton: {
-    flex: 0.45,
+    flex: 1,
+    borderColor: primaryColor,
   },
   photoGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
+    marginTop: rs(12),
   },
   photoContainer: {
     position: 'relative',
@@ -1935,6 +2031,10 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
     width: getPhotoGridSize(),
     minHeight: getPhotoGridSize() * 0.75,
     maxHeight: getPhotoGridSize() * 1.5,
+    borderRadius: rs(8),
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   photoThumbnail: {
     width: '100%',
@@ -1943,19 +2043,23 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
   },
   removePhotoButton: {
     position: 'absolute',
-    top: -rs(8),
-    right: -rs(8),
-    backgroundColor: 'red',
+    top: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.6)',
     minWidth: minTouchTarget,
     minHeight: minTouchTarget,
+    borderBottomLeftRadius: 8,
   },
   submitContainer: {
     marginTop: rs(16),
     marginBottom: rs(32),
+    gap: rs(12),
   },
   submitButton: {
-    marginBottom: rs(12),
+    marginBottom: rs(0),
     minHeight: minTouchTarget,
+    backgroundColor: primaryColor,
+    borderColor: primaryColor,
   },
   submitButtonContent: {
     paddingVertical: rs(12),
@@ -1966,6 +2070,7 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
   },
   backButton: {
     marginBottom: hp('1%'),
+    borderColor: secondaryColor,
   },
   backButtonContent: {
     paddingVertical: rs(12),
@@ -1976,7 +2081,7 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
   },
   modalBackground: {
     flex: 1,
@@ -1985,18 +2090,20 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
   },
   modalContent: {
     position: 'relative',
-    width: '90%',
-    height: '70%',
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   fullImage: {
     width: '100%',
-    height: '100%',
+    height: '80%',
   },
   closeModalButton: {
     position: 'absolute',
-    top: hp('2%'),
-    right: wp('2%'),
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    top: hp('5%'),
+    right: wp('5%'),
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
   autocompleteContainer: {
     position: 'absolute',
@@ -2005,11 +2112,15 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
     right: 0,
     backgroundColor: cardBackgroundColor,
     borderWidth: 1,
-    borderColor: borderColor,
+    borderColor: primaryColor,
     borderRadius: 4,
     maxHeight: hp('20%'),
     zIndex: 10000,
     elevation: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
   autocompleteList: {
     maxHeight: hp('20%'),
@@ -2017,7 +2128,7 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
   autocompleteItem: {
     padding: hp('1.5%'),
     borderBottomWidth: 1,
-    borderBottomColor: borderColor,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
   },
   autocompleteItemContent: {
     flexDirection: 'row',
@@ -2034,11 +2145,14 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
     lineHeight: rf(24),
     flex: 1,
     paddingVertical: rf(4),
+    color: textColor,
   },
   priceNote: {
-    fontSize: rf(15),
-    lineHeight: rf(22),
+    fontSize: rf(14),
+    lineHeight: rf(20),
     marginBottom: hp('1%'),
+    color: secondaryColor,
+    fontFamily: Platform.select({ ios: 'Courier New', android: 'monospace' }),
   },
   buttonGroup: {
     flexDirection: 'row',
@@ -2050,15 +2164,18 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
     minWidth: wp('20%'),
     marginTop: hp('0.8%'),
     marginBottom: hp('0.8%'),
+    borderColor: primaryColor,
   },
   scrollOptionsContainer: {
     marginTop: hp('1%'),
   },
   scrollOptionsHint: {
-    fontSize: rf(13),
-    lineHeight: rf(18),
+    fontSize: rf(12),
+    lineHeight: rf(16),
     opacity: 0.7,
     marginBottom: hp('0.5%'),
+    fontFamily: Platform.select({ ios: 'Courier New', android: 'monospace' }),
+    color: secondaryColor,
   },
   scrollOptionsChips: {
     flexDirection: 'row',
@@ -2068,14 +2185,14 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
   scrollOptionChip: {
     paddingVertical: hp('0.8%'),
     paddingHorizontal: wp('4%'),
-    borderRadius: 20,
+    borderRadius: 4,
     borderWidth: 1,
-    borderColor: borderColor,
-    backgroundColor: cardBackgroundColor,
+    borderColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
   },
   scrollOptionChipSelected: {
-    backgroundColor: textColor,
-    borderColor: textColor,
+    backgroundColor: 'rgba(0, 240, 255, 0.2)', // Cyan with opacity
+    borderColor: primaryColor,
   },
   scrollOptionChipText: {
     fontSize: rf(14),
@@ -2083,11 +2200,12 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
     color: textColor,
   },
   scrollOptionChipTextSelected: {
-    color: cardBackgroundColor,
+    color: primaryColor,
+    fontWeight: 'bold',
   },
   handwritingModalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -2110,6 +2228,7 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
     lineHeight: rf(28),
     fontWeight: 'bold',
     paddingVertical: rf(5),
+    color: primaryColor,
   },
   handwritingCloseButton: {
     margin: 0,
@@ -2122,12 +2241,15 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
   },
   editHandwritingButton: {
     marginRight: wp('2%'),
+    borderColor: primaryColor,
   },
   clearHandwritingButton: {
     marginLeft: wp('2%'),
+    borderColor: accentColor,
   },
   handwritingButton: {
     marginTop: hp('1%'),
+    borderColor: primaryColor,
   },
   handwritingImage: {
     width: '100%',
@@ -2135,6 +2257,7 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
     borderRadius: 8,
     borderWidth: 1,
     borderColor: borderColor,
+    backgroundColor: '#FFFFFF',
   },
   handwritingButtons: {
     flexDirection: 'row',
@@ -2145,15 +2268,22 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
     marginTop: hp('1%'),
   },
   handwritingLabel: {
-    fontSize: rf(16),
-    lineHeight: rf(24),
-    fontWeight: '500',
+    fontSize: rf(14),
+    lineHeight: rf(20),
+    fontWeight: '600',
     marginBottom: hp('1%'),
     paddingVertical: rf(4),
+    color: secondaryColor,
+    textTransform: 'uppercase',
   },
   handwritingImageContainer: {
     position: 'relative',
     marginBottom: hp('1%'),
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 8,
+    padding: 4,
+    backgroundColor: 'rgba(255,255,255,0.05)',
   },
   commentModeSelector: {
     marginBottom: hp('2%'),
@@ -2168,6 +2298,6 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
     marginBottom: hp('2%'),
     paddingBottom: hp('1.5%'),
     borderBottomWidth: 1,
-    borderBottomColor: borderColor,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
   },
 });

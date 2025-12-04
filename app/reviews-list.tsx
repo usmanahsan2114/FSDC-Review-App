@@ -1,6 +1,11 @@
+import { ConnectivityStatus } from '@/components/ConnectivityStatus';
+import { NoReviewsEmptyState, NoSearchResultsEmptyState } from '@/components/EmptyState';
+import { GlassCard } from '@/components/GlassCard';
+import { ReviewListSkeleton } from '@/components/SkeletonLoader';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import ThemeToggle from '@/components/ThemeToggle';
+import { Simulator } from '@/constants/simulators';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -16,22 +21,19 @@ import {
     useWindowDimensions,
     View
 } from 'react-native';
-import { Button, Card, Chip, Divider, IconButton, Menu, TextInput } from 'react-native-paper';
+import { Button, Chip, Divider, IconButton, Menu, TextInput } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StarRating from 'react-native-star-rating-widget';
 
-import { ConnectivityStatus } from '@/components/ConnectivityStatus';
-import { NoReviewsEmptyState, NoSearchResultsEmptyState } from '@/components/EmptyState';
-import { ReviewListSkeleton } from '@/components/SkeletonLoader';
-import { Simulator } from '@/constants/simulators';
 import { deleteReview, getAllReviews, initializeDataStorage, Review } from '../utils/dataStorage';
 import { exportToExcel } from '../utils/exportUtils';
 import { hapticsButtonPress, hapticsDelete, hapticsFilterSelect } from '../utils/haptics';
 import { getDevicePadding, getGridColumns, hp, isTablet, minTouchTarget, rf, rs, wp } from '../utils/responsive';
 import { getSimulators, getSimulatorTypes } from '../utils/simulatorStorage';
 
+// ... (Keep interfaces same as before)
 interface RatingCategory {
-  id?: string; // Optional for backward compatibility
+  id?: string;
   key: string;
   title: string;
   description: string;
@@ -97,10 +99,11 @@ function ReviewsListScreen() {
   const { width } = useWindowDimensions();
   const numColumns = getGridColumns(width);
   const insets = useSafeAreaInsets();
-  const backgroundColor = useThemeColor({}, 'background');
-  const textColor = useThemeColor({}, 'text');
-  const cardBackgroundColor = useThemeColor({ light: '#FFFFFF', dark: '#1E1E1E' }, 'background');
+  const primaryColor = useThemeColor({}, 'primary');
+  const secondaryColor = useThemeColor({}, 'secondary');
+  const accentColor = useThemeColor({}, 'accent');
   const borderColor = useThemeColor({ light: '#E0E0E0', dark: '#404040' }, 'text');
+  const cardBackgroundColor = useThemeColor({ light: '#FFFFFF', dark: '#1E1E1E' }, 'background');
   
   // Memoized styles based on theme
   const styles = useMemo(() => createStyles(isDark, cardBackgroundColor, borderColor), [isDark, cardBackgroundColor, borderColor]);
@@ -122,7 +125,6 @@ function ReviewsListScreen() {
   const loadReviews = async () => {
     try {
       setLoading(true);
-      // Initialize storage system
       await initializeDataStorage();
       const allReviews = await getAllReviews();
       setReviews(allReviews);
@@ -150,17 +152,8 @@ function ReviewsListScreen() {
       const stored = await AsyncStorage.getItem('ratingCategories');
       if (stored) {
         const parsed = JSON.parse(stored);
-        const expectedKeys = new Set(defaultRatingCategories.map(c => c.key));
-        const isMismatch = !Array.isArray(parsed) || parsed.length !== defaultRatingCategories.length || parsed.some((c: any) => !expectedKeys.has(c.key));
-        if (isMismatch) {
-          await AsyncStorage.setItem('admin_rating_categories', JSON.stringify(defaultRatingCategories));
-          await AsyncStorage.setItem('ratingCategories', JSON.stringify(defaultRatingCategories));
-          setRatingCategories(defaultRatingCategories);
-        } else {
-          setRatingCategories(parsed);
-        }
+        setRatingCategories(parsed);
       } else {
-        await AsyncStorage.setItem('admin_rating_categories', JSON.stringify(defaultRatingCategories));
         await AsyncStorage.setItem('ratingCategories', JSON.stringify(defaultRatingCategories));
         setRatingCategories(defaultRatingCategories);
       }
@@ -171,8 +164,6 @@ function ReviewsListScreen() {
 
   const handleDeleteReview = useCallback(async (reviewId: string) => {
     hapticsButtonPress();
-    
-    // Prompt for PIN
     Alert.prompt(
       'Admin Access',
       'Enter Admin PIN to delete review:',
@@ -182,7 +173,6 @@ function ReviewsListScreen() {
           text: 'Verify',
           onPress: (pin?: string) => {
             if (pin === '2114') {
-              // Proceed with deletion
               Alert.alert(
                 'Delete Review',
                 'Are you sure you want to delete this review? This action cannot be undone.',
@@ -233,14 +223,12 @@ function ReviewsListScreen() {
   }, [loadReviews]);
 
   const getPersonalInfoValue = useCallback((review: Review, key: string): string => {
-    // Map field keys to Review interface properties
     const keyMapping: { [key: string]: keyof Review['personalInfo'] } = {
       'fullName': 'name',
       'nationality': 'nationality',
       'profession': 'profession',
       'contact': 'email'
     };
-    
     const mappedKey = keyMapping[key] || key as keyof Review['personalInfo'];
     return review.personalInfo?.[mappedKey] || '';
   }, []);
@@ -251,16 +239,6 @@ function ReviewsListScreen() {
     return values.reduce((sum, rating) => sum + rating, 0) / values.length;
   }, []);
 
-  const overallAverageRating = useMemo(() => {
-    const filtered = reviewTypeFilter === 'all' ? reviews : reviews.filter(r => (r.reviewType || 'professional') === reviewTypeFilter);
-    if (filtered.length === 0) return 0;
-    const totalRating = filtered.reduce((sum, review) => {
-      return sum + calculateAverageRating(review.ratings);
-    }, 0);
-    return totalRating / filtered.length;
-  }, [reviews, reviewTypeFilter, calculateAverageRating]);
-
-  // Label for current sort option (for UI)
   const sortLabel = useMemo(() => {
     switch (sortOption) {
       case 'dateDesc': return 'Date (Newest)';
@@ -273,27 +251,19 @@ function ReviewsListScreen() {
     }
   }, [sortOption]);
 
-  // Derived filtered/sorted reviews (must be above any conditional returns)
   const filteredReviews = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     let list = reviews;
 
-    // Review type filter
     if (reviewTypeFilter !== 'all') {
       list = list.filter(r => (r.reviewType || 'professional') === reviewTypeFilter);
     }
-
-    // Simulator Type filter
     if (simulatorTypeFilter !== 'all') {
       list = list.filter(r => r.simulatorType === simulatorTypeFilter);
     }
-
-    // Simulator Name filter
     if (simulatorFilter !== 'all') {
       list = list.filter(r => r.simulatorName === simulatorFilter);
     }
-
-    // Search filter
     if (q) {
       list = list.filter(r => {
         const pi = r.personalInfo || {};
@@ -302,239 +272,138 @@ function ReviewsListScreen() {
         return fields.includes(q) || text.includes(q);
       });
     }
-
-    // Rating threshold filter (overall)
     if (filterMinRating > 0) {
       list = list.filter(r => calculateAverageRating(r.ratings) >= filterMinRating);
     }
-
-    // Photos filter
     if (filterHasPhotos) {
       list = list.filter(r => r.photos && r.photos.length > 0);
     }
-
-    // Handwritten comment filter
     if (filterHasHandwriting) {
       list = list.filter(r => !!r.handwrittenComment);
     }
 
-    // Sort
     const sorted = [...list].sort((a, b) => {
       switch (sortOption) {
-        case 'dateDesc':
-          return b.timestamp - a.timestamp;
-        case 'dateAsc':
-          return a.timestamp - b.timestamp;
-        case 'ratingDesc':
-          return calculateAverageRating(b.ratings) - calculateAverageRating(a.ratings);
-        case 'ratingAsc':
-          return calculateAverageRating(a.ratings) - calculateAverageRating(b.ratings);
-        case 'nameAsc':
-          return (a.personalInfo.name || '').localeCompare(b.personalInfo.name || '');
-        case 'nameDesc':
-          return (b.personalInfo.name || '').localeCompare(a.personalInfo.name || '');
-        default:
-          return 0;
+        case 'dateDesc': return b.timestamp - a.timestamp;
+        case 'dateAsc': return a.timestamp - b.timestamp;
+        case 'ratingDesc': return calculateAverageRating(b.ratings) - calculateAverageRating(a.ratings);
+        case 'ratingAsc': return calculateAverageRating(a.ratings) - calculateAverageRating(b.ratings);
+        case 'nameAsc': return (a.personalInfo.name || '').localeCompare(b.personalInfo.name || '');
+        case 'nameDesc': return (b.personalInfo.name || '').localeCompare(a.personalInfo.name || '');
+        default: return 0;
       }
     });
 
     return sorted;
-  }, [reviews, reviewTypeFilter, simulatorTypeFilter, searchQuery, sortOption, filterMinRating, filterHasPhotos, filterHasHandwriting, calculateAverageRating]);
+  }, [reviews, reviewTypeFilter, simulatorTypeFilter, simulatorFilter, searchQuery, sortOption, filterMinRating, filterHasPhotos, filterHasHandwriting, calculateAverageRating]);
 
-  // Average to display in header section based on dropdown selection
-  const { displayAverage, displayCount } = useMemo(() => {
-    if (filteredReviews.length === 0) return { displayAverage: 0, displayCount: 0 };
-    if (selectedCategoryKey === 'overall') {
-      const total = filteredReviews.reduce((sum, r) => sum + calculateAverageRating(r.ratings), 0);
-      return { displayAverage: total / filteredReviews.length, displayCount: filteredReviews.length };
-    }
-    const values = filteredReviews
-      .map(r => r.ratings[selectedCategoryKey] || 0)
-      .filter(v => v > 0);
-    if (values.length === 0) return { displayAverage: 0, displayCount: 0 };
-    const avg = values.reduce((s, v) => s + v, 0) / values.length;
-    return { displayAverage: avg, displayCount: values.length };
-  }, [filteredReviews, selectedCategoryKey, calculateAverageRating]);
+  const displayCount = filteredReviews.length;
+  const displayAverage = useMemo(() => {
+    if (displayCount === 0) return 0;
+    const total = filteredReviews.reduce((sum, r) => sum + calculateAverageRating(r.ratings), 0);
+    return total / displayCount;
+  }, [filteredReviews, displayCount, calculateAverageRating]);
 
-  // Close average dropdown if the section disappears (prevents stuck state)
-  useEffect(() => {
-    if (filteredReviews.length === 0 && avgMenuVisible) {
-      setAvgMenuVisible(false);
-    }
-  }, [filteredReviews.length, avgMenuVisible]);
-
-  // Memoized ReviewCard component for FlatList performance
   const ReviewCard = React.memo(({ review }: { review: Review }) => {
     const reviewRating = useMemo(() => calculateAverageRating(review.ratings), [review.ratings]);
     const reviewerName = useMemo(() => getPersonalInfoValue(review, 'fullName'), [review]);
     const reviewDate = useMemo(() => new Date(review.timestamp).toLocaleDateString(), [review.timestamp]);
     const nationality = useMemo(() => getPersonalInfoValue(review, 'nationality'), [review]);
     const profession = useMemo(() => getPersonalInfoValue(review, 'profession'), [review]);
-    const simExperience = useMemo(() => getPersonalInfoValue(review, 'previousSimulatorExperience'), [review]);
-    const flyingExperience = useMemo(() => getPersonalInfoValue(review, 'previousFlyingExperience'), [review]);
     const simulatorName = review.simulatorName;
     const simulatorType = review.simulatorType;
     
     return (
-    <Card style={styles.reviewCard}>
-      <Card.Content>
-        <View style={styles.cardHeader}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <View style={[
-                styles.syncDot, 
-                { backgroundColor: review.isSynced ? '#4CAF50' : '#F44336' }
-              ]} />
-              <ThemedText style={styles.reviewerName}>
-                {reviewerName}
-              </ThemedText>
-            </View>
-          <ThemedText style={styles.submittedDate}>
-              {reviewDate}
-          </ThemedText>
-        </View>
-
-        <View style={styles.reviewInfo}>
-            {nationality && (
-              <Chip style={styles.chip} textStyle={styles.chipText}>
-                {nationality}
-                </Chip>
-            )}
-            {profession && (
-              <Chip style={styles.chip} textStyle={styles.chipText}>
-                {profession}
-              </Chip>
-            )}
-        </View>
-
-        {/* Simulator Info */}
-        {(simulatorName || simulatorType) && (
-          <View style={styles.reviewInfo}>
-            {simulatorName && (
-              <Chip icon="airplane" style={styles.chip} textStyle={styles.chipText}>
-                {simulatorName}
-              </Chip>
-            )}
-            {simulatorType && (
-              <Chip icon="cog" style={styles.chip} textStyle={styles.chipText}>
-                {simulatorType}
-              </Chip>
-            )}
-          </View>
-        )}
-
-          {/* Experience Row */}
-          <View style={styles.experienceRow}>
-            {simExperience && (
-              <View style={styles.experienceItem}>
-                <ThemedText style={styles.experienceLabel}>Simulator:</ThemedText>
-                <Chip 
-                  style={[styles.experienceChip, simExperience.toLowerCase() === 'yes' ? styles.chipYes : styles.chipNo]}
-                  textStyle={styles.chipText}
-                >
-                  {simExperience}
-                </Chip>
-              </View>
-            )}
-            {flyingExperience && (
-              <View style={styles.experienceItem}>
-                <ThemedText style={styles.experienceLabel}>Flying:</ThemedText>
-                <Chip 
-                  style={[styles.experienceChip, flyingExperience.toLowerCase() === 'yes' ? styles.chipYes : styles.chipNo]}
-                  textStyle={styles.chipText}
-                >
-                  {flyingExperience}
-                </Chip>
-              </View>
-            )}
-          </View>
-
-          {/* Overall Rating */}
-          <View style={styles.cardOverallRatingContainer}>
-            <ThemedText style={styles.overallRatingLabel}>Overall Rating:</ThemedText>
-          <View style={styles.overallRatingDisplay}>
-            <StarRating
-                rating={reviewRating}
-              onChange={() => {}}
-              starSize={wp('4%')}
-              color="#FFD700"
-                emptyColor={isDark ? '#404040' : '#E0E0E0'}
-              enableHalfStar={false}
-            />
-            <ThemedText style={styles.overallRatingText}>
-                {reviewRating.toFixed(1)}/5.0
+    <GlassCard style={styles.reviewCard} intensity={15}>
+      <View style={styles.cardHeader}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+          <View style={[
+            styles.syncDot, 
+            { backgroundColor: review.isSynced ? '#10B981' : '#EF4444' }
+          ]} />
+          <View>
+            <ThemedText type="technical-label" style={{ color: secondaryColor }}>PILOT</ThemedText>
+            <ThemedText type="defaultSemiBold" numberOfLines={1} style={styles.reviewerName}>
+              {reviewerName}
             </ThemedText>
           </View>
         </View>
-
-          {/* Comments Preview */}
-        {review.textComment && (
-          <View style={styles.commentsContainer}>
-              <ThemedText style={styles.commentsLabel}>Comment:</ThemedText>
-            <ThemedText style={styles.comments} numberOfLines={2}>
-              {review.textComment}
-            </ThemedText>
-          </View>
-        )}
-
-          {/* Handwritten and Photos Status */}
-        <View style={styles.additionalInfo}>
-            <View style={styles.statusItem}>
-              <ThemedText style={styles.statusLabel}>Handwritten:</ThemedText>
-              <Chip 
-                style={[styles.statusChip, review.handwrittenComment ? styles.statusYes : styles.statusNo]}
-                textStyle={styles.statusChipText}
-              >
-                {review.handwrittenComment ? 'Yes' : 'No'}
-            </Chip>
-            </View>
-            <View style={styles.statusItem}>
-              <ThemedText style={styles.statusLabel}>Photos:</ThemedText>
-              <Chip 
-                style={[styles.statusChip, review.photos && review.photos.length > 0 ? styles.statusYes : styles.statusNo]}
-                textStyle={styles.statusChipText}
-              >
-                {review.photos && review.photos.length > 0 ? 'Yes' : 'No'}
-            </Chip>
-            </View>
+        <View style={{ alignItems: 'flex-end' }}>
+          <ThemedText type="technical-label" style={{ color: secondaryColor }}>DATE</ThemedText>
+          <ThemedText style={styles.submittedDate}>{reviewDate}</ThemedText>
         </View>
+      </View>
 
-        <View style={styles.cardActions}>
-          <Button
-            mode="contained"
-            onPress={() => handleViewDetail(review)}
-            style={styles.actionButton}
-              accessibilityLabel={`View details for review by ${reviewerName}`}
-            accessibilityHint="Opens detailed view of this review"
-            accessibilityRole="button"
-          >
-            View Details
-          </Button>
-          <Button
-            mode="outlined"
-            onPress={() => handleDeleteReview(review.id)}
-            style={styles.deleteButton}
-            textColor="#d32f2f"
-              accessibilityLabel={`Delete review by ${reviewerName}`}
-            accessibilityHint="Permanently removes this review"
-            accessibilityRole="button"
-          >
-            Delete
-          </Button>
+      <View style={styles.divider} />
+
+      <View style={styles.reviewInfo}>
+        <View style={styles.infoCol}>
+          <ThemedText type="technical-label" style={{ color: secondaryColor }}>AIRCRAFT</ThemedText>
+          <ThemedText numberOfLines={1}>{simulatorName || 'N/A'}</ThemedText>
         </View>
-      </Card.Content>
-    </Card>
+        <View style={styles.infoCol}>
+          <ThemedText type="technical-label" style={{ color: secondaryColor }}>TYPE</ThemedText>
+          <ThemedText numberOfLines={1}>{simulatorType || 'N/A'}</ThemedText>
+        </View>
+      </View>
+
+      <View style={[styles.reviewInfo, { marginTop: 8 }]}>
+         <View style={styles.infoCol}>
+          <ThemedText type="technical-label" style={{ color: secondaryColor }}>NATIONALITY</ThemedText>
+          <ThemedText numberOfLines={1}>{nationality || 'N/A'}</ThemedText>
+        </View>
+        <View style={styles.infoCol}>
+          <ThemedText type="technical-label" style={{ color: secondaryColor }}>PROFESSION</ThemedText>
+          <ThemedText numberOfLines={1}>{profession || 'N/A'}</ThemedText>
+        </View>
+      </View>
+
+      <View style={styles.ratingContainer}>
+        <View>
+          <ThemedText type="technical-label" style={{ color: secondaryColor }}>RATING</ThemedText>
+          <StarRating
+            rating={reviewRating}
+            onChange={() => {}}
+            starSize={16}
+            color="#FFD700"
+            emptyColor={isDark ? '#404040' : '#E0E0E0'}
+            enableHalfStar={false}
+            style={{ marginLeft: -2, marginTop: 2 }}
+          />
+        </View>
+        <ThemedText type="data-value" style={{ fontSize: 20 }}>
+          {reviewRating.toFixed(1)}
+        </ThemedText>
+      </View>
+
+      <View style={styles.cardActions}>
+        <Button
+          mode="outlined"
+          onPress={() => handleViewDetail(review)}
+          style={styles.actionButton}
+          labelStyle={{ fontSize: 12 }}
+          compact
+        >
+          Details
+        </Button>
+        <IconButton
+          icon="delete-outline"
+          size={20}
+          iconColor="#EF4444"
+          onPress={() => handleDeleteReview(review.id)}
+        />
+      </View>
+    </GlassCard>
     );
   }, (prevProps, nextProps) => {
-    // Custom comparison function for better memoization
     return prevProps.review.id === nextProps.review.id && 
-           prevProps.review.timestamp === nextProps.review.timestamp;
+           prevProps.review.timestamp === nextProps.review.timestamp &&
+           prevProps.review.isSynced === nextProps.review.isSynced;
   });
 
   const renderReviewItem: ListRenderItem<Review> = useCallback(({ item }) => (
     <ReviewCard review={item} />
-  ), [getPersonalInfoValue, calculateAverageRating, personalInfoFields, ratingCategories, handleViewDetail, handleDeleteReview]);
-
-  const keyExtractor = useCallback((item: Review) => item.id, []);
+  ), [handleViewDetail, handleDeleteReview]);
 
   const clearAllFilters = useCallback(() => {
     setSearchQuery('');
@@ -543,10 +412,12 @@ function ReviewsListScreen() {
     setFilterHasHandwriting(false);
     setSortOption('dateDesc');
     setSimulatorTypeFilter('all');
+    setSimulatorFilter('all');
+    setReviewTypeFilter('all');
     hapticsButtonPress();
   }, []);
 
-  const hasActiveFilters = searchQuery || filterMinRating > 0 || filterHasPhotos || filterHasHandwriting || simulatorTypeFilter !== 'all';
+  const hasActiveFilters = searchQuery || filterMinRating > 0 || filterHasPhotos || filterHasHandwriting || simulatorTypeFilter !== 'all' || simulatorFilter !== 'all' || reviewTypeFilter !== 'all';
 
   const ListEmptyComponent = useMemo(() => {
     if (reviews.length === 0) {
@@ -555,33 +426,14 @@ function ReviewsListScreen() {
     if (hasActiveFilters) {
       return <NoSearchResultsEmptyState onClearFilters={clearAllFilters} />;
     }
-    return (
-    <View style={styles.emptyState}>
-      <ThemedText style={styles.emptyText}>
-        No reviews yet. Add your first review!
-      </ThemedText>
-      <Button
-        mode="contained"
-        onPress={() => router.push('/add-review')}
-        style={styles.addButton}
-      >
-        Add Review
-      </Button>
-    </View>
-    );
+    return null;
   }, [reviews.length, hasActiveFilters, clearAllFilters]);
 
   if (loading) {
     return (
-      <ThemedView style={styles.container}>
+      <ThemedView style={styles.container} variant="grid-background">
         <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <View style={styles.headerTitles}>
-              <ThemedText style={styles.title}>Reviews</ThemedText>
-              <ThemedText style={styles.subtitle}>Loading...</ThemedText>
-        </View>
-            <ThemeToggle />
-          </View>
+            <ThemedText type="title">LOGS</ThemedText>
         </View>
         <ReviewListSkeleton count={5} />
       </ThemedView>
@@ -589,69 +441,66 @@ function ReviewsListScreen() {
   }
 
   return (
-    <ThemedView style={styles.container}>
-      <View style={styles.header}>
+    <ThemedView style={styles.container} variant="grid-background">
+      <View style={[styles.header, { marginTop: insets.top }]}>
         <View style={styles.headerTop}>
           <IconButton
             icon="arrow-left"
             size={24}
             onPress={handleGoBack}
             style={{ margin: 0, marginRight: 4 }}
+            iconColor={primaryColor}
           />
           <View style={styles.headerTitles}>
-            <ThemedText style={styles.title}>Reviews</ThemedText>
-            <ThemedText style={styles.subtitle}>
-              {filteredReviews.length} review{filteredReviews.length !== 1 ? 's' : ''} found
+            <ThemedText type="hero-title" style={styles.title}>FLIGHT LOGS</ThemedText>
+            <ThemedText type="technical-label" style={{ opacity: 0.7 }}>
+              {filteredReviews.length} RECORDS FOUND
             </ThemedText>
           </View>
           <View style={styles.headerActions}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <ConnectivityStatus />
-              <ThemeToggle />
-            </View>
-          <IconButton
-            icon="file-excel"
-            mode="contained"
-            containerColor={isDark ? '#2E7D32' : '#4CAF50'}
-            iconColor="white"
-            size={20}
-            onPress={async () => {
-              hapticsButtonPress();
-              setIsExporting(true);
-              try {
-                await exportToExcel(filteredReviews);
-              } catch (error) {
-                Alert.alert('Export Failed', 'Could not export reviews to Excel.');
-              } finally {
-                setIsExporting(false);
-              }
-            }}
-            loading={isExporting}
-            style={{ margin: 0 }}
-          />
+            <ConnectivityStatus />
+            <ThemeToggle />
+            <IconButton
+              icon="file-excel"
+              mode="contained"
+              containerColor={isDark ? '#2E7D32' : '#4CAF50'}
+              iconColor="white"
+              size={20}
+              onPress={async () => {
+                hapticsButtonPress();
+                setIsExporting(true);
+                try {
+                  await exportToExcel(filteredReviews);
+                } catch (error) {
+                  Alert.alert('Export Failed', 'Could not export reviews to Excel.');
+                } finally {
+                  setIsExporting(false);
+                }
+              }}
+              loading={isExporting}
+              style={{ margin: 0, marginLeft: 8 }}
+            />
           </View>
         </View>
 
-        {/* Search, sort and filter controls */}
         <View style={styles.controlsRow}>
           <TextInput
             mode="outlined"
-            placeholder="Search by name, profession, nationality, comments"
+            placeholder="SEARCH LOGS..."
             value={searchQuery}
             onChangeText={setSearchQuery}
-            style={[styles.searchInput, { flex: 0, width: wp('40%') }]}
+            style={styles.searchInput}
             dense
+            left={<TextInput.Icon icon="magnify" />}
           />
         </View>
 
-        {/* Unified Filter Bar */}
         <View style={styles.filterBar}>
           <ScrollView 
             horizontal 
             showsHorizontalScrollIndicator={false} 
             contentContainerStyle={styles.filterContentContainer}
           >
-            {/* Reset Filter */}
             {hasActiveFilters && (
               <Chip
                 icon="close"
@@ -659,11 +508,10 @@ function ReviewsListScreen() {
                 style={[styles.filterChip, styles.resetChip]}
                 textStyle={styles.resetChipText}
               >
-                Reset
+                RESET
               </Chip>
             )}
 
-            {/* Sort Menu */}
             <Menu
               visible={menuVisible}
               onDismiss={() => setMenuVisible(false)}
@@ -672,24 +520,20 @@ function ReviewsListScreen() {
                   icon="sort"
                   onPress={() => setMenuVisible(true)}
                   style={styles.filterChip}
-                  showSelectedOverlay
+                  textStyle={{ fontSize: 12 }}
                 >
-                  {sortLabel}
+                  {sortLabel.toUpperCase()}
                 </Chip>
               }
             >
-              <Menu.Item onPress={() => { setSortOption('dateDesc'); setMenuVisible(false); hapticsFilterSelect(); }} title="Date (Newest)" />
-              <Menu.Item onPress={() => { setSortOption('dateAsc'); setMenuVisible(false); hapticsFilterSelect(); }} title="Date (Oldest)" />
+              <Menu.Item onPress={() => { setSortOption('dateDesc'); setMenuVisible(false); }} title="Date (Newest)" />
+              <Menu.Item onPress={() => { setSortOption('dateAsc'); setMenuVisible(false); }} title="Date (Oldest)" />
               <Divider />
-              <Menu.Item onPress={() => { setSortOption('ratingDesc'); setMenuVisible(false); hapticsFilterSelect(); }} title="Rating (High → Low)" />
-              <Menu.Item onPress={() => { setSortOption('ratingAsc'); setMenuVisible(false); hapticsFilterSelect(); }} title="Rating (Low → High)" />
-              <Divider />
-              <Menu.Item onPress={() => { setSortOption('nameAsc'); setMenuVisible(false); hapticsFilterSelect(); }} title="Name (A → Z)" />
-              <Menu.Item onPress={() => { setSortOption('nameDesc'); setMenuVisible(false); hapticsFilterSelect(); }} title="Name (Z → A)" />
+              <Menu.Item onPress={() => { setSortOption('ratingDesc'); setMenuVisible(false); }} title="Rating (High → Low)" />
+              <Menu.Item onPress={() => { setSortOption('ratingAsc'); setMenuVisible(false); }} title="Rating (Low → High)" />
             </Menu>
 
-            {/* Review Type Menu */}
-            <Menu
+             <Menu
               visible={typeFilterMenuVisible}
               onDismiss={() => setTypeFilterMenuVisible(false)}
               anchor={
@@ -697,19 +541,17 @@ function ReviewsListScreen() {
                   icon="filter-variant"
                   onPress={() => setTypeFilterMenuVisible(true)}
                   style={[styles.filterChip, reviewTypeFilter !== 'all' && styles.filterChipActive]}
-                  textStyle={reviewTypeFilter !== 'all' ? styles.filterChipTextActive : undefined}
-                  showSelectedOverlay
+                  textStyle={{ fontSize: 12 }}
                 >
-                  {reviewTypeFilter === 'all' ? 'Type: All' : reviewTypeFilter === 'professional' ? 'Professional' : 'Joyride'}
+                  {reviewTypeFilter === 'all' ? 'TYPE: ALL' : reviewTypeFilter.toUpperCase()}
                 </Chip>
               }
             >
-              <Menu.Item onPress={() => { setReviewTypeFilter('all'); setTypeFilterMenuVisible(false); hapticsFilterSelect(); }} title="All Reviews" />
-              <Menu.Item onPress={() => { setReviewTypeFilter(prev => prev === 'professional' ? 'all' : 'professional'); setTypeFilterMenuVisible(false); hapticsFilterSelect(); }} title="Professional" />
-              <Menu.Item onPress={() => { setReviewTypeFilter(prev => prev === 'joyride' ? 'all' : 'joyride'); setTypeFilterMenuVisible(false); hapticsFilterSelect(); }} title="Joyride" />
+              <Menu.Item onPress={() => { setReviewTypeFilter('all'); setTypeFilterMenuVisible(false); }} title="All Reviews" />
+              <Menu.Item onPress={() => { setReviewTypeFilter('professional'); setTypeFilterMenuVisible(false); }} title="Professional" />
+              <Menu.Item onPress={() => { setReviewTypeFilter('joyride'); setTypeFilterMenuVisible(false); }} title="Joyride" />
             </Menu>
 
-            {/* Simulator Menu */}
             <Menu
               visible={simulatorMenuVisible}
               onDismiss={() => setSimulatorMenuVisible(false)}
@@ -718,86 +560,26 @@ function ReviewsListScreen() {
                   icon="airplane"
                   onPress={() => setSimulatorMenuVisible(true)}
                   style={[styles.filterChip, simulatorFilter !== 'all' && styles.filterChipActive]}
-                  textStyle={simulatorFilter !== 'all' ? styles.filterChipTextActive : undefined}
-                  showSelectedOverlay
+                  textStyle={{ fontSize: 12 }}
                 >
-                  {simulatorFilter === 'all' ? 'Sim: All' : availableSimulators.find(s => s.name === simulatorFilter)?.name || simulatorFilter}
+                  {simulatorFilter === 'all' ? 'SIM: ALL' : simulatorFilter.toUpperCase()}
                 </Chip>
               }
             >
-              <Menu.Item onPress={() => { setSimulatorFilter('all'); setSimulatorMenuVisible(false); hapticsFilterSelect(); }} title="All Simulators" />
+              <Menu.Item onPress={() => { setSimulatorFilter('all'); setSimulatorMenuVisible(false); }} title="All Simulators" />
               <Divider />
               {availableSimulators.map(sim => (
                 <Menu.Item 
                   key={sim.id} 
-                  onPress={() => { 
-                    setSimulatorFilter(prev => prev === sim.name ? 'all' : sim.name); 
-                    setSimulatorMenuVisible(false); 
-                    hapticsFilterSelect(); 
-                  }} 
+                  onPress={() => { setSimulatorFilter(sim.name); setSimulatorMenuVisible(false); }} 
                   title={sim.name} 
                 />
               ))}
             </Menu>
-
-            {/* Simulator Type Menu */}
-            <Menu
-              visible={simTypeMenuVisible}
-              onDismiss={() => setSimTypeMenuVisible(false)}
-              anchor={
-                <Chip
-                  icon="cog"
-                  onPress={() => setSimTypeMenuVisible(true)}
-                  style={[styles.filterChip, simulatorTypeFilter !== 'all' && styles.filterChipActive]}
-                  textStyle={simulatorTypeFilter !== 'all' ? styles.filterChipTextActive : undefined}
-                  showSelectedOverlay
-                >
-                  {simulatorTypeFilter === 'all' ? 'Sys: All' : simulatorTypeFilter}
-                </Chip>
-              }
-            >
-              <Menu.Item onPress={() => { setSimulatorTypeFilter('all'); setSimTypeMenuVisible(false); hapticsFilterSelect(); }} title="All Types" />
-              <Divider />
-              {availableTypes.map(type => (
-                <Menu.Item 
-                  key={type} 
-                  onPress={() => { 
-                    setSimulatorTypeFilter(prev => prev === type ? 'all' : type); 
-                    setSimTypeMenuVisible(false); 
-                    hapticsFilterSelect(); 
-                  }} 
-                  title={type} 
-                />
-              ))}
-            </Menu>
-
-            {/* Min Rating Menu (Replaces Input) */}
-            <Menu
-              visible={ratingMenuVisible}
-              onDismiss={() => setRatingMenuVisible(false)}
-              anchor={
-                <Chip
-                  icon="star"
-                  onPress={() => setRatingMenuVisible(true)}
-                  style={[styles.filterChip, filterMinRating > 0 && styles.filterChipActive]}
-                  textStyle={filterMinRating > 0 ? styles.filterChipTextActive : undefined}
-                  showSelectedOverlay
-                >
-                  {filterMinRating === 0 ? 'Rating: Any' : `${filterMinRating}+ Stars`}
-                </Chip>
-              }
-            >
-              <Menu.Item onPress={() => { setFilterMinRating(0); setRatingMenuVisible(false); hapticsFilterSelect(); }} title="Any Rating" />
-              <Menu.Item onPress={() => { setFilterMinRating(prev => prev === 3 ? 0 : 3); setRatingMenuVisible(false); hapticsFilterSelect(); }} title="3+ Stars" />
-              <Menu.Item onPress={() => { setFilterMinRating(prev => prev === 4 ? 0 : 4); setRatingMenuVisible(false); hapticsFilterSelect(); }} title="4+ Stars" />
-              <Menu.Item onPress={() => { setFilterMinRating(prev => prev === 5 ? 0 : 5); setRatingMenuVisible(false); hapticsFilterSelect(); }} title="5 Stars Only" />
-            </Menu>
-
-            {/* Toggles */}
             <Chip
               selected={filterHasPhotos}
               onPress={() => { hapticsFilterSelect(); setFilterHasPhotos(!filterHasPhotos); }}
-              icon="image-outline"
+              icon="camera"
               style={[styles.filterChip, filterHasPhotos && styles.filterChipActive]}
               textStyle={filterHasPhotos ? styles.filterChipTextActive : undefined}
               showSelectedOverlay
@@ -864,36 +646,20 @@ function ReviewsListScreen() {
         )}
       </View>
 
-
-
       <FlatList
         data={filteredReviews}
         renderItem={renderReviewItem}
-        keyExtractor={keyExtractor}
-        ListEmptyComponent={ListEmptyComponent}
-        showsVerticalScrollIndicator={false}
-        style={styles.scrollView}
-        contentContainerStyle={filteredReviews.length === 0 ? styles.emptyContainer : { paddingBottom: Math.max(insets.bottom, hp('10%')) }}
-        removeClippedSubviews={true}
-        maxToRenderPerBatch={10}
-        updateCellsBatchingPeriod={50}
-        initialNumToRender={5}
-        windowSize={10}
+        keyExtractor={item => item.id}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: Math.max(insets.bottom, rs(24)) }
+        ]}
         numColumns={numColumns}
-        key={numColumns}
-        columnWrapperStyle={numColumns > 1 ? { gap: wp('2%') } : undefined}
+        key={numColumns} // Force re-render on column change
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={isDark ? '#FFFFFF' : '#000000'}
-            colors={['#2196F3']}
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primaryColor} />
         }
-        // Removing inaccurate fixed getItemLayout to avoid jumpy virtualization
-        accessibilityLabel="Reviews list"
-        accessibilityHint="Pull down to refresh. Scrollable list of all reviews"
-        accessibilityRole="list"
+        ListEmptyComponent={ListEmptyComponent}
       />
 
       <View style={[styles.bottomActions, { paddingBottom: Math.max(insets.bottom, hp('1%')) }]}>
@@ -908,6 +674,8 @@ function ReviewsListScreen() {
     </ThemedView>
   );
 }
+
+
 
 
 
@@ -1269,6 +1037,27 @@ const createStyles = (isDark: boolean, cardBackgroundColor: string, borderColor:
     height: 8,
     borderRadius: 4,
     marginRight: 8,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    marginBottom: rs(12),
+  },
+  infoCol: {
+    flex: 1,
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: rs(12),
+    paddingTop: rs(12),
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.1)',
+  },
+  listContent: {
+    padding: rs(16),
+    gap: rs(16),
   },
 });
 
