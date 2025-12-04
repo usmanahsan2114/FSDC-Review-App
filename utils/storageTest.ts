@@ -4,6 +4,7 @@ import {
     getAllReviews,
     getStorageStats,
     initializeDataStorage,
+    Review,
     saveReview
 } from './dataStorage';
 import {
@@ -71,10 +72,10 @@ export async function runStorageTests(): Promise<StorageTestResult> {
     }
 
     // Test 3: Create and save a test review
-    const testReview = {
+    const testReview: Review = {
       id: `test-${Date.now()}`,
       timestamp: Date.now(),
-      reviewType: 'professional' as const,
+      reviewType: 'professional',
       personalInfo: { 
         name: 'Test User', 
         email: 'test@example.com',

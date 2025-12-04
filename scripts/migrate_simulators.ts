@@ -17,11 +17,11 @@ async function migrateSimulators() {
 
   try {
     // 1. Super Mushshak
-    const { error: err1, count: count1 } = await supabase
+    const { error: err1 } = await supabase
       .from('reviews')
       .update({ simulator_name: 'Super Mushshak' })
       .ilike('simulator_name', 'Super Mushshak%')
-      .select('id', { count: 'exact' });
+      .select('id');
     if (err1) console.error('Error updating Super Mushshak:', err1);
     else console.log(`Updated Super Mushshak records.`);
 

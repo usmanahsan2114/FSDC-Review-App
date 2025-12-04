@@ -16,8 +16,8 @@
 ### Any Type Usage
 
 **Location**: `storage/reviewStorage.js`, `screens/ReviewPreviewScreen.js`.
-**Details**: Missing type definitions, implicit `any`.
-**Recommendation**: Define proper TypeScript interfaces.
+**Details**: These are legacy files and are not currently used in the active application flow.
+**Recommendation**: Can be safely ignored or deleted.
 
 ### React Native Deprecation Warnings
 

@@ -18,15 +18,16 @@ This document provides detailed explanations for complex parts of the ReviewsApp
 
 ## Data Management Layer
 
-### Review Storage (`storage/reviewStorage.js`)
+### Review Storage (`utils/dataStorage.ts`)
 
-- **Key**: `flight_simulator_reviews`
-- **Structure**: JSON array of review objects.
+- **Key**: `reviews`
+- **Structure**: Encrypted JSON array of review objects.
 - **Features**:
-  - `generateId()`: Timestamp + random string.
-  - `getReviews()`: Retrieves and validates data.
-  - `saveReview()`: Validates, adds metadata, and persists.
-- **Limitations**: AsyncStorage size limits, no indexing.
+  - `saveReview()`: Validates, encrypts, and persists data.
+  - `getAllReviews()`: Decrypts and retrieves reviews.
+  - `batchMigrateImages()`: Handles image storage optimization.
+  - `syncReviewsToSupabase()`: Handles offline-first synchronization.
+- **Storage**: Uses `AsyncStorage` for metadata and `expo-file-system` for images.
 
 ### Theme Management (`contexts/ThemeContext.tsx`)
 

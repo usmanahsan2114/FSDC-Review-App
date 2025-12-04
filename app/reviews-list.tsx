@@ -22,7 +22,7 @@ import {
     useWindowDimensions,
     View
 } from 'react-native';
-import { Button, Chip, Divider, IconButton, Menu, TextInput } from 'react-native-paper';
+import { Button, Chip, Divider, IconButton, Menu, Modal, Portal, TextInput } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StarRating from 'react-native-star-rating-widget';
 

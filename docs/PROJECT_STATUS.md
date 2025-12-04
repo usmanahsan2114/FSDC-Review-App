@@ -102,7 +102,10 @@ Added new Dashboard button:
 
 ## 4. Errors
 
-_No critical runtime errors or linter errors were detected during the static analysis._
+_All known type errors and warnings have been resolved._
+
+- Fixed type mismatch in `utils/storageTest.ts`.
+- Fixed Supabase query syntax in `scripts/migrate_simulators.ts`.
 
 ## 5. Missing Documentation
 
