@@ -988,7 +988,7 @@ function AddReviewScreen() {
           <GlassCard style={{ 
             padding: rs(12), 
             marginHorizontal: wp('4%'), 
-            marginTop: rs(8), 
+            marginTop: insets.top + rs(16), 
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -1034,7 +1034,7 @@ function AddReviewScreen() {
 
         {/* Aircraft Selection Section - WOW Factor */}
         <GlassCard style={styles.sectionCard} variant="glass-panel">
-          <View style={{ padding: 16 }}>
+          <View style={{ padding: 16, paddingTop: 24 }}>
             <View style={{ marginBottom: 12 }}>
               <ThemedText style={styles.sectionTitle}>SELECT AIRCRAFT</ThemedText>
             </View>

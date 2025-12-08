@@ -4,10 +4,12 @@ import OptimizedImage from '@/components/OptimizedImage';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import ThemeToggle from '@/components/ThemeToggle';
+import { Simulator } from '@/constants/simulators';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useThemeColor } from '@/hooks/use-theme-color';
-import { router } from 'expo-router';
-import React from 'react';
+import { getSimulators } from '@/utils/simulatorStorage';
+import { router, useFocusEffect } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import { Linking, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { IconButton } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,6 +20,13 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const primaryColor = useThemeColor({}, 'primary');
   const accentColor = useThemeColor({}, 'accent');
+  const [simulators, setSimulators] = useState<Simulator[]>([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      getSimulators().then(setSimulators);
+    }, [])
+  );
 
   const handleAddReview = () => router.push('/add-review');
   const handleAddJoyrideReview = () => router.push('/add-review?type=joyride');
@@ -104,6 +113,54 @@ export default function HomeScreen() {
             <ThemedText type="technical-label" style={[styles.subtitle, { color: isDark ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.6)' }]}>
               FLIGHT SIMULATION DATA CENTER FSDC
             </ThemedText>
+          </View>
+
+          {/* Simulator Slideshow */}
+          <View style={{ marginBottom: rs(32) }}>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: rs(24), gap: rs(16) }}
+            >
+              {simulators.map((sim) => (
+                <GlassCard 
+                  key={sim.id} 
+                  style={{ 
+                    width: wp(60), 
+                    height: hp(20), 
+                    borderRadius: 16, 
+                    overflow: 'hidden',
+                  }}
+                  variant="glass-panel"
+                >
+                  <View style={{ 
+                    flex: 1, 
+                    padding: 24, 
+                    justifyContent: 'center', 
+                    alignItems: 'center',
+                    backgroundColor: 'rgba(0,0,0,0.2)' // Subtle backing like add-review
+                  }}>
+                    <OptimizedImage
+                      source={{ uri: sim.imageUrl || 'https://fsdcpak.com/assets/img/home/super-mushak.webp' }}
+                      style={{ width: '100%', height: '100%' }}
+                      contentFit="contain"
+                    />
+                  </View>
+                  <View style={{ 
+                    position: 'absolute', 
+                    bottom: 0, 
+                    left: 0, 
+                    right: 0, 
+                    padding: 12,
+                    backgroundColor: 'rgba(0,0,0,0.6)' 
+                  }}>
+                    <ThemedText type="defaultSemiBold" style={{ color: '#FFF' }}>
+                      {sim.name}
+                    </ThemedText>
+                  </View>
+                </GlassCard>
+              ))}
+            </ScrollView>
           </View>
 
           <View style={styles.gridContainer}>

@@ -376,8 +376,19 @@ export default function AdminQuestionsScreen() {
     setHasChanges(true);
   };
 
-  const updateSimulator = (id: string, name: string) => {
-    setSimulators(prev => prev.map(s => s.id === id ? { ...s, name } : s));
+  const updateSimulator = (id: string, field: keyof Simulator, value: any) => {
+    setSimulators(prev => {
+      const targetSim = prev.find(s => s.id === id);
+      // If updating Image URL, sync across all simulators with the same NAME
+      if (field === 'imageUrl' && targetSim) {
+        return prev.map(s => 
+          (s.id === id || s.name === targetSim.name) 
+            ? { ...s, [field]: value } 
+            : s
+        );
+      }
+      return prev.map(s => s.id === id ? { ...s, [field]: value } : s);
+    });
     setHasChanges(true);
   };
 
@@ -498,7 +509,7 @@ export default function AdminQuestionsScreen() {
             numberOfLines={1}
             adjustsFontSizeToFit
           >
-            {"Rating Categories\n"}
+            {"Rating Categories"}
           </ThemedText>
         </TouchableOpacity>
         <TouchableOpacity
@@ -873,15 +884,30 @@ export default function AdminQuestionsScreen() {
                     </View>
                   </View>
                   {editingSimulator === sim.id ? (
-                    <TextInput
-                      label="Aircraft Name"
-                      value={sim.name}
-                      onChangeText={(text) => updateSimulator(sim.id, text)}
-                      style={styles.textInput}
-                      mode="outlined"
-                    />
+                    <View style={styles.editForm}>
+                      <TextInput
+                        label="Aircraft Name"
+                        value={sim.name}
+                        onChangeText={(text) => updateSimulator(sim.id, 'name', text)}
+                        style={styles.textInput}
+                        mode="outlined"
+                      />
+                      <TextInput
+                        label="Image URL"
+                        value={sim.imageUrl}
+                        onChangeText={(text) => updateSimulator(sim.id, 'imageUrl', text)}
+                        style={styles.textInput}
+                        mode="outlined"
+                        placeholder="https://example.com/image.png"
+                      />
+                    </View>
                   ) : (
-                    <ThemedText style={styles.categoryTitle}>{sim.name}</ThemedText>
+                    <View style={styles.categoryDisplay}>
+                      <ThemedText style={styles.categoryTitle}>{sim.name}</ThemedText>
+                      {sim.imageUrl ? (
+                        <ThemedText style={styles.categoryDescription} numberOfLines={1}>{sim.imageUrl}</ThemedText>
+                      ) : null}
+                    </View>
                   )}
                 </View>
               </GlassCard>
