@@ -7,7 +7,7 @@
     "icon": "./assets/images/AppIcons/playstore.png",
     "scheme": "reviewsapp",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.ReviewsApp",

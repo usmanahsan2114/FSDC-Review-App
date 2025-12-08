@@ -1,7 +1,7 @@
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { Image } from 'expo-image';
-import React, { memo, useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import React, { memo, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 
 interface OptimizedImageProps {
   source: { uri: string } | number;
@@ -29,34 +29,20 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
   onLoad,
   onError,
   alt,
-  lazy = true,
+  lazy = true, // Not used in JS anymore, but kept for API compatibility if needed (expo-image handles it internally usually)
   blurRadius,
 }) => {
-  const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
-  const [isVisible, setIsVisible] = useState(!lazy);
   
   const backgroundColor = useThemeColor({}, 'surface');
-  const placeholderColor = useThemeColor({}, 'border');
-
-  useEffect(() => {
-    if (lazy) {
-      // Simulate intersection observer for lazy loading
-      const timer = setTimeout(() => {
-        setIsVisible(true);
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [lazy]);
+  // const placeholderColor = useThemeColor({}, 'border'); // Not used with native placeholder
 
   const handleLoad = () => {
-    setIsLoading(false);
     setHasError(false);
     onLoad?.();
   };
 
   const handleError = (error: any) => {
-    setIsLoading(false);
     setHasError(true);
     onError?.(error);
   };
@@ -65,28 +51,14 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
     if (placeholder) {
       return { uri: placeholder };
     }
-    // Static 1x1 PNG placeholder (gray) to avoid btoa usage in RN
+    // Static 1x1 PNG placeholder (gray)
     const transparentPngBase64 =
       'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAuMB9h1dHkQAAAAASUVORK5CYII=';
     return { uri: `data:image/png;base64,${transparentPngBase64}` };
   };
 
-  if (!isVisible) {
-    return (
-      <View style={[styles.container, style, { backgroundColor }]}>
-        <ActivityIndicator size="small" color={placeholderColor} />
-      </View>
-    );
-  }
-
   return (
-    <View style={[styles.container, style]}>
-      {isLoading && (
-        <View style={[styles.loadingContainer, StyleSheet.absoluteFill]}>
-          <ActivityIndicator size="small" color={placeholderColor} />
-        </View>
-      )}
-      
+    <View style={[styles.container, style, { backgroundColor: hasError ? backgroundColor : undefined }]}>
       {hasError ? (
         <Image
           source={getPlaceholderSource()}
@@ -98,7 +70,6 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
           source={source}
           style={[styles.image, style]}
           placeholder={getPlaceholderSource()}
-          // Default to 'contain' to avoid cropping/distortion; callers may override
           contentFit={contentFit}
           transition={transition}
           cachePolicy={cachePolicy}
@@ -108,6 +79,7 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
           blurRadius={blurRadius}
           accessible={!!alt}
           accessibilityLabel={alt}
+          // native lazy loading is default in expo-image or handled by FlatList windowing
         />
       )}
     </View>

@@ -28,7 +28,7 @@ import { Button, Chip, Divider, IconButton, Menu, Modal, Portal, TextInput } fro
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StarRating from 'react-native-star-rating-widget';
 
-import { deleteReview, getAllReviews, initializeDataStorage, Review } from '../utils/dataStorage';
+import { deleteReview, getAllReviews, getReviewsPaginated, initializeDataStorage, Review } from '../utils/dataStorage';
 import { validateAdminPin } from '../utils/deviceConfig';
 import { exportToExcel } from '../utils/exportUtils';
 import { hapticsButtonPress, hapticsFilterSelect } from '../utils/haptics';
@@ -104,6 +104,8 @@ function ReviewsListScreen() {
   const [ratingMenuVisible, setRatingMenuVisible] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
+  const hasActiveFilters = searchQuery || filterMinRating > 0 || filterHasPhotos || filterHasHandwriting || simulatorTypeFilter !== 'all' || simulatorFilter !== 'all' || reviewTypeFilter !== 'all';
+
   const { isDark } = useTheme();
   const { width } = useWindowDimensions();
   const numColumns = 1;
@@ -131,19 +133,54 @@ function ReviewsListScreen() {
     setAvailableSimulators(sims);
   };
 
+  const [totalReviewsCount, setTotalReviewsCount] = useState(0);
+
   const loadReviews = async () => {
     try {
       setLoading(true);
       await initializeDataStorage();
-      const allReviews = await getAllReviews();
-      setReviews(allReviews);
+      
+      // Load initial chunk for fast startup
+      const { data, total } = await getReviewsPaginated(0, 20);
+      setReviews(data);
+      setTotalReviewsCount(total);
     } catch (error) {
       console.error('Error loading reviews:', error);
       Alert.alert('Error', 'Failed to load reviews');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
+
+  const loadMoreReviews = async () => {
+    if (loading || reviews.length >= totalReviewsCount || hasActiveFilters) return;
+    
+    // console.log('Loading more reviews...');
+    try {
+      const { data } = await getReviewsPaginated(reviews.length, 20);
+      if (data.length > 0) {
+        setReviews(prev => [...prev, ...data]);
+      }
+    } catch (error) {
+      console.error('Error loading more reviews:', error);
+    }
+  };
+
+  const ensureAllReviewsLoaded = useCallback(async () => {
+    if (reviews.length < totalReviewsCount) {
+      // console.log('Filters active, loading all reviews...');
+      const all = await getAllReviews();
+      setReviews(all);
+    }
+  }, [reviews.length, totalReviewsCount]);
+
+  // Effect to load all data when searching/filtering
+  useEffect(() => {
+    if (hasActiveFilters) {
+      ensureAllReviewsLoaded();
+    }
+  }, [hasActiveFilters, ensureAllReviewsLoaded]);
 
   const loadPersonalInfoFields = async () => {
     try {
@@ -445,7 +482,7 @@ function ReviewsListScreen() {
     hapticsButtonPress();
   }, []);
 
-  const hasActiveFilters = searchQuery || filterMinRating > 0 || filterHasPhotos || filterHasHandwriting || simulatorTypeFilter !== 'all' || simulatorFilter !== 'all' || reviewTypeFilter !== 'all';
+
 
   const ListEmptyComponent = useMemo(() => {
     if (reviews.length === 0) {
@@ -667,6 +704,14 @@ function ReviewsListScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primaryColor} />
         }
         ListEmptyComponent={ListEmptyComponent}
+        
+        // Performance Enhancements
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        removeClippedSubviews={true}
+        onEndReached={loadMoreReviews}
+        onEndReachedThreshold={0.5}
       />
 
       <View style={[styles.bottomActions, { paddingBottom: Math.max(insets.bottom, hp('1%')) }]}>

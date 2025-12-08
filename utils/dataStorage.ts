@@ -21,6 +21,9 @@ const REVIEWS_KEY = 'reviews';
 const STORAGE_VERSION_KEY = 'storage_version';
 const CURRENT_STORAGE_VERSION = '2.0';
 
+// In-memory cache for reviews to avoid frequent JSON parsing
+let cachedReviews: Review[] | null = null;
+
 // Types
 export interface Review {
   id: string;
@@ -122,6 +125,7 @@ export const saveReview = async (reviewData: Omit<Review, 'id' | 'timestamp'>): 
     // Save to AsyncStorage (now much smaller without Base64 data and encrypted)
     await AsyncStorage.setItem(REVIEWS_KEY, encryptedReviews);
     
+    invalidateReviewsCache();
     console.log(`Review saved with ID: ${reviewId}`);
     return reviewId;
     
@@ -135,6 +139,9 @@ export const saveReview = async (reviewData: Omit<Review, 'id' | 'timestamp'>): 
  * Get all reviews
  */
 export const getAllReviews = async (): Promise<Review[]> => {
+  // Return cached data if available
+  if (cachedReviews) return cachedReviews;
+
   try {
     const reviewsData = await AsyncStorage.getItem(REVIEWS_KEY);
     if (!reviewsData) {
@@ -204,7 +211,9 @@ export const getAllReviews = async (): Promise<Review[]> => {
         reviewType: review.reviewType || 'professional'
       }));
       
-      return reviews.sort((a, b) => b.timestamp - a.timestamp); // Sort by newest first
+      const sorted = reviews.sort((a, b) => b.timestamp - a.timestamp); // Sort by newest first
+      cachedReviews = sorted;
+      return sorted;
     }
     
     console.warn('Reviews data is not a valid array, returning empty array');
@@ -225,6 +234,27 @@ export const getAllReviews = async (): Promise<Review[]> => {
     
     return [];
   }
+};
+
+/**
+ * Get reviews with pagination support
+ * @param offset Starting index
+ * @param limit Number of items to return
+ */
+export const getReviewsPaginated = async (offset: number, limit: number): Promise<{ data: Review[], total: number }> => {
+  const allReviews = await getAllReviews();
+  const sliced = allReviews.slice(offset, offset + limit);
+  return {
+    data: sliced,
+    total: allReviews.length
+  };
+};
+
+/**
+ * Invalidate the reviews cache. Call this after any modification (save, update, delete).
+ */
+export const invalidateReviewsCache = () => {
+  cachedReviews = null;
 };
 
 /**
@@ -273,6 +303,7 @@ export const updateReview = async (reviewId: string, updatedData: Partial<Review
     const encryptedReviews = encryptObject(reviews);
     await AsyncStorage.setItem(REVIEWS_KEY, encryptedReviews);
     
+    invalidateReviewsCache();
     console.log(`Review ${reviewId} updated successfully`);
     return true;
     
@@ -312,6 +343,7 @@ export const deleteReview = async (reviewId: string): Promise<boolean> => {
     const encryptedReviews = encryptObject(updatedReviews);
     await AsyncStorage.setItem(REVIEWS_KEY, encryptedReviews);
     
+    invalidateReviewsCache();
     console.log(`Review ${reviewId} deleted successfully`);
     return true;
     
@@ -407,6 +439,7 @@ export const importReviews = async (newReviews: Review[]): Promise<number> => {
     const encryptedReviews = encryptObject(updatedReviews);
     await AsyncStorage.setItem(REVIEWS_KEY, encryptedReviews);
     
+    invalidateReviewsCache();
     console.log(`Imported ${uniqueNewReviews.length} reviews`);
     return uniqueNewReviews.length;
   } catch (error) {
@@ -460,6 +493,7 @@ export const mergeRemoteReviews = async (remoteReviews: Review[]): Promise<numbe
       const encryptedReviews = encryptObject(mergedReviews);
       await AsyncStorage.setItem(REVIEWS_KEY, encryptedReviews);
       console.log(`Merged ${updatesCount} remote reviews.`);
+      invalidateReviewsCache();
     }
     
     return updatesCount;
