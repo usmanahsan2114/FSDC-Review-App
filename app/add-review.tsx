@@ -37,7 +37,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import OptimizedImage from '@/components/OptimizedImage';
 import StylusCanvas from '@/components/StylusCanvas';
-import { Simulator } from '@/constants/simulators';
+import { FSDC_SIMULATORS, Simulator } from '@/constants/simulators';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import { usePerformance } from '@/hooks/usePerformance';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -1031,6 +1031,33 @@ function AddReviewScreen() {
             <ThemeToggle />
           </View>
         </View>
+
+        {/* Aircraft Selection Section - WOW Factor */}
+        <GlassCard style={styles.sectionCard} variant="glass-panel">
+          <View style={{ padding: 16 }}>
+            <View style={{ marginBottom: 12 }}>
+              <ThemedText style={styles.sectionTitle}>SELECT AIRCRAFT</ThemedText>
+            </View>
+
+            <View style={{ 
+              height: 300, 
+              marginBottom: 16, 
+              padding: 32, // "A lot of padding"
+              backgroundColor: 'rgba(0,0,0,0.2)', 
+              borderRadius: 16,
+              borderWidth: 1, 
+              borderColor: 'rgba(255,255,255,0.1)',
+              justifyContent: 'center',
+              alignItems: 'center'
+            }}>
+              <OptimizedImage 
+                source={{ uri: FSDC_SIMULATORS.find(s => s.name === formData.simulatorName)?.imageUrl ?? 'https://fsdcpak.com/assets/img/home/super-mushak.webp' }}
+                style={{ width: '100%', height: '100%' }}
+                contentFit="contain"
+              />
+            </View>
+          </View>
+        </GlassCard>
 
         {/* Personal Information Section */}
         <GlassCard style={styles.sectionCard} variant="glass-panel">
@@ -2145,5 +2172,13 @@ const createStyles = (
     paddingBottom: hp('1.5%'),
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.1)',
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
   },
 });

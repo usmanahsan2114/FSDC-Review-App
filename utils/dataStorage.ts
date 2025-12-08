@@ -38,6 +38,7 @@ export interface Review {
   simulatorName?: string;
   simulatorType?: string;
   isSynced?: boolean;
+  updatedAt?: number; // Timestamp of last update for conflict resolution
 }
 
 export interface StorageStats {
@@ -95,6 +96,7 @@ export const saveReview = async (reviewData: Omit<Review, 'id' | 'timestamp'>): 
     const review: Review = {
       id: reviewId,
       timestamp,
+      updatedAt: timestamp, // Set initial update time
       reviewType: reviewData.reviewType || 'professional', // Default to professional for backward compatibility
       personalInfo: reviewData.personalInfo,
       ratings: reviewData.ratings,
@@ -261,7 +263,11 @@ export const updateReview = async (reviewId: string, updatedData: Partial<Review
     }
     
     // Update review
-    reviews[reviewIndex] = { ...reviews[reviewIndex], ...updatedData };
+    reviews[reviewIndex] = { 
+      ...reviews[reviewIndex], 
+      ...updatedData,
+      updatedAt: Date.now() 
+    };
     
     // Encrypt and save updated reviews
     const encryptedReviews = encryptObject(reviews);

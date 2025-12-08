@@ -8,7 +8,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { router } from 'expo-router';
 import React from 'react';
-import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Linking, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { IconButton } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getDevicePadding, hp, isTablet, rs, wp } from '../../utils/responsive';
@@ -126,6 +126,14 @@ export default function HomeScreen() {
               subLabel="Visitor Experience"
               onPress={handleAddJoyrideReview}
               color="#D946EF" // Magenta
+            />
+
+            <ActionButton 
+              icon="web" 
+              label={"FSDC Website\n"} 
+              subLabel="Official Portal"
+              onPress={() => Linking.openURL('https://fsdcpak.com')}
+              color="#0EA5E9" // Sky Blue
             />
 
             <View style={[styles.sectionHeader, { marginTop: rs(24) }]}>
