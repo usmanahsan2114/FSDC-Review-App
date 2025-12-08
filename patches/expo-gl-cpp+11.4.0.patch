@@ -1,5 +1,5 @@
 diff --git a/node_modules/expo-gl-cpp/android/build.gradle b/node_modules/expo-gl-cpp/android/build.gradle
-index 025d491..4905dc7 100644
+index 025d491..b1d28bc 100644
 --- a/node_modules/expo-gl-cpp/android/build.gradle
 +++ b/node_modules/expo-gl-cpp/android/build.gradle
 @@ -50,7 +50,7 @@ buildscript {
@@ -20,6 +20,15 @@ index 025d491..4905dc7 100644
  
    compileOptions {
      sourceCompatibility JavaVersion.VERSION_11
+@@ -104,7 +104,7 @@ android {
+   }
+ 
+   buildFeatures {
+-    // prefab true
++    prefab true
+   }
+ 
+   packagingOptions {
 @@ -150,14 +150,16 @@ def extractReactNativeAAR = { buildType ->
        throw new GradleException("Multiple React Native AARs found:\n${rnAARs.join("\n")}" +
            "\nRemove the old ones and try again")
@@ -45,3 +54,34 @@ index 025d491..4905dc7 100644
    }
  }
  
+diff --git a/node_modules/expo-gl-cpp/cpp/CMakeLists.txt b/node_modules/expo-gl-cpp/cpp/CMakeLists.txt
+index 2c69484..f4ae208 100644
+--- a/node_modules/expo-gl-cpp/cpp/CMakeLists.txt
++++ b/node_modules/expo-gl-cpp/cpp/CMakeLists.txt
+@@ -34,13 +34,20 @@ if(NOT LIBRN_DIR)
+     file(GLOB LIBRN_DIR "${RN_SO_DIR}")
+ endif()
+ 
+-target_include_directories(${PACKAGE_NAME}
+-                           PRIVATE "${REACT_NATIVE_DIR}/ReactCommon/jsi")
++# Prefab support for RN 0.71+
++find_package(ReactAndroid CONFIG)
+ 
+-find_library(
+-    JSI_LIB jsi
+-    PATHS ${LIBRN_DIR}
+-    NO_CMAKE_FIND_ROOT_PATH)
++if(ReactAndroid_FOUND)
++    set(JSI_LIB ReactAndroid::jsi)
++else()
++    target_include_directories(${PACKAGE_NAME}
++                               PRIVATE "${REACT_NATIVE_DIR}/ReactCommon/jsi")
++
++    find_library(
++        JSI_LIB jsi
++        PATHS ${LIBRN_DIR}
++        NO_CMAKE_FIND_ROOT_PATH)
++endif()
+ 
+ find_library(LOG_LIB log)
+ find_library(GLES_LIB GLESv3)
