@@ -1,5 +1,5 @@
 diff --git a/node_modules/expo-gl-cpp/android/build.gradle b/node_modules/expo-gl-cpp/android/build.gradle
-index 025d491..fe2562c 100644
+index 025d491..4905dc7 100644
 --- a/node_modules/expo-gl-cpp/android/build.gradle
 +++ b/node_modules/expo-gl-cpp/android/build.gradle
 @@ -50,7 +50,7 @@ buildscript {
@@ -20,3 +20,28 @@ index 025d491..fe2562c 100644
  
    compileOptions {
      sourceCompatibility JavaVersion.VERSION_11
+@@ -150,14 +150,16 @@ def extractReactNativeAAR = { buildType ->
+       throw new GradleException("Multiple React Native AARs found:\n${rnAARs.join("\n")}" +
+           "\nRemove the old ones and try again")
+     }
+-  }
+-  def rnAAR = rnAARs.singleFile
+-  def file = rnAAR.absoluteFile
+-  def packageName = file.name.tokenize('-')[0]
+-  copy {
+-    from zipTree(file)
+-    into "$buildDir/$file.name"
+-    include "jni/**/*"
++    def rnAAR = rnAARs.singleFile
++    def file = rnAAR.absoluteFile
++    def packageName = file.name.tokenize('-')[0]
++    copy {
++      from zipTree(file)
++      into "$buildDir/$file.name"
++      include "jni/**/*"
++    }
++  } else {
++    logger.warn("No React Native AAR found in ${RN_AAR_DIR}. Skipping extraction.")
+   }
+ }
+ 
