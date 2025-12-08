@@ -260,6 +260,8 @@ export default function AdminQuestionsScreen() {
       await AsyncStorage.setItem('ratingCategories', JSON.stringify(ratingCategories));
       await AsyncStorage.setItem('admin_personal_info_fields', JSON.stringify(personalInfoFields));
       await AsyncStorage.setItem('personalInfoFields', JSON.stringify(personalInfoFields));
+      await saveSimulators(simulators);
+      await saveSimulatorTypes(simulatorTypes);
       setHasChanges(false);
       Alert.alert('Success', 'All changes saved successfully!');
     } catch (error) {
@@ -453,7 +455,7 @@ export default function AdminQuestionsScreen() {
         [
           { text: 'Discard', style: 'destructive', onPress: () => router.back() },
           { text: 'Cancel', style: 'cancel' },
-          { text: 'Save', onPress: () => { saveRatingCategories(); router.back(); } }
+          { text: 'Save', onPress: async () => { await saveAllChanges(); router.back(); } }
         ]
       );
     } else {
@@ -914,6 +916,15 @@ export default function AdminQuestionsScreen() {
             ))}
             <Button mode="outlined" onPress={addNewSimulator} style={styles.addButton} icon="plus">
               Add New Aircraft
+            </Button>
+            
+            <Button 
+              mode="contained" 
+              onPress={saveSimulatorChanges} 
+              style={[styles.saveButton, { marginTop: 20 }]} 
+              icon="content-save"
+            >
+              Save Simulator Data
             </Button>
           </>
         )}

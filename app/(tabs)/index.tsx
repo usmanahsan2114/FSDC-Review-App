@@ -34,51 +34,7 @@ export default function HomeScreen() {
   const handleAdminQuestions = () => router.push('/admin-questions');
   const handleDashboard = () => router.push('/dashboard');
 
-  const ActionButton = ({ 
-    icon, 
-    label, 
-    subLabel, 
-    onPress, 
-    color = primaryColor,
-    variant = 'default' 
-  }: { 
-    icon: string, 
-    label: string, 
-    subLabel?: string, 
-    onPress: () => void, 
-    color?: string,
-    variant?: 'default' | 'accent' | 'outline'
-  }) => (
-    <TouchableOpacity 
-      onPress={onPress} 
-      activeOpacity={0.7}
-      style={[styles.actionButtonWrapper, isTablet && styles.actionButtonWrapperTablet]}
-    >
-      <GlassCard 
-        style={[
-          styles.actionButton, 
-          variant === 'accent' && { borderColor: color, borderWidth: 2 },
-          variant === 'outline' && { borderColor: 'rgba(255,255,255,0.2)' }
-        ]}
-        intensity={variant === 'accent' ? 40 : 20}
-      >
-        <View style={styles.actionIconContainer}>
-          <IconButton icon={icon} iconColor={color} size={32} style={{ margin: 0 }} />
-        </View>
-        <View style={styles.actionTextContainer}>
-          <ThemedText type="defaultSemiBold" style={{ color: variant === 'accent' ? color : (isDark ? '#FFFFFF' : '#000000') }}>
-            {label}
-          </ThemedText>
-          {subLabel && (
-            <ThemedText type="technical-label" style={{ color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)', marginTop: 4 }}>
-              {subLabel}
-            </ThemedText>
-          )}
-        </View>
-        <IconButton icon="chevron-right" iconColor={color} size={20} />
-      </GlassCard>
-    </TouchableOpacity>
-  );
+
 
   return (
     <AnimatedEntry style={{ flex: 1 }}>
@@ -175,6 +131,7 @@ export default function HomeScreen() {
               subLabel="Professional Review"
               onPress={handleAddReview}
               variant="accent"
+              isDark={isDark}
             />
 
             <ActionButton 
@@ -183,6 +140,7 @@ export default function HomeScreen() {
               subLabel="Visitor Experience"
               onPress={handleAddJoyrideReview}
               color="#D946EF" // Magenta
+              isDark={isDark}
             />
 
             <ActionButton 
@@ -191,6 +149,7 @@ export default function HomeScreen() {
               subLabel="Official Portal"
               onPress={() => Linking.openURL('https://fsdcpak.com')}
               color="#0EA5E9" // Sky Blue
+              isDark={isDark}
             />
 
             <View style={[styles.sectionHeader, { marginTop: rs(24) }]}>
@@ -204,6 +163,7 @@ export default function HomeScreen() {
               subLabel="Dashboard & Metrics"
               onPress={handleDashboard}
               color={accentColor}
+              isDark={isDark}
             />
 
             <ActionButton 
@@ -212,6 +172,7 @@ export default function HomeScreen() {
               subLabel="View All Logs"
               onPress={handleViewReviews}
               variant="outline"
+              isDark={isDark}
             />
 
             <View style={[styles.sectionHeader, { marginTop: rs(24) }]}>
@@ -226,6 +187,7 @@ export default function HomeScreen() {
               onPress={handleAdminQuestions}
               color="#64748B"
               variant="outline"
+              isDark={isDark}
             />
           </View>
           
@@ -326,3 +288,57 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
+
+function ActionButton({
+  icon,
+  label,
+  subLabel,
+  onPress,
+  color = '#0EA5E9',
+  variant = 'default',
+  isDark
+}: {
+  icon: string,
+  label: string,
+  subLabel?: string,
+  onPress: () => void,
+  color?: string,
+  variant?: 'default' | 'accent' | 'outline',
+  isDark: boolean
+}) {
+  return (
+  <TouchableOpacity
+    onPress={onPress}
+    activeOpacity={0.7}
+    style={[styles.actionButtonWrapper, isTablet && styles.actionButtonWrapperTablet]}
+  >
+    <GlassCard
+      style={[
+        styles.actionButton,
+        variant === 'accent' && { borderColor: color, borderWidth: 2 },
+        variant === 'outline' && { borderColor: 'rgba(255,255,255,0.2)' }
+      ]}
+      intensity={variant === 'accent' ? 40 : 20}
+    >
+      <View style={styles.actionIconContainer}>
+        <IconButton icon={icon} iconColor={color} size={32} style={{ margin: 0 }} />
+      </View>
+      <View style={styles.actionTextContainer}>
+        <ThemedText type="defaultSemiBold" style={{ color: variant === 'accent' ? color : (isDark ? '#FFFFFF' : '#000000') }}>
+          {label}
+        </ThemedText>
+        {subLabel && (
+          <ThemedText type="technical-label" style={{ color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)', marginTop: 4 }}>
+            {subLabel}
+          </ThemedText>
+        )}
+      </View>
+      <IconButton icon="chevron-right" iconColor={color} size={20} />
+    </GlassCard>
+  </TouchableOpacity>
+  );
+}
+
+ActionButton.displayName = 'ActionButton';
+
+

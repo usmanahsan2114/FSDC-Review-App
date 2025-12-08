@@ -37,6 +37,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import OptimizedImage from '@/components/OptimizedImage';
 import StylusCanvas from '@/components/StylusCanvas';
+import { COUNTRIES, Country } from '@/constants/countries';
 import { FSDC_SIMULATORS, Simulator } from '@/constants/simulators';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import { usePerformance } from '@/hooks/usePerformance';
@@ -46,6 +47,7 @@ import { deleteImagePermanently, initializeImageStorage, saveImagePermanently } 
 import { getDevicePadding, getPhotoGridSize, hp, isTablet, minTouchTarget, rf, rs, wp } from '../utils/responsive';
 import { getSimulators, getSimulatorTypes } from '../utils/simulatorStorage';
 import { validateReviewForm } from '../utils/validation';
+
 
 
 interface RatingCategory {
@@ -78,7 +80,7 @@ interface FormData {
   id?: string; // For editing existing reviews
 }
 
-import { COUNTRIES, Country } from '@/constants/countries';
+
 
 const defaultRatingCategories: RatingCategory[] = [
   { id: '1',  key: 'cockpitRealismLayout',            title: 'Cockpit realism & layout',               description: '' },
@@ -290,7 +292,7 @@ function AddReviewScreen() {
   const accentColor = useThemeColor({}, 'accent');
   
   // Performance optimization
-  const { debounce, throttle, memoize, runAfterInteractions } = usePerformance();
+  usePerformance();
   
   // Create dynamic styles - optimized with useMemo
   const styles = useMemo(() => 
@@ -604,22 +606,7 @@ function AddReviewScreen() {
     }
   };
 
-  // Memoized validation state for performance
-  const isFormValid = useMemo(() => {
-    // Check required personal info fields
-    for (const field of personalInfoFields) {
-      if (field.required) {
-        const value = formData.personalInfo[field.key];
-        if (!value || !value.trim()) {
-          return false;
-        }
-      }
-    }
-    
-    // Check if all ratings are provided
-    const hasAllRatings = Object.values(formData.ratings).every((rating: number) => rating > 0);
-    return hasAllRatings;
-  }, [formData.personalInfo, formData.ratings, personalInfoFields]);
+
 
   const validateForm = useCallback((): boolean => {
     // Validate required personal info fields

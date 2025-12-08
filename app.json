@@ -7,7 +7,7 @@
     "icon": "./assets/images/AppIcons/playstore.png",
     "scheme": "reviewsapp",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.ReviewsApp",
@@ -23,9 +23,6 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.anonymous.ReviewsApp",
-      "proguardEnabled": true,
-      "enableProguardInReleaseBuilds": true,
-      "enableDangerousExperimentalLeanBuilds": false,
       "permissions": [
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
@@ -62,7 +59,9 @@
           "savePhotosPermission": "Allow $(PRODUCT_NAME) to save photos.",
           "isAccessMediaLocationEnabled": true
         }
-      ]
+      ],
+      "expo-secure-store",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,

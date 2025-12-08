@@ -17,21 +17,21 @@ export const FSDC_SIMULATORS: Simulator[] = [
   { 
     id: '2', 
     name: 'Enstrom 280-FX',
-    imageUrl: 'https://fsdcpak.com/assets/img/home/enstrom-280-fx.webp'
+    imageUrl: 'https://fsdcpak.com/assets/img/home/about2.webp'
   },
   { 
     id: '3', 
     name: 'Mushshak MFI-17',
-    imageUrl: 'https://fsdcpak.com/assets/img/home/mushshak-mfi-17.webp'
+    imageUrl: 'https://fsdcpak.com/assets/img/home/hero-01.webp'
   },
   { 
     id: '4', 
     name: 'Mi-17',
-    imageUrl: 'https://fsdcpak.com/assets/img/home/mi-17.webp'
+    imageUrl: 'https://fsdcpak.com/assets/img/home/hero-01.webp'
   },
   { 
     id: '5', 
     name: 'AS-350/ H125',
-    imageUrl: 'https://fsdcpak.com/assets/img/home/as-350.webp'
+    imageUrl: 'https://fsdcpak.com/assets/img/home/hero-01.webp'
   },
 ];

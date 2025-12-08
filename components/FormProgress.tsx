@@ -25,7 +25,7 @@ export const FormProgress: React.FC<FormProgressProps> = ({
       friction: 7,
       useNativeDriver: false,
     }).start();
-  }, [currentStep]);
+  }, [currentStep, progressAnim]);
 
   const progressWidth = progressAnim.interpolate({
     inputRange: [0, totalSteps],

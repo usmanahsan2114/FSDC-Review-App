@@ -83,7 +83,7 @@ function ErrorFallback({ error, onRetry }: ErrorFallbackProps) {
           </ThemedText>
           
           <ThemedText style={styles.message}>
-            We're sorry, but something unexpected happened. Please try again.
+            We&apos;re sorry, but something unexpected happened. Please try again.
           </ThemedText>
 
           {__DEV__ && error && (

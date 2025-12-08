@@ -14,15 +14,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Alert,
-  FlatList,
-  ListRenderItem,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  useWindowDimensions,
-  View
+    Alert,
+    FlatList,
+    ListRenderItem,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    useWindowDimensions,
+    View
 } from 'react-native';
 import { Button, Chip, Divider, IconButton, Menu, Modal, Portal, TextInput } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -427,6 +427,8 @@ function ReviewsListScreen() {
            prevProps.review.isSynced === nextProps.review.isSynced;
   });
 
+  ReviewCard.displayName = 'ReviewCard';
+
   const renderReviewItem: ListRenderItem<Review> = useCallback(({ item }) => (
     <ReviewCard review={item} />
   ), [handleViewDetail, handleDeleteReview]);
@@ -497,7 +499,7 @@ function ReviewsListScreen() {
                 setIsExporting(true);
                 try {
                   await exportToExcel(filteredReviews);
-                } catch (error) {
+                } catch {
                   Alert.alert('Export Failed', 'Could not export reviews to Excel.');
                 } finally {
                   setIsExporting(false);
