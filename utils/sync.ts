@@ -1,12 +1,45 @@
 import { supabase } from '@/lib/supabase';
 import NetInfo from '@react-native-community/netinfo';
-import { getAllReviews, getReviewById, updateReview } from './dataStorage';
+import * as FileSystem from 'expo-file-system';
+import { getAllReviews, getReviewById, mergeRemoteReviews, updateReview } from './dataStorage';
 import { getDeviceId, getDeviceName } from './deviceConfig';
 
 /**
  * Sync a single review to Supabase immediately (real-time sync on submit).
  * Returns true if sync succeeded, false otherwise.
  */
+/**
+ * Process image URI for sync.
+ * If strictly local file path (file://), converts to Base64 Data URI.
+ * This ensures the image data is stored in Supabase text column (mostly for compressed handwritten notes).
+ */
+const processImageForSync = async (uri?: string): Promise<string | null> => {
+  if (!uri) return null;
+  
+  // If it's already a web URL or dataURI, return as is
+  if (uri.startsWith('http') || uri.startsWith('data:')) {
+    return uri;
+  }
+
+  // If local file, read and convert to base64
+  if (uri.startsWith('file://')) {
+    try {
+      const base64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: 'base64',
+      });
+      // Detect extension for mime type (default png)
+      const ext = uri.split('.').pop()?.toLowerCase();
+      const mime = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 'image/png';
+      return `data:${mime};base64,${base64}`;
+    } catch (e) {
+      console.warn('Failed to convert local image to base64:', e);
+      return null;
+    }
+  }
+  
+  return uri;
+};
+
 export const syncSingleReview = async (reviewId: string): Promise<boolean> => {
   const state = await NetInfo.fetch();
   if (!state.isConnected) {
@@ -24,6 +57,9 @@ export const syncSingleReview = async (reviewId: string): Promise<boolean> => {
     const deviceId = await getDeviceId();
     const deviceName = await getDeviceName();
 
+    // Process handwritten comment to ensure it's synced as data (if local)
+    const processedHandwritten = await processImageForSync(review.handwrittenComment);
+
     const { error } = await supabase
       .from('reviews')
       .upsert({
@@ -34,7 +70,7 @@ export const syncSingleReview = async (reviewId: string): Promise<boolean> => {
         ratings: review.ratings,
         overall_rating: review.overallRating,
         text_comment: review.textComment,
-        handwritten_comment_url: review.handwrittenComment,
+        handwritten_comment_url: processedHandwritten,
         photos_url: review.photos || [],
         simulator_id: review.simulatorId,
         simulator_name: review.simulatorName,
@@ -87,6 +123,8 @@ export const syncReviewsToSupabase = async (): Promise<number> => {
 
     for (const review of unsyncedReviews) {
       try {
+        const processedHandwritten = await processImageForSync(review.handwrittenComment);
+        
         const { error } = await supabase
           .from('reviews')
           .upsert({
@@ -97,7 +135,7 @@ export const syncReviewsToSupabase = async (): Promise<number> => {
             ratings: review.ratings,
             overall_rating: review.overallRating,
             text_comment: review.textComment,
-            handwritten_comment_url: review.handwrittenComment,
+            handwritten_comment_url: processedHandwritten,
             photos_url: review.photos || [],
             simulator_id: review.simulatorId,
             simulator_name: review.simulatorName,
@@ -155,6 +193,8 @@ export const forceSyncAllReviews = async (): Promise<number> => {
 
     for (const review of allReviews) {
       try {
+        const processedHandwritten = await processImageForSync(review.handwrittenComment);
+        
         const { error } = await supabase
           .from('reviews')
           .upsert({
@@ -165,7 +205,7 @@ export const forceSyncAllReviews = async (): Promise<number> => {
             ratings: review.ratings,
             overall_rating: review.overallRating,
             text_comment: review.textComment,
-            handwritten_comment_url: review.handwrittenComment,
+            handwritten_comment_url: processedHandwritten,
             photos_url: review.photos || [],
             simulator_id: review.simulatorId,
             simulator_name: review.simulatorName,
@@ -192,6 +232,60 @@ export const forceSyncAllReviews = async (): Promise<number> => {
     return syncedCount;
   } catch (error) {
     console.error('Force sync error:', error);
+    return 0;
+  }
+};
+
+/**
+ * Import ALL reviews from Supabase and merge with local storage.
+ * This effectively restores the database from the cloud.
+ */
+export const importAllFromSupabase = async (): Promise<number> => {
+  const state = await NetInfo.fetch();
+  if (!state.isConnected) {
+    console.log('No internet connection, skipping import');
+    return 0;
+  }
+
+  try {
+    console.log('Importing ALL reviews from Supabase...');
+    
+    const { data: remoteData, error } = await supabase
+      .from('reviews')
+      .select('*');
+
+    if (error) {
+      console.error('Import failed:', error);
+      throw error;
+    }
+
+    if (!remoteData || remoteData.length === 0) {
+      console.log('No remote reviews found to import');
+      return 0;
+    }
+
+    const mappedReviews = remoteData.map((row: any) => ({
+      id: row.id,
+      timestamp: new Date(row.created_at).getTime(),
+      reviewType: row.review_type || 'professional',
+      personalInfo: row.personal_info || {},
+      ratings: row.ratings || {},
+      overallRating: row.overall_rating || 0,
+      handwrittenComment: row.handwritten_comment_url,
+      photos: row.photos_url || [],
+      textComment: row.text_comment || '',
+      simulatorId: row.simulator_id,
+      simulatorName: row.simulator_name,
+      simulatorType: row.simulator_type,
+      isSynced: true
+    }));
+
+    // Merge with local storage
+    const count = await mergeRemoteReviews(mappedReviews);
+    console.log(`Successfully imported and merged ${count} reviews from cloud`);
+    return count;
+  } catch (error) {
+    console.error('Import error:', error);
     return 0;
   }
 };

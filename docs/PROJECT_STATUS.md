@@ -100,12 +100,30 @@ Added new Dashboard button:
 - **Auto-Sync**: Implemented background sync that runs on review submission and network reconnection.
 - **Data Integrity**: Executed `scripts/migrate_ratings.ts` to migrate all ratings to integers and target a 4.7 average (34 reviews updated).
 
+### N. Recent Enhancements (Cloud Sync & Handwriting) ☁️✍️ (COMPLETED)
+
+**Files Modified:** `app/add-review.tsx`, `utils/sync.ts`, `app/admin-questions.tsx`, `components/themed-text.tsx`, `app/(tabs)/index.tsx`
+
+- **Handwriting Sync**:
+  - Implemented high-compression for handwritten images to be stored in Supabase (as Base64).
+  - Ensures original high-quality image is saved to device Gallery.
+  - Updated `utils/sync.ts` to seamlessley convert local paths to Data URIs for cloud storage.
+- **Cloud Database Management**:
+  - Added "Import All Database from Cloud" in Admin Panel to restore local data.
+  - Added "Export New Reviews" to force-push local data to cloud.
+  - Removed legacy "Reset & Import Excel" functionality.
+- **UI Polish**:
+  - Fixed text clipping on Android by adjusting `lineHeight` in `ThemedText`.
+  - Added manual line spacing pattern (`{"\n"}`) for button labels.
+  - Made Admin tabs responsive to prevent text wrapping.
+
 ## 4. Errors
 
 _All known type errors and warnings have been resolved._
 
 - Fixed type mismatch in `utils/storageTest.ts`.
 - Fixed Supabase query syntax in `scripts/migrate_simulators.ts`.
+- Resolved import errors for `importAllFromSupabase`.
 
 ## 5. Missing Documentation
 

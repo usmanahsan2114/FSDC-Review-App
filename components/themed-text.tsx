@@ -48,7 +48,7 @@ const styles = StyleSheet.create({
   },
   defaultSemiBold: {
     fontSize: rf(16),
-    lineHeight: rf(24),
+    lineHeight: rf(26),
     fontWeight: '600',
 
     fontFamily: Platform.select({ ios: 'System', android: 'sans-serif-medium' }),
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
   },
   technicalLabel: {
     fontSize: rf(12),
-    lineHeight: rf(16),
+    lineHeight: rf(20),
     textTransform: 'uppercase',
     letterSpacing: 1.5,
     fontFamily: Platform.select({ ios: 'Courier New', android: 'monospace' }),

@@ -36,3 +36,16 @@
 **Location**: `app/add-review.tsx`.
 **Details**: Camera and FileSystem usage may have limitations in Expo Go vs Development Build.
 **Recommendation**: Use Development Build for full native capability testing.
+
+### Local Data Decryption Warning
+
+**Location**: Console Logs / `utils/encryption.ts`.
+**Details**: `WARN Standard decryption failed: [SyntaxError: JSON Parse error: Unexpected character: U]`.
+**Status**: Investigating. Likely due to legacy data format overlap or non-encrypted data being read as encrypted.
+**Impact**: Low (Application functions normally, data is readable), but logs are noisy.
+
+### Text Clipping (Resolved) ✅
+
+**Location**: `components/themed-text.tsx`.
+**Details**: Text was clipping on Android due to insufficient `lineHeight`.
+**Resolution**: Increased `lineHeight` for `defaultSemiBold` to 26 and `technicalLabel` to 20. Confirmed fix.

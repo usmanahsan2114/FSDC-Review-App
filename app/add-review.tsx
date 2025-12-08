@@ -6,6 +6,7 @@ import ThemeToggle from '@/components/ThemeToggle';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -676,27 +677,59 @@ function AddReviewScreen() {
       // Initialize image storage
       await initializeImageStorage();
       
-      // Generate filename: handwriting_{timestamp}.png
+      // Generate filename for ORIGINAL: handwriting_{timestamp}_orig.png
       const timestamp = Date.now();
-      const filename = `handwriting_${timestamp}.png`;
+      const filenameOrig = `handwriting_${timestamp}_orig.png`;
       const directory = ((FileSystem as any).documentDirectory ?? '') + 'images/';
-      const filePath = directory + filename;
+      const filePathOrig = directory + filenameOrig;
       
       // Ensure directory exists
-    await FileSystem.makeDirectoryAsync(directory, { intermediates: true });
+      await FileSystem.makeDirectoryAsync(directory, { intermediates: true });
 
-    // Remove header from base64 data
-    const base64Data = dataUrl.replace(/^data:image\/png;base64,/, '');
-    
-    // Write to file system
-    await FileSystem.writeAsStringAsync(filePath, base64Data, {
-      encoding: 'base64',
-    });
+      // Remove header from base64 data to save original
+      const base64Data = dataUrl.replace(/^data:image\/png;base64,/, '');
       
-      console.log(`Handwriting saved: ${filePath}`);
+      // Write ORIGINAL to file system
+      await FileSystem.writeAsStringAsync(filePathOrig, base64Data, {
+        encoding: 'base64',
+      });
+
+      console.log(`Original handwriting saved: ${filePathOrig}`);
+
+      // 1. Save ORIGINAL to Gallery (as requested)
+      const hasPermission = await requestMediaLibraryPermission();
+      if (hasPermission) {
+        try {
+          await MediaLibrary.createAssetAsync(filePathOrig);
+          console.log('Original handwriting saved to Gallery');
+        } catch (galleryError) {
+          console.error('Failed to save to gallery:', galleryError);
+          // Don't block flow if gallery save fails
+        }
+      }
+
+      // 2. Compress image for Supabase/App usage
+      // "compress the hand written image to max and put it in supabase database then"
+      const compressed = await ImageManipulator.manipulateAsync(
+        filePathOrig,
+        [{ resize: { width: 600 } }], // Resize to reasonable width
+        { compress: 0.1, format: ImageManipulator.SaveFormat.JPEG } // High compression
+      );
+
+      // Move compressed file to our images directory
+      const filenameCompressed = `handwriting_${timestamp}_comp.jpg`;
+      const filePathCompressed = directory + filenameCompressed;
       
-      // Update form data with file path
-      updateFormData('handwrittenComment', filePath);
+      // ImageManipulator saves to cache, move it to our dir
+      await FileSystem.moveAsync({
+        from: compressed.uri,
+        to: filePathCompressed
+      });
+
+      console.log(`Compressed handwriting saved: ${filePathCompressed}`);
+      
+      // Update form data with COMPRESSED file path
+      updateFormData('handwrittenComment', filePathCompressed);
       setShowHandwritingModal(false);
     } catch (error) {
       console.error('Error saving handwriting:', error);

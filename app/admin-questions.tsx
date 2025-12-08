@@ -13,11 +13,10 @@ import { Button, IconButton, TextInput } from 'react-native-paper';
 
 import AdminLogin from '@/components/AdminLogin';
 import { Simulator } from '@/constants/simulators';
-import { clearCorruptedStorage, importReviews } from '../utils/dataStorage';
 import { getDeviceConfig, regenerateDeviceId, setAdminPin, setDeviceId, setDeviceName } from '../utils/deviceConfig';
 import { hp, rf, rs, wp } from '../utils/responsive';
 import { getSimulators, getSimulatorTypes, saveSimulators, saveSimulatorTypes } from '../utils/simulatorStorage';
-import { forceSyncAllReviews } from '../utils/sync';
+import { forceSyncAllReviews, importAllFromSupabase } from '../utils/sync';
 
 const seedReviews = require('../assets/data/seed_reviews.json');
 interface RatingCategory {
@@ -494,23 +493,35 @@ export default function AdminQuestionsScreen() {
           style={[styles.tab, activeTab === 'ratings' && styles.activeTab]}
           onPress={() => setActiveTab('ratings')}
         >
-          <ThemedText style={[styles.tabText, activeTab === 'ratings' && styles.activeTabText]}>
-            Rating Categories
+          <ThemedText 
+            style={[styles.tabText, activeTab === 'ratings' && styles.activeTabText]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+          >
+            {"Rating Categories\n"}
           </ThemedText>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'personal' && styles.activeTab]}
           onPress={() => setActiveTab('personal')}
         >
-          <ThemedText style={[styles.tabText, activeTab === 'personal' && styles.activeTabText]}>
-            Personal Info Fields
+          <ThemedText 
+            style={[styles.tabText, activeTab === 'personal' && styles.activeTabText]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+          >
+            Personal Info
           </ThemedText>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'simulators' && styles.activeTab]}
           onPress={() => setActiveTab('simulators')}
         >
-          <ThemedText style={[styles.tabText, activeTab === 'simulators' && styles.activeTabText]}>
+          <ThemedText 
+            style={[styles.tabText, activeTab === 'simulators' && styles.activeTabText]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+          >
             Simulators
           </ThemedText>
         </TouchableOpacity>
@@ -518,7 +529,11 @@ export default function AdminQuestionsScreen() {
           style={[styles.tab, activeTab === 'device' && styles.activeTab]}
           onPress={() => setActiveTab('device')}
         >
-          <ThemedText style={[styles.tabText, activeTab === 'device' && styles.activeTabText]}>
+          <ThemedText 
+            style={[styles.tabText, activeTab === 'device' && styles.activeTabText]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+          >
             Device
           </ThemedText>
         </TouchableOpacity>
@@ -946,99 +961,92 @@ export default function AdminQuestionsScreen() {
               Save Device Settings
             </Button>
 
-            {/* Manual Sync to Cloud Button */}
-            <GlassCard style={[styles.categoryCard, { marginTop: 20 }]} variant="glass-panel">
+            {/* Cloud Sync Buttons */}
+            <GlassCard style={[styles.categoryCard, { marginTop: 20, marginBottom: 40 }]} variant="glass-panel">
               <View style={{ padding: 16 }}>
-                <ThemedText style={[styles.categoryTitle, { marginBottom: 8 }]}>Cloud Sync</ThemedText>
-                <ThemedText style={{ opacity: 0.7, marginBottom: 16, fontSize: 13 }}>
-                  Force sync ALL reviews to Supabase. This updates existing reviews with any missing fields (device info, photos, etc).
+                <ThemedText style={[styles.categoryTitle, { marginBottom: 8 }]}>Cloud Database</ThemedText>
+                
+                {/* 1. Import from Cloud */}
+                <ThemedText style={{ opacity: 0.7, marginBottom: 8, fontSize: 13 }}>
+                  Download all reviews from Supabase. This will merge cloud data with your local data.
                 </ThemedText>
                 <Button 
                   mode="contained" 
                   onPress={async () => {
                     Alert.alert(
-                      'Sync All Reviews',
-                      'This will upload ALL reviews to cloud, updating any missing fields like device_id, device_name, and photos_url. Continue?',
+                      'Import Database',
+                      'This will download ALL reviews from Supabase and merge them with your local data. Continue?',
                       [
                         { text: 'Cancel', style: 'cancel' },
                         {
-                          text: 'Sync All',
+                          text: 'Import All',
                           onPress: async () => {
                             try {
-                              Alert.alert('Syncing...', 'Uploading all reviews to cloud. This may take a moment...');
-                              const count = await forceSyncAllReviews();
+                              Alert.alert('Importing...', 'Downloading reviews from cloud...');
+                              const count = await importAllFromSupabase();
                               if (count > 0) {
-                                Alert.alert('Success', `Successfully synced ${count} review(s) to cloud with all fields updated.`);
+                                Alert.alert('Success', `Successfully imported/merged ${count} reviews from cloud.`);
                               } else {
-                                Alert.alert('Info', 'No reviews found to sync.');
+                                Alert.alert('Info', 'No new reviews found in cloud.');
                               }
                             } catch (error) {
-                              console.error('Force sync error:', error);
-                              Alert.alert('Error', 'Failed to sync reviews. Check your internet connection.');
+                              console.error('Import error:', error);
+                              Alert.alert('Error', 'Failed to import reviews. Check your internet connection.');
                             }
                           }
                         }
                       ]
                     );
                   }}
-                  icon="cloud-sync"
+                  icon="cloud-download"
+                  style={{ marginBottom: 20, backgroundColor: '#2196F3' }}
+                  textColor="#FFFFFF"
+                >
+                  Import All Database from Cloud
+                </Button>
+
+                {/* 2. Export to Cloud */}
+                <ThemedText style={{ opacity: 0.7, marginBottom: 8, fontSize: 13 }}>
+                  Export unsynced reviews to Supabase. Useful if auto-sync missed some reviews.
+                </ThemedText>
+                <Button 
+                  mode="contained" 
+                  onPress={async () => {
+                    Alert.alert(
+                      'Export to Cloud',
+                      'This will upload ALL local reviews to Supabase, ensuring everything is synced. Continue?',
+                      [
+                        { text: 'Cancel', style: 'cancel' },
+                        {
+                          text: 'Export All',
+                          onPress: async () => {
+                            try {
+                              Alert.alert('Syncing...', 'Uploading reviews to cloud...');
+                              const count = await forceSyncAllReviews();
+                              if (count > 0) {
+                                Alert.alert('Success', `Successfully synced ${count} review(s) to cloud.`);
+                              } else {
+                                Alert.alert('Info', 'No reviews found to sync.');
+                              }
+                            } catch (error) {
+                              console.error('Export error:', error);
+                              Alert.alert('Error', 'Failed to export reviews.');
+                            }
+                          }
+                        }
+                      ]
+                    );
+                  }}
+                  icon="cloud-upload" // Changed icon to upload
                   buttonColor="#10B981"
                   textColor="#FFFFFF"
                 >
-                  Sync All Reviews to Cloud
+                  Export New Reviews to Supabase
                 </Button>
               </View>
             </GlassCard>
-          </>
+            </>
         )}
-
-        {hasChanges && (
-          <View style={styles.bottomActions}>
-            <Button
-              mode="contained"
-              onPress={activeTab === 'simulators' ? saveSimulatorChanges : saveAllChanges}
-              style={styles.saveButton}
-              icon="content-save"
-            >
-              Save All Changes
-            </Button>
-          </View>
-        )}
-        <GlassCard style={{ marginTop: 20, marginBottom: 40, backgroundColor: colors.card }} variant="glass-panel">
-          <View style={{ padding: 16 }}>
-            <ThemedText type="subtitle" style={{ color: colors.text }}>Data Management</ThemedText>
-            <Button 
-              mode="contained" 
-              onPress={async () => {
-                Alert.alert(
-                  'Reset & Import',
-                  'This will DELETE all existing reviews and import the 32 reviews from the Excel file. Are you sure?',
-                  [
-                    { text: 'Cancel', style: 'cancel' },
-                    { 
-                      text: 'Delete & Import', 
-                      style: 'destructive',
-                      onPress: async () => {
-                        try {
-                          await clearCorruptedStorage();
-                          const count = await importReviews(seedReviews);
-                          await syncReviews(); // Trigger sync immediately
-                          Alert.alert('Success', `Database reset. Imported ${count} reviews and started sync.`);
-                        } catch (error) {
-                          Alert.alert('Error', 'Failed to reset and import.');
-                          console.error(error);
-                        }
-                      }
-                    }
-                  ]
-                );
-              }}
-              style={{ marginTop: 10, backgroundColor: colors.notification }}
-            >
-              Reset & Import Excel Data ({seedReviews.length})
-            </Button>
-          </View>
-        </GlassCard>
       </ScrollView>
     </ThemedView>
   );
@@ -1093,21 +1101,20 @@ const createStyles = (backgroundColor: string, textColor: string, borderColor: s
   },
   tab: {
     flex: 1,
-    paddingVertical: hp('1.5%'),
-    paddingHorizontal: wp('4%'),
+    paddingVertical: hp('1.2%'),
+    paddingHorizontal: wp('1%'),
     borderRadius: 8,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   activeTab: {
     backgroundColor: '#FF6B35',
   },
   tabText: {
-    fontSize: rf(16),
-    lineHeight: rf(40),
-    fontWeight: '500',
-    flexShrink: 1,
+    fontSize: rf(12),
+    lineHeight: rf(16),
+    fontWeight: '600',
     textAlign: 'center',
-    paddingVertical: rf(4),
   },
   activeTabText: {
     color: '#FFFFFF',

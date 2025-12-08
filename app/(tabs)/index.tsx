@@ -114,7 +114,7 @@ export default function HomeScreen() {
 
             <ActionButton 
               icon="plus-circle-outline" 
-              label="New Flight Log" 
+              label={"New Flight Log\n"} 
               subLabel="Professional Review"
               onPress={handleAddReview}
               variant="accent"
@@ -122,7 +122,7 @@ export default function HomeScreen() {
 
             <ActionButton 
               icon="airplane-takeoff" 
-              label="Joyride Entry" 
+              label={"Joyride Entry\n"} 
               subLabel="Visitor Experience"
               onPress={handleAddJoyrideReview}
               color="#D946EF" // Magenta
@@ -135,7 +135,7 @@ export default function HomeScreen() {
 
             <ActionButton 
               icon="chart-box-outline" 
-              label="Mission Analytics" 
+              label={"Mission Analytics\n"} 
               subLabel="Dashboard & Metrics"
               onPress={handleDashboard}
               color={accentColor}
@@ -143,7 +143,7 @@ export default function HomeScreen() {
 
             <ActionButton 
               icon="format-list-bulleted" 
-              label="Flight Archives" 
+              label={"Flight Archives\n"} 
               subLabel="View All Logs"
               onPress={handleViewReviews}
               variant="outline"
