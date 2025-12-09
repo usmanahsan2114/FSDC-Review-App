@@ -359,6 +359,18 @@ export const importAllFromSupabase = async (): Promise<{ count: number; error: s
       return { count: 0, error: null };
     }
 
+    // Schema Check: Detect if user made a typo in DB (update_at vs updated_at) to help debug "update_at colum" error
+    const firstRow = remoteData[0];
+    if (firstRow && !firstRow.updated_at && firstRow.update_at) {
+       const msg = 'DB Schema Error: Found column "update_at" but expected "updated_at". Please rename the column in Supabase.';
+       console.error(msg);
+       return { count: 0, error: msg };
+    }
+    if (firstRow && !firstRow.updated_at) {
+       // Just a warning, maybe it's null? But it's usually auto-generated.
+       console.warn('Warning: "updated_at" column appears to be missing or null in remote data.');
+    }
+
     const mappedReviews = remoteData.map((row: any) => ({
       id: row.id,
       timestamp: new Date(row.created_at).getTime(),

@@ -120,6 +120,7 @@ export const useSupabaseSync = () => {
             .upsert({
               id: review.id,
               created_at: new Date(review.timestamp).toISOString(),
+              updated_at: new Date(review.updatedAt || review.timestamp).toISOString(),
               simulator_id: review.simulatorId || 'unknown',
               simulator_name: review.simulatorName || 'Unknown Simulator',
               simulator_type: review.simulatorType || 'unknown',

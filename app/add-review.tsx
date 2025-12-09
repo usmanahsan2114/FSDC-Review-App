@@ -12,24 +12,24 @@ import * as MediaLibrary from 'expo-media-library';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-    Alert,
-    BackHandler,
-    Image,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View
+  Alert,
+  BackHandler,
+  Image,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import {
-    Button,
-    Dialog,
-    IconButton,
-    Paragraph,
-    Portal,
-    SegmentedButtons,
-    TextInput
+  Button,
+  Dialog,
+  IconButton,
+  Paragraph,
+  Portal,
+  SegmentedButtons,
+  TextInput
 } from 'react-native-paper';
 import StarRating from 'react-native-star-rating-widget';
 
@@ -667,7 +667,13 @@ function AddReviewScreen() {
       // Generate filename for ORIGINAL: handwriting_{timestamp}_orig.png
       const timestamp = Date.now();
       const filenameOrig = `handwriting_${timestamp}_orig.png`;
-      const directory = ((FileSystem as any).documentDirectory ?? '') + 'images/';
+      // Safer directory resolution
+      const rootDir = (FileSystem as any).documentDirectory || (FileSystem as any).cacheDirectory;
+      if (!rootDir) {
+        console.error('Storage Error: No valid directory found');
+        throw new Error('Device storage unavailable');
+      }
+      const directory = `${rootDir}images/`;
       const filePathOrig = directory + filenameOrig;
       
       // Ensure directory exists

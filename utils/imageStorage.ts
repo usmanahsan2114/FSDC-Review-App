@@ -11,9 +11,18 @@ const FS = FileSystem as any;
  */
 
 // Create permanent directories for different types of images
-const IMAGES_DIR = `${FS.documentDirectory ?? ''}images/`;
-const SIGNATURES_DIR = `${FS.documentDirectory ?? ''}signatures/`;
-const THUMBNAILS_DIR = `${FS.documentDirectory ?? ''}thumbnails/`;
+// Ensure we have a valid directory, fallback to cache if documentDirectory is null (rare but possible)
+const ROOT_DIR = FS.documentDirectory || FS.cacheDirectory;
+
+if (!ROOT_DIR) {
+  console.error("CRITICAL: Both documentDirectory and cacheDirectory are null!");
+} else {
+  console.log("Storage Root:", ROOT_DIR);
+}
+
+const IMAGES_DIR = `${ROOT_DIR}images/`;
+const SIGNATURES_DIR = `${ROOT_DIR}signatures/`;
+const THUMBNAILS_DIR = `${ROOT_DIR}thumbnails/`;
 
 // Thumbnail settings (only for list previews, not for actual images)
 const THUMBNAIL_SIZE = { width: 200, height: 200 };
