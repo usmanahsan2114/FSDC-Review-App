@@ -12,24 +12,24 @@ import * as MediaLibrary from 'expo-media-library';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert,
-  BackHandler,
-  Image,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View
+    Alert,
+    BackHandler,
+    Image,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import {
-  Button,
-  Dialog,
-  IconButton,
-  Paragraph,
-  Portal,
-  SegmentedButtons,
-  TextInput
+    Button,
+    Dialog,
+    IconButton,
+    Paragraph,
+    Portal,
+    SegmentedButtons,
+    TextInput
 } from 'react-native-paper';
 import StarRating from 'react-native-star-rating-widget';
 
@@ -41,7 +41,7 @@ import { COUNTRIES, Country } from '@/constants/countries';
 import { FSDC_SIMULATORS, Simulator } from '@/constants/simulators';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import { usePerformance } from '@/hooks/usePerformance';
-import * as FileSystem from 'expo-file-system/legacy';
+import * as FileSystem from 'expo-file-system';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { deleteImagePermanently, initializeImageStorage, saveImagePermanently } from '../utils/imageStorage';
 import { getDevicePadding, getPhotoGridSize, hp, isTablet, minTouchTarget, rf, rs, wp } from '../utils/responsive';
