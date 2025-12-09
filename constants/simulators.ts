@@ -10,27 +10,27 @@ export const SIMULATOR_TYPES = ['AeroSim Pro', 'Aeromix'];
 
 export const FSDC_SIMULATORS: Simulator[] = [
   { 
-    id: '1', 
+    id: 'sim_super_mushshak', 
     name: 'Super Mushshak',
     imageUrl: 'https://fsdcpak.com/assets/img/home/super-mushak.webp'
   },
   { 
-    id: '2', 
+    id: 'sim_enstrom_280fx', 
     name: 'Enstrom 280-FX',
     imageUrl: 'https://fsdcpak.com/assets/img/home/about2.webp'
   },
   { 
-    id: '3', 
+    id: 'sim_mushshak_mfi17', 
     name: 'Mushshak MFI-17',
     imageUrl: 'https://fsdcpak.com/assets/img/home/hero-01.webp'
   },
   { 
-    id: '4', 
+    id: 'sim_mi17', 
     name: 'Mi-17',
     imageUrl: 'https://fsdcpak.com/assets/img/home/hero-01.webp'
   },
   { 
-    id: '5', 
+    id: 'sim_as350', 
     name: 'AS-350/ H125',
     imageUrl: 'https://fsdcpak.com/assets/img/home/hero-01.webp'
   },
