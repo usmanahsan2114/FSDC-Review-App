@@ -1,4 +1,6 @@
 import * as FileSystem from 'expo-file-system';
+// @ts-ignore: Type definitions for expo-file-system seem to be missing properties that exist at runtime
+const FS = FileSystem as any;
 
 /**
  * Permanent Image Storage Utility
@@ -9,9 +11,9 @@ import * as FileSystem from 'expo-file-system';
  */
 
 // Create permanent directories for different types of images
-const IMAGES_DIR = `${FileSystem.documentDirectory ?? ''}images/`;
-const SIGNATURES_DIR = `${FileSystem.documentDirectory ?? ''}signatures/`;
-const THUMBNAILS_DIR = `${FileSystem.documentDirectory ?? ''}thumbnails/`;
+const IMAGES_DIR = `${FS.documentDirectory ?? ''}images/`;
+const SIGNATURES_DIR = `${FS.documentDirectory ?? ''}signatures/`;
+const THUMBNAILS_DIR = `${FS.documentDirectory ?? ''}thumbnails/`;
 
 // Thumbnail settings (only for list previews, not for actual images)
 const THUMBNAIL_SIZE = { width: 200, height: 200 };
@@ -54,11 +56,11 @@ const processBase64Image = async (uri: string): Promise<string> => {
     if (uri.startsWith('data:image/')) {
       // For base64 data (handwritten signatures), save as temporary file without any modifications
       const tempFilename = `temp_${Date.now()}.jpg`;
-      const tempPath = `${FileSystem.cacheDirectory}${tempFilename}`;
+      const tempPath = `${FS.cacheDirectory}${tempFilename}`;
       
       // Write base64 data directly to file
       await FileSystem.writeAsStringAsync(tempPath, uri.split(',')[1], {
-        encoding: FileSystem.EncodingType.Base64,
+        encoding: FS.EncodingType.Base64,
       });
       
       return tempPath;
@@ -271,7 +273,7 @@ export const cleanupOrphanedImages = async (referencedImages: string[]): Promise
 export const migrateTemporaryImage = async (tempUri: string): Promise<string | null> => {
   try {
     // Check if it's already a permanent path
-    if (FileSystem.documentDirectory && tempUri.includes(FileSystem.documentDirectory)) {
+    if (FS.documentDirectory && tempUri.includes(FS.documentDirectory)) {
       return tempUri;
     }
     
