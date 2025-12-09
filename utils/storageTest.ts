@@ -75,7 +75,7 @@ export async function runStorageTests(): Promise<StorageTestResult> {
     const testReview: Review = {
       id: `test-${Date.now()}`,
       timestamp: Date.now(),
-      reviewType: 'professional',
+      reviewType: 'professional' as const,
       personalInfo: { 
         name: 'Test User', 
         email: 'test@example.com',
