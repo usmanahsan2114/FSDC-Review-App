@@ -335,11 +335,11 @@ export const forceSyncAllReviews = async (): Promise<{ synced: number; failed: n
  * Import ALL reviews from Supabase and merge with local storage.
  * This effectively restores the database from the cloud.
  */
-export const importAllFromSupabase = async (): Promise<number> => {
+export const importAllFromSupabase = async (): Promise<{ count: number; error: string | null }> => {
   const state = await NetInfo.fetch();
   if (!state.isConnected) {
     console.log('No internet connection, skipping import');
-    return 0;
+    return { count: 0, error: 'No internet connection' };
   }
 
   try {
@@ -351,12 +351,12 @@ export const importAllFromSupabase = async (): Promise<number> => {
 
     if (error) {
       console.error('Import failed:', error);
-      throw error;
+      return { count: 0, error: error.message };
     }
 
     if (!remoteData || remoteData.length === 0) {
       console.log('No remote reviews found to import');
-      return 0;
+      return { count: 0, error: null };
     }
 
     const mappedReviews = remoteData.map((row: any) => ({
@@ -378,9 +378,9 @@ export const importAllFromSupabase = async (): Promise<number> => {
     // Merge with local storage
     const count = await mergeRemoteReviews(mappedReviews);
     console.log(`Successfully imported and merged ${count} reviews from cloud`);
-    return count;
+    return { count, error: null };
   } catch (error) {
     console.error('Import error:', error);
-    return 0;
+    return { count: 0, error: error instanceof Error ? error.message : String(error) };
   }
 };

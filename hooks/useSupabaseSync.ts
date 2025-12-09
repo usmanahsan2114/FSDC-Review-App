@@ -45,12 +45,13 @@ export const useSupabaseSync = () => {
 
       if (error) {
         console.error('Initial sync failed:', error);
-        setSyncError('Initial sync failed');
+        setSyncError(`Initial sync failed: ${error.message}`);
         initialSyncRef.current = false;
         return;
       }
 
       if (remoteData && remoteData.length > 0) {
+        // ... (data processing) ...
         const mappedReviews = remoteData.map((row: any) => ({
           id: row.id,
           timestamp: new Date(row.created_at).getTime(),
@@ -78,7 +79,7 @@ export const useSupabaseSync = () => {
       setLastSyncTime(new Date());
     } catch (error) {
       console.error('Initial sync error:', error);
-      setSyncError('Initial sync failed');
+      setSyncError(`Initial sync failed: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setIsSyncing(false);
       initialSyncRef.current = false;
@@ -153,7 +154,7 @@ export const useSupabaseSync = () => {
 
       if (pullError) {
         console.error('Error pulling reviews:', pullError);
-        setSyncError('Pull failed');
+        setSyncError(`Pull failed: ${pullError.message}`);
       } else if (remoteData) {
         const mappedReviews = remoteData.map((row: any) => ({
           id: row.id,
@@ -177,7 +178,7 @@ export const useSupabaseSync = () => {
       setLastSyncTime(new Date());
     } catch (error) {
       console.error('Sync failed:', error);
-      setSyncError('Sync failed');
+      setSyncError(`Sync failed: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setIsSyncing(false);
     }

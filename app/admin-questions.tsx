@@ -1020,9 +1020,12 @@ export default function AdminQuestionsScreen() {
                           onPress: async () => {
                             try {
                               Alert.alert('Importing...', 'Downloading reviews from cloud...');
-                              const count = await importAllFromSupabase();
-                              if (count > 0) {
-                                Alert.alert('Success', `Successfully imported/merged ${count} reviews from cloud.`);
+                              const result = await importAllFromSupabase();
+                              
+                              if (result.error) {
+                                Alert.alert('Import Failed', `Error: ${result.error}`);
+                              } else if (result.count > 0) {
+                                Alert.alert('Success', `Successfully imported/merged ${result.count} reviews from cloud.`);
                               } else {
                                 Alert.alert('Info', 'No new reviews found in cloud.');
                               }
