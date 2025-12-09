@@ -667,7 +667,7 @@ function AddReviewScreen() {
       // Generate filename for ORIGINAL: handwriting_{timestamp}_orig.png
       const timestamp = Date.now();
       const filenameOrig = `handwriting_${timestamp}_orig.png`;
-      const directory = ((FileSystem as any).documentDirectory ?? '') + 'images/';
+      const directory = (FileSystem.documentDirectory ?? '') + 'images/';
       const filePathOrig = directory + filenameOrig;
       
       // Ensure directory exists

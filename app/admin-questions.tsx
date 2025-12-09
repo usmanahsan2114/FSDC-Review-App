@@ -1059,11 +1059,17 @@ export default function AdminQuestionsScreen() {
                           onPress: async () => {
                             try {
                               Alert.alert('Syncing...', 'Uploading reviews to cloud...');
-                              const count = await forceSyncAllReviews();
-                              if (count > 0) {
-                                Alert.alert('Success', `Successfully synced ${count} review(s) to cloud.`);
+                              const result = await forceSyncAllReviews();
+                              
+                              if (result.failed > 0) {
+                                Alert.alert(
+                                  'Sync Completed with Errors', 
+                                  `Synced: ${result.synced}\nFailed: ${result.failed}\n\nFirst Error: ${result.errors[0]}`
+                                );
+                              } else if (result.synced > 0) {
+                                Alert.alert('Success', `Successfully synced ${result.synced} reviews.`);
                               } else {
-                                Alert.alert('Info', 'No reviews found to sync.');
+                                Alert.alert('Info', 'No reviews needed syncing (or all remote revisions were newer).');
                               }
                             } catch (error) {
                               console.error('Export error:', error);

@@ -235,11 +235,15 @@ export const syncReviewsToSupabase = async (): Promise<number> => {
  * Force sync ALL reviews to Supabase (including already synced ones).
  * This updates missing fields like device_id, device_name, photos_url.
  */
-export const forceSyncAllReviews = async (): Promise<number> => {
+/**
+ * Force sync ALL reviews to Supabase (including already synced ones).
+ * This updates missing fields like device_id, device_name, photos_url.
+ */
+export const forceSyncAllReviews = async (): Promise<{ synced: number; failed: number; total: number; errors: string[] }> => {
   const state = await NetInfo.fetch();
   if (!state.isConnected) {
     console.log('No internet connection, skipping force sync');
-    return 0;
+    return { synced: 0, failed: 0, total: 0, errors: ['No internet connection'] };
   }
 
   try {
@@ -247,7 +251,7 @@ export const forceSyncAllReviews = async (): Promise<number> => {
 
     if (allReviews.length === 0) {
       console.log('No reviews found to sync');
-      return 0;
+      return { synced: 0, failed: 0, total: 0, errors: ['No local reviews found'] };
     }
 
     console.log(`Force syncing ALL ${allReviews.length} reviews to update missing fields...`);
@@ -255,6 +259,8 @@ export const forceSyncAllReviews = async (): Promise<number> => {
     const deviceId = await getDeviceId();
     const deviceName = await getDeviceName();
     let syncedCount = 0;
+    let failedCount = 0;
+    const errors: string[] = [];
 
     for (const review of allReviews) {
       try {
@@ -273,6 +279,8 @@ export const forceSyncAllReviews = async (): Promise<number> => {
 
           if (remoteTime > localTime) {
             console.log(`Remote Review ${review.id} is newer. Skipping force sync upload.`);
+            // Count as synced because it's technically in sync (server version is better/equal)
+            // Or better: don't count as synced update, but not a failure.
             continue; 
           }
         }
@@ -301,6 +309,8 @@ export const forceSyncAllReviews = async (): Promise<number> => {
 
         if (error) {
           console.error(`Failed to force sync review ${review.id}:`, error);
+          failedCount++;
+          errors.push(`Review ${review.id}: ${error.message}`);
           continue;
         }
 
@@ -308,14 +318,16 @@ export const forceSyncAllReviews = async (): Promise<number> => {
         syncedCount++;
       } catch (err) {
         console.error(`Error force syncing review ${review.id}:`, err);
+        failedCount++;
+        errors.push(`Review ${review.id}: ${err instanceof Error ? err.message : String(err)}`);
       }
     }
 
     console.log(`Successfully force synced ${syncedCount} of ${allReviews.length} reviews`);
-    return syncedCount;
+    return { synced: syncedCount, failed: failedCount, total: allReviews.length, errors };
   } catch (error) {
     console.error('Force sync error:', error);
-    return 0;
+    return { synced: 0, failed: 0, total: 0, errors: [error instanceof Error ? error.message : String(error)] };
   }
 };
 
