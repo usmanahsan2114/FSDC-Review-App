@@ -451,6 +451,11 @@ export const importReviews = async (newReviews: Review[]): Promise<number> => {
 /**
  * Merge remote reviews into local storage (Two-Way Sync)
  */
+// ... (previous imports and code)
+
+/**
+ * Merge remote reviews into local storage (Two-Way Sync)
+ */
 export const mergeRemoteReviews = async (remoteReviews: Review[]): Promise<number> => {
   try {
     const existingReviews = await getAllReviews();
@@ -492,6 +497,8 @@ export const mergeRemoteReviews = async (remoteReviews: Review[]): Promise<numbe
     if (updatesCount > 0) {
       const encryptedReviews = encryptObject(mergedReviews);
       await AsyncStorage.setItem(REVIEWS_KEY, encryptedReviews);
+      // Ensure storage version is set to current to avoid unnecessary migration triggers
+      await AsyncStorage.setItem(STORAGE_VERSION_KEY, CURRENT_STORAGE_VERSION);
       console.log(`Merged ${updatesCount} remote reviews.`);
       invalidateReviewsCache();
     }
@@ -548,7 +555,41 @@ const migrateStorageData = async (): Promise<void> => {
       return;
     }
     
-    const reviews: Review[] = JSON.parse(reviewsJson);
+    let reviews: Review[] = [];
+    
+    // Check if encrypted first
+    if (isEncrypted(reviewsJson)) {
+        console.log('Migration: Data appears encrypted/encoded, attempting decode...');
+        const decrypted = decryptObject<Review[]>(reviewsJson);
+        if (Array.isArray(decrypted)) {
+            reviews = decrypted;
+        } else {
+            console.warn('Migration: Decryption returned invalid data, trying raw parse fallback.');
+            try {
+                 reviews = JSON.parse(reviewsJson);
+            } catch (e) {
+                 console.error('Migration: Failed to parse data.', e);
+                 // If we can't parse, we can't migrate. But maybe it's already migrated? 
+                 // We shouldn't throw if we can't parse garbage, just init fresh? 
+                 // No, risk of data loss. 
+                 // Assuming getAllReviews logic handles it, let's just abort migration if filtered.
+                 return;
+            }
+        }
+    } else {
+        try {
+            reviews = JSON.parse(reviewsJson);
+        } catch (e) {
+             console.error('Migration: Failed to parse JSON.', e);
+             return; 
+        }
+    }
+
+    if (!Array.isArray(reviews)) {
+         console.warn('Migration: Parsed data is not an array.');
+         return;
+    }
+
     let migratedCount = 0;
     
     for (const review of reviews) {
@@ -579,14 +620,15 @@ const migrateStorageData = async (): Promise<void> => {
       }
     }
     
-    // Save migrated reviews
-    await AsyncStorage.setItem(REVIEWS_KEY, JSON.stringify(reviews));
+    // Save migrated reviews (and ensure encrypted)
+    const encryptedData = encryptObject(reviews);
+    await AsyncStorage.setItem(REVIEWS_KEY, encryptedData);
     
     console.log(`Migration completed. ${migratedCount} reviews migrated.`);
     
   } catch (error) {
     console.error('Error during storage migration:', error);
-    throw new Error('Storage migration failed');
+    // Don't throw, just log. Throwing breaks the app boot.
   }
 };
 
