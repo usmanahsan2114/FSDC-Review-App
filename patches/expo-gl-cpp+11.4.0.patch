@@ -102,3 +102,27 @@ index 2c69484..f4ae208 100644
  
  find_library(LOG_LIB log)
  find_library(GLES_LIB GLESv3)
+diff --git a/node_modules/expo-gl-cpp/cpp/EXGLImageUtils.cpp b/node_modules/expo-gl-cpp/cpp/EXGLImageUtils.cpp
+index 82cd012..b78008d 100644
+--- a/node_modules/expo-gl-cpp/cpp/EXGLImageUtils.cpp
++++ b/node_modules/expo-gl-cpp/cpp/EXGLImageUtils.cpp
+@@ -1,3 +1,4 @@
++#include <vector>
+ #include "EXGLImageUtils.h"
+ 
+ #define STB_IMAGE_IMPLEMENTATION
+@@ -126,11 +127,11 @@ std::shared_ptr<uint8_t> loadImage(
+     if (strncmp(localUri.c_str(), "file://", 7) != 0) {
+       return std::shared_ptr<uint8_t>(nullptr);
+     }
+-    char localPath[localUri.size()];
+-    decodeURI(localPath, localUri.c_str() + 7);
++    std::vector<char> localPath(localUri.size() + 1);
++    decodeURI(localPath.data(), localUri.c_str() + 7);
+ 
+     return std::shared_ptr<uint8_t>(
+-        stbi_load(localPath, fileWidth, fileHeight, fileComp, STBI_rgb_alpha),
++        stbi_load(localPath.data(), fileWidth, fileHeight, fileComp, STBI_rgb_alpha),
+         [](void *data) { stbi_image_free(data); });
+   }
+   return std::shared_ptr<uint8_t>(nullptr);

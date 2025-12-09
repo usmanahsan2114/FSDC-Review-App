@@ -1,3 +1,0 @@
-﻿utils/storageTest.ts(92,24): error TS2345: Argument of type '{ id: string; timestamp: number; reviewType: string; personalInfo: { name: string; email: string; profession: string; nationality: string; }; ratings: { service: number; quality: number; }; overallRating: number; textComment: string; handwrittenComment: string; photos: never[]; }' is not assignable to parameter of type 'Omit<Review, "id" | "timestamp">'.
-  Types of property 'reviewType' are incompatible.
-    Type 'string' is not assignable to type '"professional" | "joyride"'.
