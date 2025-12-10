@@ -12,24 +12,24 @@ import * as MediaLibrary from 'expo-media-library';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert,
-  BackHandler,
-  Image,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View
+    Alert,
+    BackHandler,
+    Image,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import {
-  Button,
-  Dialog,
-  IconButton,
-  Paragraph,
-  Portal,
-  SegmentedButtons,
-  TextInput
+    Button,
+    Dialog,
+    IconButton,
+    Paragraph,
+    Portal,
+    SegmentedButtons,
+    TextInput
 } from 'react-native-paper';
 import StarRating from 'react-native-star-rating-widget';
 
@@ -41,7 +41,6 @@ import { COUNTRIES, Country } from '@/constants/countries';
 import { FSDC_SIMULATORS, Simulator } from '@/constants/simulators';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import { usePerformance } from '@/hooks/usePerformance';
-import * as FileSystem from 'expo-file-system';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { deleteImagePermanently, initializeImageStorage, saveImagePermanently } from '../utils/imageStorage';
 import { getDevicePadding, getPhotoGridSize, hp, isTablet, minTouchTarget, rf, rs, wp } from '../utils/responsive';
@@ -661,68 +660,42 @@ function AddReviewScreen() {
   // Handwriting functions - Stylus-only canvas handlers
   const handleStylusCanvasSave = async (dataUrl: string) => {
     try {
-      // Initialize image storage
-      await initializeImageStorage();
-      
-      // Generate filename for ORIGINAL: handwriting_{timestamp}_orig.png
-      const timestamp = Date.now();
-      const filenameOrig = `handwriting_${timestamp}_orig.png`;
-      // Safer directory resolution
-      const rootDir = (FileSystem as any).documentDirectory || (FileSystem as any).cacheDirectory;
-      if (!rootDir) {
-        console.error('Storage Error: No valid directory found');
-        throw new Error('Device storage unavailable');
-      }
-      const directory = `${rootDir}images/`;
-      const filePathOrig = directory + filenameOrig;
-      
-      // Ensure directory exists
-      await FileSystem.makeDirectoryAsync(directory, { intermediates: true });
-
-      // Remove header from base64 data to save original
-      const base64Data = dataUrl.replace(/^data:image\/png;base64,/, '');
-      
-      // Write ORIGINAL to file system
-      await FileSystem.writeAsStringAsync(filePathOrig, base64Data, {
-        encoding: 'base64',
-      });
-
-      console.log(`Original handwriting saved: ${filePathOrig}`);
-
-      // 1. Save ORIGINAL to Gallery (as requested)
+      // 1. Initial robust permission check for gallery
+      // We ask here to ensure the user sees the prompt before we do internal work
       const hasPermission = await requestMediaLibraryPermission();
-      if (hasPermission) {
-        try {
-          await MediaLibrary.createAssetAsync(filePathOrig);
-          console.log('Original handwriting saved to Gallery');
-        } catch (galleryError) {
-          console.error('Failed to save to gallery:', galleryError);
-          // Don't block flow if gallery save fails
-        }
-      }
+      
+      // 2. Save ORIGINAL to persistent storage + Gallery
+      // saveImagePermanently handles directory creation, file existence, and permissions internally
+      // It returns the permanent path of the saved file
+      const savedOriginalPath = await saveImagePermanently(
+        dataUrl, 
+        'signature', 
+        true, 
+        hasPermission // Only try gallery if we know we have permission/it's allowed
+      );
+      
+      console.log(`Original handwriting saved: ${savedOriginalPath}`);
 
-      // 2. Compress image for Supabase/App usage
-      // "compress the hand written image to max and put it in supabase database then"
+      // 3. Compress image for Supabase/App usage (High compression)
+      // We must pass a file URI to ImageManipulator, so we use the savedOriginalPath
       const compressed = await ImageManipulator.manipulateAsync(
-        filePathOrig,
-        [{ resize: { width: 600 } }], // Resize to reasonable width
-        { compress: 0.1, format: ImageManipulator.SaveFormat.JPEG } // High compression
+        savedOriginalPath,
+        [{ resize: { width: 600 } }],
+        { compress: 0.1, format: ImageManipulator.SaveFormat.JPEG }
       );
 
-      // Move compressed file to our images directory
-      const filenameCompressed = `handwriting_${timestamp}_comp.jpg`;
-      const filePathCompressed = directory + filenameCompressed;
-      
-      // ImageManipulator saves to cache, move it to our dir
-      await FileSystem.moveAsync({
-        from: compressed.uri,
-        to: filePathCompressed
-      });
+      // 4. Save COMPRESSED version to internal storage (NOT gallery)
+      const savedCompressedPath = await saveImagePermanently(
+        compressed.uri, 
+        'signature', 
+        true, 
+        false
+      );
 
-      console.log(`Compressed handwriting saved: ${filePathCompressed}`);
+      console.log(`Compressed handwriting saved: ${savedCompressedPath}`);
       
       // Update form data with COMPRESSED file path
-      updateFormData('handwrittenComment', filePathCompressed);
+      updateFormData('handwrittenComment', savedCompressedPath);
       setShowHandwritingModal(false);
     } catch (error) {
       console.error('Error saving handwriting:', error);
@@ -770,7 +743,8 @@ function AddReviewScreen() {
   };
 
   const requestMediaLibraryPermission = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    // Use MediaLibrary permissions directly for robust Gallery access
+    const { status } = await MediaLibrary.requestPermissionsAsync();
     return status === 'granted';
   };
 
@@ -790,18 +764,21 @@ function AddReviewScreen() {
       const photo = await cameraRef.current?.takePictureAsync({ quality: 1, skipProcessing: true, exif: true });
       if (photo?.uri) {
         try {
-          // Request gallery permission (non-blocking save fallback handled in utils)
-          try {
-            const { status } = await MediaLibrary.requestPermissionsAsync(true, ['photo']);
-            if (status !== 'granted') {
-              console.warn('MediaLibrary permission not granted; will skip gallery save');
-            }
-          } catch (permErr) {
-            console.warn('MediaLibrary permission request failed:', permErr);
+          // 1. Check/Request permission for gallery
+          const hasPermission = await requestMediaLibraryPermission();
+          
+          if (!hasPermission) {
+             console.warn('MediaLibrary permission not granted; will skip gallery save');
           }
 
-          // Save image permanently and also to gallery (creates/uses album "FSDC Reviews")
-          const permanentPath = await saveImagePermanently(photo.uri, 'photo', true, true);
+          // 2. Save permanently + Gallery (if permitted)
+          const permanentPath = await saveImagePermanently(
+            photo.uri, 
+            'photo', 
+            true, 
+            hasPermission
+          );
+          
           const newPhotos = [...formData.photos, permanentPath];
           updateFormData('photos', newPhotos);
         } catch (error) {

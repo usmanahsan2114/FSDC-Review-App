@@ -743,7 +743,7 @@ const StylusCanvas: React.FC<StylusCanvasProps> = ({
         if (initialImage.startsWith('file://') || (!initialImage.startsWith('http') && !initialImage.startsWith('https'))) {
           // Read file and convert to base64
           const base64 = await FileSystem.readAsStringAsync(initialImage, {
-            encoding: 'base64',
+            encoding: FileSystem.EncodingType.Base64,
           });
           // Convert to data URL
           const dataUrl = `data:image/png;base64,${base64}`;

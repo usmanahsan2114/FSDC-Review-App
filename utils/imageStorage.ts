@@ -1,55 +1,46 @@
 import * as FileSystem from 'expo-file-system';
-// @ts-ignore: Type definitions for expo-file-system seem to be missing properties that exist at runtime
-const FS = FileSystem as any;
+import * as MediaLibrary from 'expo-media-library';
 
-/**
- * Permanent Image Storage Utility
- * 
- * This utility provides reliable, permanent storage for images using expo-file-system.
- * Images are stored in the app's document directory which persists across app updates
- * and device restarts, unlike temporary cache directories.
- */
+// Explicitly log the detected directories for debugging
+console.log('[Storage] Document Directory:', FileSystem.documentDirectory);
+console.log('[Storage] Cache Directory:', FileSystem.cacheDirectory);
 
-// Create permanent directories for different types of images
-// Ensure we have a valid directory, fallback to cache if documentDirectory is null (rare but possible)
-const ROOT_DIR = FS.documentDirectory || FS.cacheDirectory;
+// Use documentDirectory if available, otherwise fallback to cacheDirectory (but warn heavily)
+const ROOT_DIR = FileSystem.documentDirectory || FileSystem.cacheDirectory;
 
 if (!ROOT_DIR) {
-  console.error("CRITICAL: Both documentDirectory and cacheDirectory are null!");
-} else {
-  console.log("Storage Root:", ROOT_DIR);
+  console.error("[Storage] CRITICAL: Both documentDirectory and cacheDirectory are null! Storage will fail.");
 }
 
 const IMAGES_DIR = `${ROOT_DIR}images/`;
 const SIGNATURES_DIR = `${ROOT_DIR}signatures/`;
 const THUMBNAILS_DIR = `${ROOT_DIR}thumbnails/`;
 
-// Thumbnail settings (only for list previews, not for actual images)
+// Thumbnail settings (only for list previews)
 const THUMBNAIL_SIZE = { width: 200, height: 200 };
 
 /**
  * Initialize storage directories
  */
 export const initializeImageStorage = async (): Promise<void> => {
+  if (!ROOT_DIR) return; // Cannot do anything
   try {
-    // Create directories if they don't exist
     const directories = [IMAGES_DIR, SIGNATURES_DIR, THUMBNAILS_DIR];
-    
     for (const dir of directories) {
       const dirInfo = await FileSystem.getInfoAsync(dir);
       if (!dirInfo.exists) {
         await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
-        console.log(`Created directory: ${dir}`);
+        console.log(`[Storage] Created directory: ${dir}`);
       }
     }
   } catch (error) {
-    console.error('Error initializing image storage:', error);
-    throw new Error('Failed to initialize image storage');
+    console.error('[Storage] Error initializing image storage directories:', error);
+    // Don't throw here, let individual saves try to create/fail so we get more specific errors
   }
 };
 
 /**
- * Generate unique filename for images
+ * Generate unique filename
  */
 const generateImageFilename = (prefix: string = 'img'): string => {
   const timestamp = Date.now();
@@ -58,75 +49,92 @@ const generateImageFilename = (prefix: string = 'img'): string => {
 };
 
 /**
- * Process base64 data URL to file URI (NO EDITING - direct conversion only)
+ * Process base64 data URL to file URI (direct conversion only)
  */
 const processBase64Image = async (uri: string): Promise<string> => {
   try {
     if (uri.startsWith('data:image/')) {
-      // For base64 data (handwritten signatures), save as temporary file without any modifications
+      // It's a base64 string
       const tempFilename = `temp_${Date.now()}.jpg`;
-      const tempPath = `${FS.cacheDirectory}${tempFilename}`;
+      const tempPath = `${FileSystem.cacheDirectory}${tempFilename}`;
       
-      // Write base64 data directly to file
-      await FileSystem.writeAsStringAsync(tempPath, uri.split(',')[1], {
-        encoding: FS.EncodingType.Base64,
+      const base64Data = uri.split(',')[1];
+      await FileSystem.writeAsStringAsync(tempPath, base64Data, {
+        encoding: FileSystem.EncodingType.Base64,
       });
       
       return tempPath;
     }
-    
-    // For file URIs, return as-is with NO modifications
-    return uri;
+    return uri; // Already a URI
   } catch (error) {
-    console.error('Error processing image:', error);
+    console.error('[Storage] Error processing base64 image:', error);
     throw error;
   }
 };
 
 /**
- * Save image permanently to device storage
+ * Save image permanently to device storage AND optionally to global gallery
  */
 export const saveImagePermanently = async (
   imageUri: string, 
   type: 'photo' | 'signature' = 'photo',
   preserveOriginal: boolean = true,
-  saveToGallery: boolean = false // Don't save to gallery by default to avoid "modify photo" permission
+  saveToGallery: boolean = false 
 ): Promise<string> => {
   try {
+    if (!ROOT_DIR) throw new Error("FileSystem root directory logic failed.");
+
     await initializeImageStorage();
     
-    // Process image WITHOUT any editing - just handle base64 conversion if needed
+    // 1. Convert base64 to file if needed (returns a file URI)
+    //    If it's already a file URI from camera/picker, this returns it as-is.
     const processedUri = await processBase64Image(imageUri);
     
-    // Generate filename and determine directory
+    // 2. Check if source file exists
+    const sourceInfo = await FileSystem.getInfoAsync(processedUri);
+    if (!sourceInfo.exists) {
+      throw new Error(`Source file does not exist at path: ${processedUri}`);
+    }
+
+    // 3. Determine Permanent Path
     const filename = generateImageFilename(type);
     const directory = type === 'signature' ? SIGNATURES_DIR : IMAGES_DIR;
     const permanentPath = `${directory}${filename}`;
     
-    // Copy image to permanent location WITHOUT any modifications
+    // 4. Save to App's Internal Storage
     await FileSystem.copyAsync({
       from: processedUri,
       to: permanentPath
     });
-    
-    console.log(`Image saved permanently (no edits): ${permanentPath}`);
+    console.log(`[Storage] Image saved to internal storage: ${permanentPath}`);
 
-    // Optionally save to device gallery (photos and signatures)
+    // 5. Optionally Save to Public Gallery
+    if (saveToGallery) {
+      try {
+        const perm = await MediaLibrary.getPermissionsAsync();
+        if (perm.status !== 'granted') {
+          console.warn('[Storage] Gallery saving skipped: Permission not granted');
+        } else {
+          const asset = await MediaLibrary.createAssetAsync(permanentPath);
+          await MediaLibrary.createAlbumAsync('FSDC Reviews', asset, false);
+          console.log('[Storage] Saved to Gallery Album: FSDC Reviews');
+        }
+      } catch (galleryError) {
+        console.error('[Storage] FAILED to save to gallery (non-fatal):', galleryError);
+        // We do NOT throw here because the internal save was successful, which is what matters for the app.
+      }
+    }
+
     return permanentPath;
     
   } catch (error) {
-    console.error('Error saving image permanently:', error);
-    throw new Error('Failed to save image permanently');
+    console.error('[Storage] FATAL Error saving image permanently:', error);
+    throw new Error(`Failed to save image: ${(error as any).message}`);
   }
 };
 
 /**
- * Create thumbnail for faster loading
- */
-// Thumbnail creation removed - images are displayed in their original size
-
-/**
- * Get thumbnail path for an image
+ * Get thumbnail path (utility)
  */
 export const getThumbnailPath = (imagePath: string): string => {
   const filename = imagePath.split('/').pop() || '';
@@ -134,44 +142,30 @@ export const getThumbnailPath = (imagePath: string): string => {
 };
 
 /**
- * Check if image exists in permanent storage
+ * Check if image exists
  */
 export const imageExists = async (imagePath: string): Promise<boolean> => {
   try {
     const fileInfo = await FileSystem.getInfoAsync(imagePath);
     return fileInfo.exists;
   } catch (error) {
-    console.error('Error checking image existence:', error);
     return false;
   }
 };
 
 /**
- * Delete image from permanent storage
+ * Delete image
  */
 export const deleteImagePermanently = async (imagePath: string): Promise<boolean> => {
   try {
     const exists = await imageExists(imagePath);
-    if (!exists) {
-      console.warn(`Image does not exist: ${imagePath}`);
-      return false;
-    }
+    if (!exists) return false;
     
-    // Delete main image
     await FileSystem.deleteAsync(imagePath);
-    
-    // Delete thumbnail if it exists
-    const thumbnailPath = getThumbnailPath(imagePath);
-    const thumbnailExists = await imageExists(thumbnailPath);
-    if (thumbnailExists) {
-      await FileSystem.deleteAsync(thumbnailPath);
-    }
-    
-    console.log(`Image deleted: ${imagePath}`);
+    console.log(`[Storage] Deleted: ${imagePath}`);
     return true;
-    
   } catch (error) {
-    console.error('Error deleting image:', error);
+    console.error('[Storage] Error deleting image:', error);
     return false;
   }
 };
@@ -182,24 +176,23 @@ export const deleteImagePermanently = async (imagePath: string): Promise<boolean
 export const getAllStoredImages = async (): Promise<string[]> => {
   try {
     await initializeImageStorage();
-    
     const imageFiles = await FileSystem.readDirectoryAsync(IMAGES_DIR);
     const signatureFiles = await FileSystem.readDirectoryAsync(SIGNATURES_DIR);
     
+    // Fix: readDirectoryAsync returns file names, not paths. We must prepend the dir.
     const allImages = [
       ...imageFiles.map(file => `${IMAGES_DIR}${file}`),
       ...signatureFiles.map(file => `${SIGNATURES_DIR}${file}`)
     ];
-    
     return allImages;
   } catch (error) {
-    console.error('Error getting stored images:', error);
+    console.error('[Storage] Error listing images:', error);
     return [];
   }
 };
 
 /**
- * Get storage usage information
+ * Get Storage Info
  */
 export const getStorageInfo = async (): Promise<{
   totalImages: number;
@@ -211,114 +204,47 @@ export const getStorageInfo = async (): Promise<{
     let totalSize = 0;
     
     for (const imagePath of allImages) {
-      try {
-        const fileInfo = await FileSystem.getInfoAsync(imagePath);
-        if (fileInfo.exists && fileInfo.size) {
-          totalSize += fileInfo.size;
-        }
-      } catch (error) {
-        console.warn(`Error getting size for ${imagePath}:`, error);
+      const fileInfo = await FileSystem.getInfoAsync(imagePath);
+      if (fileInfo.exists && fileInfo.size) {
+        totalSize += fileInfo.size;
       }
     }
-    
-    const formattedSize = formatBytes(totalSize);
     
     return {
       totalImages: allImages.length,
       totalSize,
-      formattedSize
+      formattedSize: (totalSize / (1024 * 1024)).toFixed(2) + ' MB'
     };
   } catch (error) {
-    console.error('Error getting storage info:', error);
-    return {
-      totalImages: 0,
-      totalSize: 0,
-      formattedSize: '0 B'
-    };
+    return { totalImages: 0, totalSize: 0, formattedSize: '0 MB' };
   }
 };
 
 /**
- * Format bytes to human readable string
- */
-const formatBytes = (bytes: number): string => {
-  if (bytes === 0) return '0 B';
-  
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
-};
-
-/**
- * Clean up orphaned images (images not referenced in any review)
- */
-export const cleanupOrphanedImages = async (referencedImages: string[]): Promise<number> => {
-  try {
-    const allImages = await getAllStoredImages();
-    let deletedCount = 0;
-    
-    for (const imagePath of allImages) {
-      if (!referencedImages.includes(imagePath)) {
-        const deleted = await deleteImagePermanently(imagePath);
-        if (deleted) {
-          deletedCount++;
-        }
-      }
-    }
-    
-    console.log(`Cleaned up ${deletedCount} orphaned images`);
-    return deletedCount;
-  } catch (error) {
-    console.error('Error cleaning up orphaned images:', error);
-    return 0;
-  }
-};
-
-/**
- * Migrate temporary image URIs to permanent storage
+ * Migrate Temporary Image
  */
 export const migrateTemporaryImage = async (tempUri: string): Promise<string | null> => {
   try {
-    // Check if it's already a permanent path
-    if (FS.documentDirectory && tempUri.includes(FS.documentDirectory)) {
+    // If it's already in our document directory, leave it be.
+    if (ROOT_DIR && tempUri.includes(ROOT_DIR)) {
       return tempUri;
     }
     
-    // Check if temporary file exists
-    const tempFileInfo = await FileSystem.getInfoAsync(tempUri);
-    if (!tempFileInfo.exists) {
-      console.warn('Temporary file does not exist:', tempUri);
-      return null;
-    }
-    
-    // Save to permanent storage
-    const permanentPath = await saveImagePermanently(tempUri, 'photo');
-    return permanentPath;
-    
+    return await saveImagePermanently(tempUri, 'photo');
   } catch (error) {
-    console.error('Error migrating temporary image:', error);
+    console.error('[Storage] Error migrating temp image:', error);
     return null;
   }
 };
 
 /**
- * Batch migrate multiple images
+ * Batch Migrate
  */
 export const batchMigrateImages = async (tempUris: string[]): Promise<string[]> => {
   const migratedPaths: string[] = [];
-  
   for (const tempUri of tempUris) {
-    try {
-      const permanentPath = await migrateTemporaryImage(tempUri);
-      if (permanentPath) {
-        migratedPaths.push(permanentPath);
-      }
-    } catch (error) {
-      console.error(`Error migrating image ${tempUri}:`, error);
-    }
+    const res = await migrateTemporaryImage(tempUri);
+    if (res) migratedPaths.push(res);
   }
-  
   return migratedPaths;
 };
