@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 
 export const DRAFT_KEY = 'review_form_draft';
 
-export const useFormDraft = <T>(initialState: T) => {
+export const useFormDraft = <T>(initialState: T, draftKey: string = DRAFT_KEY) => {
   const [data, setData] = useState<T>(initialState);
   const [isLoaded, setIsLoaded] = useState(false);
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -12,7 +12,7 @@ export const useFormDraft = <T>(initialState: T) => {
   useEffect(() => {
     const loadDraft = async () => {
       try {
-        const savedDraft = await AsyncStorage.getItem(DRAFT_KEY);
+        const savedDraft = await AsyncStorage.getItem(draftKey);
         if (savedDraft) {
           setData(JSON.parse(savedDraft));
         }
@@ -23,7 +23,7 @@ export const useFormDraft = <T>(initialState: T) => {
       }
     };
     loadDraft();
-  }, []);
+  }, [draftKey]);
 
   // Save draft on change (debounced)
   const updateData = (newData: T | ((prev: T) => T)) => {
@@ -34,7 +34,7 @@ export const useFormDraft = <T>(initialState: T) => {
       
       saveTimeout.current = setTimeout(async () => {
         try {
-          await AsyncStorage.setItem(DRAFT_KEY, JSON.stringify(resolvedData));
+          await AsyncStorage.setItem(draftKey, JSON.stringify(resolvedData));
         } catch (error) {
           console.error('Failed to save draft', error);
         }
@@ -46,7 +46,7 @@ export const useFormDraft = <T>(initialState: T) => {
 
   const clearDraft = async () => {
     try {
-      await AsyncStorage.removeItem(DRAFT_KEY);
+      await AsyncStorage.removeItem(draftKey);
       setData(initialState);
     } catch (error) {
       console.error('Failed to clear draft', error);

@@ -499,6 +499,7 @@ export const importReviews = async (newReviews: Review[]): Promise<number> => {
 export const mergeRemoteReviews = async (remoteReviews: Review[]): Promise<number> => {
   try {
     const existingReviews = await getAllReviews();
+    const deletedIds = await getDeletedReviews();
     let updatesCount = 0;
     
     // Create a map for faster lookup
@@ -506,6 +507,12 @@ export const mergeRemoteReviews = async (remoteReviews: Review[]): Promise<numbe
     const mergedReviews: Review[] = [...existingReviews];
     
     for (const remote of remoteReviews) {
+      // SKIP if marked for deletion locally (Zombie protection)
+      if (deletedIds.includes(remote.id)) {
+        console.log(`Skipping sync for locally deleted review: ${remote.id}`);
+        continue;
+      }
+
       const local = existingMap.get(remote.id);
       
       if (local) {

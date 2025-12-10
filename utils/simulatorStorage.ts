@@ -9,22 +9,54 @@ export const getSimulators = async (): Promise<Simulator[]> => {
     const jsonValue = await AsyncStorage.getItem(SIMULATORS_KEY);
     if (jsonValue != null) {
       const parsed = JSON.parse(jsonValue);
-      // Merge with defaults to ensure new fields like imageUrl are present if missing
-      // This is a simple migration strategy: if saved data lacks imageUrl, use default
-      const merged = parsed.map((savedSim: Simulator) => {
-        const defaultSim = FSDC_SIMULATORS.find(d => d.id === savedSim.id);
-        return {
-          ...defaultSim, // Use default as base (contains new fields like imageUrl)
-          ...savedSim,   // Override with saved data (names, etc)
-          imageUrl: savedSim.imageUrl || defaultSim?.imageUrl // Explicitly ensure imageUrl is populated
-        };
+      
+      // 1. Merge with defaults to ensure new fields like imageUrl are present
+      // Use a Map to ensure UNIQUENESS by ID.
+      // If duplicates exist in storage, the LAST one processed wins (or we can stick to first).
+      const uniqueSimulatorsMap = new Map<string, Simulator>();
+
+      // First, populate with defaults to ensure we have base data
+      FSDC_SIMULATORS.forEach(defaultSim => {
+        uniqueSimulatorsMap.set(defaultSim.id, defaultSim);
+      });
+
+      // Then overwrite with saved data (merging properties)
+      parsed.forEach((savedSim: Simulator) => {
+        const existing = uniqueSimulatorsMap.get(savedSim.id);
+        if (existing) {
+          uniqueSimulatorsMap.set(savedSim.id, {
+            ...existing,
+            ...savedSim,
+            imageUrl: savedSim.imageUrl || existing.imageUrl
+          });
+        } else {
+          // If it's a saved simulator not in defaults (custom added), add it
+          uniqueSimulatorsMap.set(savedSim.id, savedSim);
+        }
       });
       
-      // Also check if any new simulators were added to defaults that aren't in saved
-      const savedIds = new Set(parsed.map((s: Simulator) => s.id));
-      const newSims = FSDC_SIMULATORS.filter(d => !savedIds.has(d.id));
-      
-      return [...merged, ...newSims];
+      const combinedSimulators = Array.from(uniqueSimulatorsMap.values());
+
+      // 2. Extra Safety: Deduplicate by NAME to handle legacy issues where IDs might have changed
+      // but names remained same (e.g. "Super Mushshak" with different IDs)
+      const uniqueNames = new Set();
+      const finalSimulators: Simulator[] = [];
+
+      for (const sim of combinedSimulators) {
+        if (!uniqueNames.has(sim.name)) {
+          uniqueNames.add(sim.name);
+          finalSimulators.push(sim);
+        }
+      }
+
+      // 3. Save the cleaned list back to storage to fix the persistence issue permanently
+      if (finalSimulators.length !== parsed.length) {
+         console.log('Fixed duplicate simulators in storage');
+         await saveSimulators(finalSimulators);
+      }
+
+      return finalSimulators;
+
     } else {
       // First launch, save defaults
       await saveSimulators(FSDC_SIMULATORS);

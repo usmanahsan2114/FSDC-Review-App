@@ -13,24 +13,24 @@ import * as MediaLibrary from 'expo-media-library';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-    Alert,
-    BackHandler,
-    Image,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View
+  Alert,
+  BackHandler,
+  Image,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import {
-    Button,
-    Dialog,
-    IconButton,
-    Paragraph,
-    Portal,
-    SegmentedButtons,
-    TextInput
+  Button,
+  Dialog,
+  IconButton,
+  Paragraph,
+  Portal,
+  SegmentedButtons,
+  TextInput
 } from 'react-native-paper';
 import StarRating from 'react-native-star-rating-widget';
 
@@ -346,8 +346,10 @@ function AddReviewScreen() {
     };
   }, [parsedEditData, reviewType]);
 
+  const draftKey = parsedEditData?.id ? `edit_draft_${parsedEditData.id}` : 'review_form_draft';
+
   // Form State with Auto-Save Draft
-  const { data: formData, updateData: setFormData, clearDraft, isLoaded: isDraftLoaded } = useFormDraft<FormData>(initialFormData);
+  const { data: formData, updateData: setFormData, clearDraft, isLoaded: isDraftLoaded } = useFormDraft<FormData>(initialFormData, draftKey);
 
   // Load rating categories from AsyncStorage (only for professional reviews)
   useEffect(() => {
@@ -600,6 +602,13 @@ function AddReviewScreen() {
       updatePersonalInfo('previousSimulatorExperience', 'Yes');
     }
   };
+
+  // Sync nationality query with form data (for edit mode)
+  useEffect(() => {
+    if (formData.personalInfo.nationality && formData.personalInfo.nationality !== nationalityQuery) {
+      setNationalityQuery(formData.personalInfo.nationality);
+    }
+  }, [formData.personalInfo.nationality]);
 
   // Handle Yes/No selection for flying experience
   const handleFlyingExperienceSelection = (selection: 'yes' | 'no') => {
@@ -1038,7 +1047,7 @@ function AddReviewScreen() {
               alignItems: 'center'
             }}>
               <OptimizedImage 
-                source={{ uri: FSDC_SIMULATORS.find(s => s.name === formData.simulatorName)?.imageUrl ?? 'https://fsdcpak.com/assets/img/home/super-mushak.webp' }}
+                source={{ uri: availableSimulators.find(s => s.name === formData.simulatorName)?.imageUrl ?? FSDC_SIMULATORS.find(s => s.name === formData.simulatorName)?.imageUrl ?? 'https://fsdcpak.com/assets/img/home/super-mushak.webp' }}
                 style={{ width: '100%', height: '100%' }}
                 contentFit="contain"
               />
