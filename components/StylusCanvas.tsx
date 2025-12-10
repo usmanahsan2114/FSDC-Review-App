@@ -1,4 +1,4 @@
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { WebView } from 'react-native-webview';
@@ -743,7 +743,7 @@ const StylusCanvas: React.FC<StylusCanvasProps> = ({
         if (initialImage.startsWith('file://') || (!initialImage.startsWith('http') && !initialImage.startsWith('https'))) {
           // Read file and convert to base64
           const base64 = await FileSystem.readAsStringAsync(initialImage, {
-            encoding: FileSystem.EncodingType.Base64,
+            encoding: 'base64',
           });
           // Convert to data URL
           const dataUrl = `data:image/png;base64,${base64}`;

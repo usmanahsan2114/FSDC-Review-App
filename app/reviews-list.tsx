@@ -28,7 +28,7 @@ import { Button, Chip, Divider, IconButton, Menu, Modal, Portal, TextInput } fro
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StarRating from 'react-native-star-rating-widget';
 
-import { deleteReview, getAllReviews, getReviewsPaginated, initializeDataStorage, Review } from '../utils/dataStorage';
+import { getAllReviews, getReviewsPaginated, initializeDataStorage, markReviewForDeletion, Review } from '../utils/dataStorage';
 import { validateAdminPin } from '../utils/deviceConfig';
 import { exportToExcel } from '../utils/exportUtils';
 import { hapticsButtonPress, hapticsFilterSelect } from '../utils/haptics';
@@ -268,8 +268,8 @@ function ReviewsListScreen() {
           Alert.alert('Error', 'Failed to delete from server, but will delete locally.');
         }
 
-        // 2. Delete locally
-        const success = await deleteReview(reviewToDelete.id);
+        // 2. Delete locally and mark for sync
+        const success = await markReviewForDeletion(reviewToDelete.id);
         if (success) {
           setReviews(prev => prev.filter(r => r.id !== reviewToDelete.id));
           Alert.alert('Success', 'Review deleted successfully');

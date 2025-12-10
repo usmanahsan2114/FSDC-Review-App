@@ -6,25 +6,26 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { DRAFT_KEY } from '@/hooks/useFormDraft';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 import * as MediaLibrary from 'expo-media-library';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Alert,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View
+    Alert,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import {
-  Button,
-  Card,
-  Chip,
-  Dialog,
-  IconButton,
-  Paragraph,
-  Portal,
+    Button,
+    Card,
+    Chip,
+    Dialog,
+    IconButton,
+    Paragraph,
+    Portal,
 } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StarRating from 'react-native-star-rating-widget';
@@ -632,8 +633,8 @@ function ReviewPreviewScreen() {
         success = !!reviewId;
       }
       
-      // Save handwritten comment to gallery if it exists
-      if (formData.handwrittenComment) {
+      // Save handwritten comment to gallery if it exists (Skip in Expo Go to prevent crash)
+      if (formData.handwrittenComment && Constants.executionEnvironment !== 'storeClient') {
         try {
           const { status } = await MediaLibrary.requestPermissionsAsync(true, ['photo']);
           if (status === 'granted') {

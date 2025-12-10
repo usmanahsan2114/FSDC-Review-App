@@ -1,8 +1,33 @@
 import { supabase } from '@/lib/supabase';
 import NetInfo from '@react-native-community/netinfo';
-import * as FileSystem from 'expo-file-system';
-import { getAllReviews, getReviewById, mergeRemoteReviews, updateReview } from './dataStorage';
+import * as FileSystem from 'expo-file-system/legacy';
+import { clearDeletedReview, getAllReviews, getDeletedReviews, getReviewById, mergeRemoteReviews, updateReview } from './dataStorage';
 import { getDeviceId, getDeviceName } from './deviceConfig';
+
+/**
+ * Sync deleted reviews to Supabase
+ */
+const syncDeletionsToSupabase = async () => {
+  const deletedIds = await getDeletedReviews();
+  if (deletedIds.length === 0) return;
+
+  console.log(`Found ${deletedIds.length} deletions to sync...`);
+
+  for (const id of deletedIds) {
+    try {
+      const { error } = await supabase.from('reviews').delete().eq('id', id);
+      
+      if (!error) {
+        console.log(`Synced deletion for review ${id}`);
+        await clearDeletedReview(id);
+      } else {
+        console.error(`Failed to sync deletion for ${id}:`, error);
+      }
+    } catch (e) {
+      console.error(`Error syncing deletion for ${id}:`, e);
+    }
+  }
+};
 
 /**
  * Sync a single review to Supabase immediately (real-time sync on submit).
@@ -60,6 +85,13 @@ export const syncSingleReview = async (reviewId: string): Promise<boolean> => {
     // Process handwritten comment to ensure it's synced as data (if local)
     const processedHandwritten = await processImageForSync(review.handwrittenComment);
 
+    // Process photos array to ensure they are synced as data (if local)
+    const processedPhotos = await Promise.all(
+      (review.photos || []).map(p => processImageForSync(p))
+    );
+    // Filter out nulls
+    const validPhotos = processedPhotos.filter(p => p !== null) as string[];
+
     // Conflict Resolution: Check remote state first
     const { data: remoteReview } = await supabase
       .from('reviews')
@@ -116,7 +148,7 @@ export const syncSingleReview = async (reviewId: string): Promise<boolean> => {
         overall_rating: review.overallRating,
         text_comment: review.textComment,
         handwritten_comment_url: processedHandwritten,
-        photos_url: review.photos || [],
+        photos_url: validPhotos,
         simulator_id: review.simulatorId,
         simulator_name: review.simulatorName,
         simulator_type: review.simulatorType,
@@ -156,11 +188,16 @@ export const syncReviewsToSupabase = async (): Promise<number> => {
     const unsyncedReviews = allReviews.filter(r => !r.isSynced);
 
     if (unsyncedReviews.length === 0) {
-      console.log('No unsynced reviews found');
+      console.log('No unsynced reviews found.');
+      // Check for deletions even if no new reviews
+      await syncDeletionsToSupabase();
       return 0;
     }
 
     console.log(`Found ${unsyncedReviews.length} unsynced reviews, starting sync...`);
+    
+    // Sync deletions first
+    await syncDeletionsToSupabase();
     
     const deviceId = await getDeviceId();
     const deviceName = await getDeviceName();
@@ -169,6 +206,12 @@ export const syncReviewsToSupabase = async (): Promise<number> => {
     for (const review of unsyncedReviews) {
       try {
         const processedHandwritten = await processImageForSync(review.handwrittenComment);
+
+        // Process photos array
+        const processedPhotos = await Promise.all(
+          (review.photos || []).map(p => processImageForSync(p))
+        );
+        const validPhotos = processedPhotos.filter(p => p !== null) as string[];
         
         // Conflict Resolution: Check remote state first
         const { data: remoteReview } = await supabase
@@ -201,7 +244,7 @@ export const syncReviewsToSupabase = async (): Promise<number> => {
             overall_rating: review.overallRating,
             text_comment: review.textComment,
             handwritten_comment_url: processedHandwritten,
-            photos_url: review.photos || [],
+            photos_url: validPhotos,
             simulator_id: review.simulatorId,
             simulator_name: review.simulatorName,
             simulator_type: review.simulatorType,
@@ -265,6 +308,12 @@ export const forceSyncAllReviews = async (): Promise<{ synced: number; failed: n
     for (const review of allReviews) {
       try {
         const processedHandwritten = await processImageForSync(review.handwrittenComment);
+
+        // Process photos array
+        const processedPhotos = await Promise.all(
+          (review.photos || []).map(p => processImageForSync(p))
+        );
+        const validPhotos = processedPhotos.filter(p => p !== null) as string[];
         
         // Conflict Resolution: Check remote state first
         const { data: remoteReview } = await supabase
@@ -297,7 +346,7 @@ export const forceSyncAllReviews = async (): Promise<{ synced: number; failed: n
             overall_rating: review.overallRating,
             text_comment: review.textComment,
             handwritten_comment_url: processedHandwritten,
-            photos_url: review.photos || [],
+            photos_url: validPhotos,
             simulator_id: review.simulatorId,
             simulator_name: review.simulatorName,
             simulator_type: review.simulatorType,

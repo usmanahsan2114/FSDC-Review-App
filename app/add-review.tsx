@@ -6,6 +6,7 @@ import ThemeToggle from '@/components/ThemeToggle';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import Constants from 'expo-constants';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
@@ -480,7 +481,12 @@ function AddReviewScreen() {
         setShowSimulatorModal(false);
       }
     }
-  }, [parsedEditData, availableSimulators]);
+    
+    // Force update form data if we have edit data (bypassing draft if needed)
+    if (parsedEditData) {
+      setFormData(initialFormData);
+    }
+  }, [parsedEditData, availableSimulators, initialFormData]);
 
   const handleSimulatorSelect = (simulator: Simulator) => {
     setSelectedSimulator(simulator);
@@ -743,9 +749,20 @@ function AddReviewScreen() {
   };
 
   const requestMediaLibraryPermission = async () => {
-    // Use MediaLibrary permissions directly for robust Gallery access
-    const { status } = await MediaLibrary.requestPermissionsAsync();
-    return status === 'granted';
+     // 1. Expo Go Check: Skip to avoid crash on Android 13+
+    if (Constants.executionEnvironment === 'storeClient') {
+      console.log('Skipping MediaLibrary permission in Expo Go to prevent crash');
+      return false; // Safely return false
+    }
+
+    try {
+      // Explicitly request ONLY photo permissions to avoid crashes asking for Audio
+      const { status } = await MediaLibrary.requestPermissionsAsync(false, ['photo']);
+      return status === 'granted';
+    } catch (error) {
+       console.warn('MediaLibrary permission request failed:', error);
+       return false;
+    }
   };
 
   const takePhoto = async () => {
@@ -1044,7 +1061,7 @@ function AddReviewScreen() {
                     <ThemedText style={styles.pickerLabel}>
                       {field.label}{field.required ? ' *' : ''}
                     </ThemedText>
-                    <View style={{ position: 'relative', zIndex: (showNationalitySuggestions && filteredNationalities.length > 0 ? 1000 : 1) }}>
+                    <View style={{ position: 'relative', zIndex: 1000 }}>
                       <TextInput
                         label={field.placeholder}
                         value={nationalityQuery}

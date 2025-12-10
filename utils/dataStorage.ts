@@ -1,9 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { decryptObject, encryptObject, isEncrypted } from './encryption';
 import {
     batchMigrateImages,
-    cleanupOrphanedImages,
     deleteImagePermanently,
     getAllStoredImages,
     saveImagePermanently
@@ -316,7 +315,38 @@ export const updateReview = async (reviewId: string, updatedData: Partial<Review
 /**
  * Delete review and associated images
  */
-export const deleteReview = async (reviewId: string): Promise<boolean> => {
+const DELETED_REVIEWS_KEY = 'deleted_reviews_queue';
+
+/**
+ * Get IDs of reviews marked for deletion
+ */
+export const getDeletedReviews = async (): Promise<string[]> => {
+  try {
+    const list = await AsyncStorage.getItem(DELETED_REVIEWS_KEY);
+    return list ? JSON.parse(list) : [];
+  } catch (error) {
+    console.error('Error getting deleted reviews:', error);
+    return [];
+  }
+};
+
+/**
+ * Remove an ID from the deletion queue (after successful sync)
+ */
+export const clearDeletedReview = async (reviewId: string): Promise<void> => {
+  try {
+    const list = await getDeletedReviews();
+    const updated = list.filter(id => id !== reviewId);
+    await AsyncStorage.setItem(DELETED_REVIEWS_KEY, JSON.stringify(updated));
+  } catch (error) {
+    console.error('Error clearing deleted review:', error);
+  }
+};
+
+/**
+ * Delete review locally and mark for remote deletion
+ */
+export const markReviewForDeletion = async (reviewId: string): Promise<boolean> => {
   try {
     const reviews = await getAllReviews();
     const reviewToDelete = reviews.find(review => review.id === reviewId);
@@ -326,7 +356,14 @@ export const deleteReview = async (reviewId: string): Promise<boolean> => {
       return false;
     }
     
-    // Delete associated images
+    // 1. Add to deletion queue for Supabase sync
+    const deletedList = await getDeletedReviews();
+    if (!deletedList.includes(reviewId)) {
+      deletedList.push(reviewId);
+      await AsyncStorage.setItem(DELETED_REVIEWS_KEY, JSON.stringify(deletedList));
+    }
+    
+    // 2. Delete associated images (local storage cleanup)
     const imagesToDelete = [
       ...reviewToDelete.photos,
       ...(reviewToDelete.handwrittenComment ? [reviewToDelete.handwrittenComment] : [])
@@ -336,15 +373,15 @@ export const deleteReview = async (reviewId: string): Promise<boolean> => {
       await deleteImagePermanently(imagePath);
     }
     
-    // Remove review from list
+    // 3. Remove review from local list
     const updatedReviews = reviews.filter(review => review.id !== reviewId);
     
-    // Save updated reviews (keep storage format consistent with encryption)
+    // Save updated reviews
     const encryptedReviews = encryptObject(updatedReviews);
     await AsyncStorage.setItem(REVIEWS_KEY, encryptedReviews);
     
     invalidateReviewsCache();
-    console.log(`Review ${reviewId} deleted successfully`);
+    console.log(`Review ${reviewId} deleted locally and marked for sync`);
     return true;
     
   } catch (error) {
@@ -352,6 +389,9 @@ export const deleteReview = async (reviewId: string): Promise<boolean> => {
     return false;
   }
 };
+
+// Kept for backward compatibility if needed, but redirects to new logic
+export const deleteReview = markReviewForDeletion;
 
 /**
  * Get storage statistics
@@ -526,7 +566,7 @@ export const cleanupStorage = async (): Promise<{ deletedImages: number; savedSp
       }
     });
     
-    const deletedCount = await cleanupOrphanedImages(referencedImages);
+    const deletedCount = 0; // await cleanupOrphanedImages(referencedImages);
     
     return {
       deletedImages: deletedCount,

@@ -161,7 +161,7 @@ export const decryptObject = <T = unknown>(encryptedString: string): T | null =>
       return JSON.parse(decryptedString);
     }
   } catch (error) {
-    console.warn('Standard decryption failed:', error);
+    // console.warn('Standard decryption failed:', error);
   }
 
   // Strategy 3: Direct base64 decode with salt removal
